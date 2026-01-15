@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: dfbs-postgres
+    environment:
+      POSTGRES_USER: dfbs
+      POSTGRES_PASSWORD: dfbs
+      POSTGRES_DB: dfbs
+    ports:
+      - "5432:5432"
+    volumes:
+      - dfbs_pg:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: dfbs-redis
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: dfbs-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: dfbs
+      RABBITMQ_DEFAULT_PASS: dfbs
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  minio:
+    image: minio/minio:latest
+    container_name: dfbs-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: dfbs
+      MINIO_ROOT_PASSWORD: dfbsdfbsdfbs
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - dfbs_minio:/data
+
+volumes:
+  dfbs_pg:
+  dfbs_minio:

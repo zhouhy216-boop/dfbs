@@ -1,0 +1,128 @@
+# DFBS 云管系统 - 项目结构（最终整合版 v2，中文注释）
+
+> 目标：在“现阶段节省成本”的前提下，保留未来多节点/拆服务扩展可能。  
+> 说明：目录结构强调 **模块边界清晰**、**平台底座可复用**，以及“报价-仓库-费用/报销”闭环可落地。  
+> 注释：你是初学者，因此每个目录都写了中文说明，方便对照开发。  
+> 版本：v2（新增：part/bom、inventory、expense/claim、travel_request）
+
+```
+dfbs_cloud_ops/
+├── core/
+│   ├── domain/                          # 领域层：放业务模型与业务规则（最核心）
+│   │   ├── master_data/                 # 主数据：客户/合同/机型/机器/ICCID/零部件/BOM
+│   │   │   ├── customer/                # 客户：别名、临时占位导入、开票信息
+│   │   │   ├── contract/                # 合同：合同号全局唯一
+│   │   │   ├── model/                   # 机型：独立机型表（涉及运费/售后配置）
+│   │   │   ├── machine/                 # 机器：机器号唯一、归属变更历史、生效日期
+│   │   │   ├── iccid/                   # ICCID：卡实体唯一、与机器绑定迁移历史
+│   │   │   └── part/                    # 零部件与BOM：独立主数据（参考价/偏离标记）
+│   │   │       ├── part/                # Part：编码、名称、规格、单位、参考价
+│   │   │       └── bom/                 # BOM：机型×零部件清单（支持推荐数量）
+│   │   ├── shipment/                    # 发货：发货记录、签收、回执、物流状态
+│   │   ├── entrust/                     # 委托：客户委托/物流委托，关联发货/报价/费用
+│   │   ├── damage/                      # 货损：独立台账（不与售后/收费自动联动）
+│   │   ├── repair_ledger/               # 售后维修台账：完修记录（后续可对接工单系统）
+│   │   ├── quote/                       # 报价枢纽：所有收费入口（多来源合并+版本）
+│   │   │   ├── quote/                   # Quote 主体（客户、基本信息等）
+│   │   │   ├── quote_version/           # Quote 多版本（仅一个Active生效）
+│   │   │   ├── quote_item/              # 报价明细：配件类/服务类（可混合）
+│   │   │   ├── quote_merge/             # 合并/拆分/推荐合并策略
+│   │   │   ├── no_quote_flow/           # 无需报价：原因+审核流（管理控制）
+│   │   │   └── approval/                # 报价审批/会签（由平台workflow驱动）
+│   │   ├── inventory/                   # 仓库：两级仓库+出库+备库申请+告警
+│   │   │   ├── warehouse/               # 仓库实体：服务部大库/服务经理小库
+│   │   │   ├── stock/                   # 库存：仓库×零部件数量
+│   │   │   ├── outbound/                # 出库：必须绑定报价明细，允许分批
+│   │   │   ├── replenishment_request/   # 备库/发货申请：小库向大库申请
+│   │   │   └── alerts/                  # 库存告警：安全库存阈值、提醒记录
+│   │   ├── fee_execution/               # 收费执行：引用生效报价版本（售后/平台/ICCID）
+│   │   ├── payment/                     # 回款：分次回款（以回款为完成口径）
+│   │   ├── invoicing/                   # 开票：先票后款/冲红冲减（开票即入账事件）
+│   │   ├── expense/                     # 费用：费用事实（含运费垫付/差旅等）
+│   │   │   ├── expense/                 # 费用事实：谁、因何、金额、附件
+│   │   │   ├── claim/                   # 报销申请：审批流
+│   │   │   └── reporting_cost/          # 成本统计：按出差/工单/客户/人员
+│   │   ├── travel_request/              # 出差申请：V1 建议做成审批表单类型
+│   │   └── reporting/                   # 报表：预计算+实时查询、双口径（回款/开票）
+│   ├── platform/                        # 平台底座：所有模块共用能力（避免重复造轮子）
+│   │   ├── config_center/               # 配置中心：版本、灰度、依赖分析、回滚
+│   │   ├── rule_engine/                 # 规则引擎：表达式权限/校验/待办/SLA
+│   │   ├── workflow/                    # 工作流：多维状态机+审批+退回相邻状态
+│   │   ├── permissions/                 # 权限：超管勾选+规则层（字段/动作/数据范围）
+│   │   ├── versioning/                  # 版本控制：主表+history快照
+│   │   ├── audit/                       # 审计：操作日志、决策记录、时间线、下载审计
+│   │   ├── tasks/                       # 任务中心：幂等、重试、死信、手工处理、可视化
+│   │   ├── notifications/               # 通知：站内通知+阅读审计（保留短信/邮件扩展）
+│   │   ├── todos/                       # 待办：规则驱动生成/关闭，SLA升级，代理/接管
+│   │   ├── import_export/               # 导入导出：模板、校验、任务追踪、错误报告
+│   │   └── integrations/                # 集成：Webhook、订阅、事件重放（预留）
+│   └── service/                         # 应用服务层：跨模块编排、事务边界、领域服务组合
+├── infra/                               # 基础设施：与业务无关但系统必需的能力
+│   ├── db/                              # 数据库：迁移、软删除、历史表策略、可选分区
+│   ├── queue/                           # MQ封装：指数退避、死信、幂等键
+│   ├── search/                          # 搜索：索引定义、异步同步、全量重建
+│   ├── object_storage/                  # 附件：对象存储、签名URL（查看=下载）
+│   ├── scheduler/                       # 定时任务：汇率拉取、预计算、备份等
+│   ├── monitoring/                      # 监控告警：任务延迟/失败率/外部调用失败
+│   ├── backup_restore/                  # 备份恢复：时间点恢复+粒度恢复（表/附件）
+│   └── webhook_delivery/                # Webhook投递：至少一次、重试、幂等、重放
+├── web/                                 # Web层：API与页面
+│   ├── api/                             # REST API：统一鉴权、权限裁剪、审计、速率限制
+│   ├── admin/                           # 后台：配置中心/权限/规则/灰度/流程配置
+│   ├── app/                             # 业务页面：主数据/发货/委托/货损/维修/报价/仓库/费用/报销/开票
+│   └── ops/                             # 运维页面：任务中心/事件/告警/备份恢复/导入任务
+├── docs/                                # 项目文档（建议必建）
+│   ├── modules/                         # 各模块PRD/字段字典/流程（例如 quote/ inventory/ expense）
+│   ├── architecture/                    # 架构图、部署图、流程图
+│   ├── decisions/                       # ADR：架构决策记录（为什么这样选）
+│   └── glossary.md                      # 词汇表：统一名词口径（避免沟通误解）
+└── README.md                            # 项目概述与本地运行指南
+```
+
+## 关键落地说明（防止开发偏离）
+1) **报价为收费唯一入口**：fee_execution/payment/invoicing 均引用 quote_version（生效版本），并在关键节点锁定。  
+2) **仓库两级结构**：inventory 必须支持服务部大库与服务经理小库，并支持备库申请与告警。  
+3) **出库明细级绑定+分批**：outbound 必须绑定 quote_item，允许分批；并支持物流凭证附件。  
+4) **出库不阻塞回款**：payment 不应因出库未完成而阻塞，但要提示风险。  
+5) **收入 vs 成本分离**：报价中的运费是收入；垫付快递费是 expense；两者通过同一物流/出库记录关联。  
+6) **费用/报销/统计**：expense/claim/reporting_cost 是 V1 必做，支持按出差/工单/客户/人员统计。  
+7) **附件查看=下载**：仍由系统鉴权后签名 URL 下发，并记录下载审计。  
+8) **货损独立模块**：damage 与售后/收费不联动，只共享底座能力，避免业务耦合。
+
+
+========================
+[v2.1_final] 本窗口最终反查补充（结构级说明）
+日期：2026-01-15
+说明：以下为对 v2 项目结构的补充说明，用于落地本窗口新增冻结条款；不改变原有分层与方向。
+========================
+
+[platform] 新增/明确的公共能力（建议放在 core/platform 下，或保持你现有同级结构一致）
+- attachments/attachment-requirement-rules/
+  - 负责：按 object_type + status 校验 required attachment_type[]
+  - 支持：提示/阻断两种模式；规则变更审计
+- state-machine/multi-dim/
+  - 负责：并行状态维度模型与通用流转存储（biz/approval/finance/logistics/repair...）
+- payments/payment-allocation/
+  - 负责：回款(PAYMENT)分配明细、部分核销、跨周期分配
+- master-data/customer-alias-merge/
+  - 负责：仅客户合并；别名(alias)映射；合并审计
+- import/import-review/
+  - 负责：强人工确认导入（临时->待审核->入库/驳回）；全流程审计
+
+[modules] 本窗口确认纳入 V1 的业务模块（如你已有目录则只补充职责描述）
+- reconciliation/  （对账单/对账批次）
+- payments/         （回款与核销分配）
+- allocation/       （费用分摊/拆分）
+- pricebook/         （价格/费率表；同客户多合同按最低执行规则；系统建议+人工确认）
+- service-requests/  （非维修工单/服务请求）
+- correction/        （更正单/数据修正单）
+- logistics/
+  - carrier/         （承运商主数据）
+  - freight/         （运费口径：客户承担/公司成本；与报销/对账/回款联动）
+- orders/            （委托/订单：履约主线；不强绑合同，仅绑客户）
+- rma/               （退货/返修/换货）
+
+[policies] 全局策略（建议写入 docs/ 或 config/ 的“规范文件”，并在代码中强约束）
+- soft-delete-policy/：全面软删除；禁止物理删除（主数据/业务/财务事件）
+- visibility-policy/：默认 RBAC 可见；OrgUnit 仅筛选/汇总；敏感数据细粒度权限点
+- biztime-policy/：BizTime 与 SystemTime 强制区分；默认以 BizTime 做统计/计费/追溯
