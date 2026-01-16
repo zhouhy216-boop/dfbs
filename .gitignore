@@ -17,3 +17,23 @@ build/
 
 # Env
 .env
+
+# Java / Maven
+target/
+**/target/
+*.class
+
+# Logs
+*.log
+logs/
+**/logs/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+
+# Maven Wrapper downloads (optional)
+.mvn/wrapper/maven-wrapper.jar
