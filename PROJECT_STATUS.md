@@ -36,13 +36,13 @@
 - 数据库迁移：Flyway
 - 健康检查：GET http://localhost:8080/api/healthz -> ok
 
-## 2. 一键启动（已封板）
-- 入口：项目根目录 `DFBS-一键启动.bat`
-- 行为：
-  - docker compose 启动 4 个基础容器
-  - 弹出 PowerShell 窗口运行 Spring Boot（该窗口需要保持打开，关闭即停止后端）
-  - 等待 /api/healthz 就绪并输出结果
-  - 日志：应用日志落地到 backend/dfbs-app/logs/dfbs-app.log（便于定位 500 堆栈）
+## 2. 本地入口脚本（已封板）
+- 入口（项目根目录）：
+  - DFBS-START.bat：开始点一下（git pull + infra up + backend + healthz + test）
+  - DFBS-END.bat：结束点一下（git add/commit/push；无改动则提示 No changes to commit）
+- 约束：入口脚本使用英文文件名，避免中文路径/编码导致 bat 调用失败
+- 健康检查：GET http://localhost:8080/api/healthz -> ok
+- 测试日志：backend/dfbs-app/target/dfbs-test.log
 
 ## 3. 已封板的工程决策（关键）
 ### 3.1 报价版本唯一生效（数据库级约束）✅ 封板
@@ -108,6 +108,27 @@
   - 双击 DFBS-验收测试.bat
   - 或执行：cd backend/dfbs-app && .\mvnw test
 - 验收标准：BUILD SUCCESS
+### 3.7 脚本入口收敛为 2 个（START/END）✅ 封板
+- 目标：跨电脑切换时只保留两个可执行入口，减少误用与编码问题；实现“开始点一下、结束点一下”
+- 入口脚本（项目根目录）：
+  - DFBS-START.bat：git pull + docker compose up -d + 启动后端(新窗口) + healthz + mvnw test（输出到 backend/dfbs-app/target/dfbs-test.log）
+  - DFBS-END.bat：git add . + git commit + git push（无改动时提示 No changes to commit）
+- 约束：
+  - 入口脚本使用英文文件名，避免中文路径/编码导致 bat 调用失败
+- 验收标准：
+  - 双击 DFBS-START.bat 最终输出 ALL DONE: START OK 且 TESTS PASS
+  - 双击 DFBS-END.bat 最终输出 ALL DONE: END OK 且远端 main 更新或显示 up-to-date
+### 3.8 跨电脑路径/盘符不一致（C盘/D盘）允许 ✅ 封板
+- 结论：允许不同电脑将 dfbs 项目放在不同磁盘与路径（例如 C:\dfbs / D:\dfbs），不影响开发与验收。
+- 前提：
+  - 代码以 Git 仓库为唯一一致性来源（main 分支同步）。
+  - 所有本地脚本使用相对路径（%~dp0）定位项目根目录，不写死绝对路径。
+- 验收方式：
+  - 在任意路径的项目根目录双击 DFBS-START.bat，可完成：git pull + infra up + backend + healthz + test。
+  - 双击 DFBS-END.bat，可完成：git add/commit/push（无改动时提示 No changes to commit）。
+- 禁止事项：
+  - 不允许脚本写死盘符/绝对路径（如 C:\dfbs\...）。
+  - 不允许手动拷贝文件夹作为同步方式（以 Git 为准）。
 
 
 ## 4. 当前工程状态

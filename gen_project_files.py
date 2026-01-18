@@ -18,10 +18,15 @@ class Group:
     title: str
     patterns: tuple[str, ...]
 
+
+# ✅ 注意：GROUPS 必须在 class 之外
 GROUPS: list[Group] = [
-    Group("启动与基础设施", (
-        "DFBS-一键启动.bat",
-        "dfbs_boot.py",
+    Group("本地入口脚本（START/END）", (
+        "DFBS-START.bat",
+        "DFBS-END.bat",
+        "gen_project_files.py",
+    )),
+    Group("基础设施（Docker）", (
         "infra/docker-compose.yml",
     )),
     Group("权威冻结基准（v2.1_final）", (

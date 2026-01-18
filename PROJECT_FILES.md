@@ -1,13 +1,16 @@
 # DFBS 项目文件清单（自动生成）
 
-生成时间：2026-01-16 14:54:15
+生成时间：2026-01-18 19:00:57
 
 ## 常用索引（自动生成，按分组）
 > 这一段用于让 ChatGPT / 自己快速定位关键文件，不需要手工维护。
 
-### 启动与基础设施
-- DFBS-一键启动.bat
-- dfbs_boot.py
+### 本地入口脚本（START/END）
+- DFBS-START.bat
+- DFBS-END.bat
+- gen_project_files.py
+
+### 基础设施（Docker）
 - infra/docker-compose.yml
 
 ### 权威冻结基准（v2.1_final）
@@ -28,6 +31,7 @@
 - backend/dfbs-app/src/main/java/com/dfbs/app/quote/QuoteVersionController.java
 - backend/dfbs-app/src/main/java/com/dfbs/app/quote/QuoteVersionEntity.java
 - backend/dfbs-app/src/main/java/com/dfbs/app/quote/QuoteVersionRepo.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/quote/QuoteVersionService.java
 
 ### 数据库迁移（Flyway）
 - backend/dfbs-app/src/main/resources/db/migration/V0001__init.sql
@@ -49,14 +53,15 @@
 
 ```
 .gitignore
-DFBS-一键启动.bat
+DFBS-END.bat
+DFBS-GEN-PROJECT-FILES.bat
+DFBS-START.bat
 PROJECT_FILES.md
 PROJECT_STATUS.md
 README.md
 backend/dfbs-app/.gitattributes
 backend/dfbs-app/.gitignore
 backend/dfbs-app/.mvn/wrapper/maven-wrapper.properties
-backend/dfbs-app/HELP.md
 backend/dfbs-app/README.md
 backend/dfbs-app/dep.txt
 backend/dfbs-app/logs/dfbs-app.log
@@ -68,12 +73,14 @@ backend/dfbs-app/src/main/java/com/dfbs/app/HealthController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/quote/QuoteVersionController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/quote/QuoteVersionEntity.java
 backend/dfbs-app/src/main/java/com/dfbs/app/quote/QuoteVersionRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/quote/QuoteVersionService.java
 backend/dfbs-app/src/main/resources/application.properties.bak
 backend/dfbs-app/src/main/resources/application.yml
 backend/dfbs-app/src/main/resources/db/migration/V0001__init.sql
 backend/dfbs-app/src/main/resources/db/migration/V0002__quote_version.sql
 backend/dfbs-app/src/main/resources/db/migration/V0003__quote_version_only_one_active.sql
 backend/dfbs-app/src/test/java/com/dfbs/app/DfbsAppApplicationTests.java
+backend/dfbs-app/src/test/java/com/dfbs/app/quote/QuoteVersionActivateTest.java
 backend/dfbs-application/.gitkeep
 backend/dfbs-application/README.md
 backend/dfbs-interfaces/.gitkeep
@@ -83,7 +90,6 @@ backend/dfbs-modules/README.md
 backend/dfbs-platform/.gitkeep
 backend/dfbs-platform/README.md
 backend/pom.xml
-dfbs_boot.py
 docs/DECISIONS.md
 docs/baseline/final_01_mvp_scope_v2_1_final_full.md
 docs/baseline/final_02_module_map_v2_1_final_full.mmd
