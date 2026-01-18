@@ -129,6 +129,26 @@
 - 禁止事项：
   - 不允许脚本写死盘符/绝对路径（如 C:\dfbs\...）。
   - 不允许手动拷贝文件夹作为同步方式（以 Git 为准）。
+### 3.9 本地自动化脚本入口收敛（START/END）✅ 封板
+- 目标：跨电脑使用时只保留“开始点一下 / 结束点一下”两个入口，减少误用与编码问题。
+- 入口脚本（项目根目录）：
+  - DFBS-START.bat：git pull + docker compose up -d + 启动后端(新窗口) + healthz + mvnw test（日志：backend/dfbs-app/target/dfbs-test.log）
+  - DFBS-END.bat：git add . + git commit -m "sync" + git push（无改动时提示 No changes to commit）
+- 约束：入口脚本使用英文文件名；脚本使用相对路径（%~dp0），不依赖盘符/绝对路径。
+- 验收标准：
+  - 双击 DFBS-START.bat 最终输出：ALL DONE: START OK 且 TESTS PASS
+  - 双击 DFBS-END.bat 最终输出：ALL DONE: END OK 且远端 main 更新或 up-to-date
+
+### 3.10 PROJECT_FILES.md 自动生成机制（gen_project_files）✅ 封板
+- 目标：PROJECT_FILES.md 由脚本自动生成，作为“文件路径/结构”的唯一准据；禁止手工维护该文件内容。
+- 生成方式（项目根目录）：
+  - 运行：DFBS-GEN-PROJECT-FILES.bat
+  - 产物：PROJECT_FILES.md（写入时间/大小可在脚本输出中确认）
+- 约束：
+  - gen_project_files.py 为生成器本体；DFBS-GEN-PROJECT-FILES.bat 为可视化包装器（输出写入成功 + git status）
+  - 删除旧生成/启动脚本（如 dfbs_boot.py、DFBS-一键启动.bat）属于“入口收敛”的一部分
+- 验收标准：
+  - 运行 DFBS-GEN-PROJECT-FILES.bat 输出 OK -> PROJECT_FILES.md 且 git status 显示 PROJECT_FILES.md 变化
 
 
 ## 4. 当前工程状态
