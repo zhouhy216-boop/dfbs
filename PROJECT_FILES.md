@@ -1,6 +1,6 @@
 # DFBS 项目文件清单（自动生成）
 
-生成时间：2026-01-19 14:00:39
+生成时间：2026-01-19 14:55:09
 
 ## 常用索引（自动生成，按分组）
 > 这一段用于让 ChatGPT / 自己快速定位关键文件，不需要手工维护。
@@ -37,6 +37,7 @@
 - backend/dfbs-app/src/main/resources/db/migration/V0001__init.sql
 - backend/dfbs-app/src/main/resources/db/migration/V0002__quote_version.sql
 - backend/dfbs-app/src/main/resources/db/migration/V0003__quote_version_only_one_active.sql
+- backend/dfbs-app/src/main/resources/db/migration/V0004__masterdata_init.sql
 
 ### 后端工程骨架（分层目录）
 - backend/pom.xml
@@ -76,6 +77,16 @@ backend/dfbs-app/src/main/java/com/dfbs/app/DfbsAppApplication.java
 backend/dfbs-app/src/main/java/com/dfbs/app/HealthController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/quote/QuoteVersionService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/QuoteVersionController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/contract/ContractEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/contract/ContractRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/customer/CustomerEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/customer/CustomerRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/iccid/IccidEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/iccid/IccidRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/machine/MachineEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/machine/MachineRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/product/ProductEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/product/ProductRepo.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteVersionEntity.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteVersionRepo.java
 backend/dfbs-app/src/main/resources/application.properties.bak
@@ -83,6 +94,7 @@ backend/dfbs-app/src/main/resources/application.yml
 backend/dfbs-app/src/main/resources/db/migration/V0001__init.sql
 backend/dfbs-app/src/main/resources/db/migration/V0002__quote_version.sql
 backend/dfbs-app/src/main/resources/db/migration/V0003__quote_version_only_one_active.sql
+backend/dfbs-app/src/main/resources/db/migration/V0004__masterdata_init.sql
 backend/dfbs-app/src/test/java/com/dfbs/app/ArchitectureRulesTest.java
 backend/dfbs-app/src/test/java/com/dfbs/app/DfbsAppApplicationTests.java
 backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/quote/QuoteVersionActivateTest.java
