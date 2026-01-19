@@ -1,6 +1,6 @@
 # DFBS 项目文件清单（自动生成）
 
-生成时间：2026-01-19 16:05:11
+生成时间：2026-01-19 16:16:14
 
 ## 常用索引（自动生成，按分组）
 > 这一段用于让 ChatGPT / 自己快速定位关键文件，不需要手工维护。
@@ -75,6 +75,11 @@ backend/dfbs-app/pom.xml
 backend/dfbs-app/run.log
 backend/dfbs-app/src/main/java/com/dfbs/app/DfbsAppApplication.java
 backend/dfbs-app/src/main/java/com/dfbs/app/HealthController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/contract/ContractMasterDataService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/customer/CustomerMasterDataService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/iccid/IccidMasterDataService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/machine/MachineMasterDataService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/product/ProductMasterDataService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/quote/QuoteVersionService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/QuoteVersionController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/contract/ContractEntity.java

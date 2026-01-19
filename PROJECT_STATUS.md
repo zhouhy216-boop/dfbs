@@ -252,6 +252,21 @@
 - 技术实现：
   - ArchUnit 仅扫描 main（ImportOption.Predefined.DO_NOT_INCLUDE_TESTS）
 - 验收：mvnw clean test 通过
+### 3.22 主数据“写入口”占坑（MasterDataService）✅ 封板
+- 目标：为每个主数据模块建立唯一写入口（先占坑），避免未来写逻辑分散在 Repo/Controller/其他模块导致返工。
+- 范围：仅新增空 Service 骨架；不引入任何业务逻辑；不新增/修改数据库结构；不修改 3.21 守门规则。
+- 落地位置（application 层）：
+  - backend/dfbs-app/src/main/java/com/dfbs/app/application/customer/CustomerMasterDataService.java
+  - backend/dfbs-app/src/main/java/com/dfbs/app/application/contract/ContractMasterDataService.java
+  - backend/dfbs-app/src/main/java/com/dfbs/app/application/product/ProductMasterDataService.java
+  - backend/dfbs-app/src/main/java/com/dfbs/app/application/machine/MachineMasterDataService.java
+  - backend/dfbs-app/src/main/java/com/dfbs/app/application/iccid/IccidMasterDataService.java
+- 约束：
+  - 主数据写入未来只能通过对应 MasterDataService 进入
+  - 其他层/其他模块禁止直接写主数据 Repo（由 MasterDataReadOnlyRulesTest 守门）
+- 验收：
+  - cd backend/dfbs-app && .\mvnw clean test
+  - BUILD SUCCESS
 
 
 ## 4. 当前工程状态
