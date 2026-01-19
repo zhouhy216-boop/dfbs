@@ -233,6 +233,25 @@
   - iccid.machine_sn -> machine.machine_sn（允许为空）
 - 软删除：deleted_at 为空=有效；不物理删除；业务主键保持唯一避免复用
 - 验收：mvnw -q clean test 通过
+### 3.20 主数据 Repository 只读访问规则 ✅ 封板
+- 主数据模块（customer / contract / product / machine / iccid）的 Repo：
+  - 允许：查询类方法（findBy / findAll / existsBy 等）
+  - 禁止：在业务模块中直接调用 save / delete
+- 写入入口冻结：
+  - 主数据写入只能通过专用的 MasterDataService（后续阶段实现）
+  - 报价 / 发货 / 售后 / 平台费模块只能引用主数据，不得修改
+- 删除策略冻结：
+  - 禁止物理删除
+  - 删除语义通过设置 deleted_at 实现
+### 3.21 主数据只读规则自动化守门（ArchUnit）✅ 封板
+- 新增测试：MasterDataReadOnlyRulesTest
+- 规则：
+  - interfaces(main) 层禁止依赖任何 *Repo（不检查 test 代码）
+  - 除对应的 application.<module>.. 包外，禁止依赖主数据 5 个 Repo：
+    customer / contract / product / machine / iccid
+- 技术实现：
+  - ArchUnit 仅扫描 main（ImportOption.Predefined.DO_NOT_INCLUDE_TESTS）
+- 验收：mvnw clean test 通过
 
 
 ## 4. 当前工程状态
