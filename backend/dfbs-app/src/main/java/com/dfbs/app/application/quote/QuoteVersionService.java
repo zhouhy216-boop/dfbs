@@ -1,7 +1,9 @@
-package com.dfbs.app.quote;
+package com.dfbs.app.application.quote;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.dfbs.app.modules.quote.QuoteVersionRepo;
+import com.dfbs.app.modules.quote.QuoteVersionEntity;
 
 @Service
 public class QuoteVersionService {

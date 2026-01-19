@@ -1,8 +1,9 @@
-package com.dfbs.app.quote;
+package com.dfbs.app.interfaces.quote;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import com.dfbs.app.application.quote.QuoteVersionService;
 
 @RestController
 @RequestMapping("/api/quote-versions")

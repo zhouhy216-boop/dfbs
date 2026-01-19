@@ -1,14 +1,17 @@
-package com.dfbs.app.quote;
+package com.dfbs.app.interfaces.quote;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import com.dfbs.app.application.quote.QuoteVersionService;
+import com.dfbs.app.modules.quote.QuoteVersionRepo;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.time.OffsetDateTime;
 import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @Transactional

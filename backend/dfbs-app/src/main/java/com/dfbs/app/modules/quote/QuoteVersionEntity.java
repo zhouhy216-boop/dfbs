@@ -1,4 +1,4 @@
-package com.dfbs.app.quote;
+package com.dfbs.app.modules.quote;
 
 import jakarta.persistence.*;
 import java.time.OffsetDateTime;
