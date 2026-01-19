@@ -1,6 +1,6 @@
 # DFBS 项目文件清单（自动生成）
 
-生成时间：2026-01-19 16:16:14
+生成时间：2026-01-19 16:21:00
 
 ## 常用索引（自动生成，按分组）
 > 这一段用于让 ChatGPT / 自己快速定位关键文件，不需要手工维护。
@@ -58,6 +58,7 @@ DFBS-END.bat
 DFBS-GEN-PROJECT-FILES.bat
 DFBS-NEW-MODULE.bat
 DFBS-START.bat
+DFBS-TEST.bat
 PROJECT_FILES.md
 PROJECT_STATUS.md
 README.md

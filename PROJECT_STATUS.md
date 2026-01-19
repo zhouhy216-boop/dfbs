@@ -267,6 +267,14 @@
 - 验收：
   - cd backend/dfbs-app && .\mvnw clean test
   - BUILD SUCCESS
+### 3.23 新增安全测试脚本 DFBS-TEST.bat ✅ 封板
+- 背景：DFBS-START.bat 会执行 git pull / docker up / 启动后端等，存在“误触导致回到上次 END 状态”的风险。
+- 决策：新增 DFBS-TEST.bat，仅运行后端单元测试，不触碰 git / docker / 启动服务，降低误操作风险。
+- 文件：
+  - DFBS-TEST.bat
+- 验收：
+  - 双击 DFBS-TEST.bat
+  - 输出 [OK] TESTS PASS / BUILD SUCCESS
 
 
 ## 4. 当前工程状态
