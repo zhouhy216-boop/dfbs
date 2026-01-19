@@ -1,6 +1,6 @@
 # DFBS 项目文件清单（自动生成）
 
-生成时间：2026-01-19 13:21:05
+生成时间：2026-01-19 14:00:39
 
 ## 常用索引（自动生成，按分组）
 > 这一段用于让 ChatGPT / 自己快速定位关键文件，不需要手工维护。
@@ -83,6 +83,7 @@ backend/dfbs-app/src/main/resources/application.yml
 backend/dfbs-app/src/main/resources/db/migration/V0001__init.sql
 backend/dfbs-app/src/main/resources/db/migration/V0002__quote_version.sql
 backend/dfbs-app/src/main/resources/db/migration/V0003__quote_version_only_one_active.sql
+backend/dfbs-app/src/test/java/com/dfbs/app/ArchitectureRulesTest.java
 backend/dfbs-app/src/test/java/com/dfbs/app/DfbsAppApplicationTests.java
 backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/quote/QuoteVersionActivateTest.java
 backend/dfbs-application/.gitkeep

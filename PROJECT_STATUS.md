@@ -174,6 +174,18 @@
   - DFBS-NEW-MODULE.bat + tools/new_module.py
 - 验收：
   - 生成 demo 模块后，mvnw clean test 通过
+### 3.13 Demo 模块清理策略（最干净）✅ 封板
+- 原则：Demo 仅用于验证模块生成器，不作为真实业务模块保留
+- 动作：
+  - 删除 demo 在 interfaces / application / modules / test 下的全部目录
+  - 保留 DFBS-NEW-MODULE 生成器作为唯一新增模块入口
+- 验收：
+  - mvnw clean test 通过
+  - 项目内无 demo 相关路径
+### 3.14 模块依赖边界规则（interfaces -> application -> modules -> platform）✅ 封板
+- 单向依赖强制：interfaces → application → modules → platform
+- 落地方式：引入 ArchUnit 测试（ArchitectureRulesTest）作为守门员，违反规则则 mvnw test 失败
+- 验收：mvnw clean test 通过
 
 
 ## 4. 当前工程状态
