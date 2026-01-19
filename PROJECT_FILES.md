@@ -1,6 +1,6 @@
 # DFBS 项目文件清单（自动生成）
 
-生成时间：2026-01-19 11:08:52
+生成时间：2026-01-19 12:49:51
 
 ## 常用索引（自动生成，按分组）
 > 这一段用于让 ChatGPT / 自己快速定位关键文件，不需要手工维护。
@@ -28,10 +28,6 @@
 - backend/dfbs-app/src/main/resources/application.yml
 
 ### 报价模块（当前关注）
-- backend/dfbs-app/src/main/java/com/dfbs/app/quote/QuoteVersionController.java
-- backend/dfbs-app/src/main/java/com/dfbs/app/quote/QuoteVersionEntity.java
-- backend/dfbs-app/src/main/java/com/dfbs/app/quote/QuoteVersionRepo.java
-- backend/dfbs-app/src/main/java/com/dfbs/app/quote/QuoteVersionService.java
 - backend/dfbs-app/src/main/java/com/dfbs/app/application/quote/QuoteVersionService.java
 - backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/QuoteVersionController.java
 - backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteVersionEntity.java
@@ -74,16 +70,13 @@ backend/dfbs-app/logs/dfbs-app.log.2026-01-16.0.gz
 backend/dfbs-app/mvnw
 backend/dfbs-app/mvnw.cmd
 backend/dfbs-app/pom.xml
+backend/dfbs-app/run.log
 backend/dfbs-app/src/main/java/com/dfbs/app/DfbsAppApplication.java
 backend/dfbs-app/src/main/java/com/dfbs/app/HealthController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/quote/QuoteVersionService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/QuoteVersionController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteVersionEntity.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteVersionRepo.java
-backend/dfbs-app/src/main/java/com/dfbs/app/quote/QuoteVersionController.java
-backend/dfbs-app/src/main/java/com/dfbs/app/quote/QuoteVersionEntity.java
-backend/dfbs-app/src/main/java/com/dfbs/app/quote/QuoteVersionRepo.java
-backend/dfbs-app/src/main/java/com/dfbs/app/quote/QuoteVersionService.java
 backend/dfbs-app/src/main/resources/application.properties.bak
 backend/dfbs-app/src/main/resources/application.yml
 backend/dfbs-app/src/main/resources/db/migration/V0001__init.sql
