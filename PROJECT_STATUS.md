@@ -223,7 +223,7 @@
 - 引用方式冻结：只允许用对方“业务主键”引用（不引用名称等描述字段）
 - 软删除冻结：deleted_at 作为软删除标记；业务主键不复用
 
-### 3.15 主数据最小字段集 + 首次建表（Flyway V0004）✅ 封板
+### 3.19 主数据最小字段集 + 首次建表（Flyway V0004）✅ 封板
 - 新增迁移：V0004__masterdata_init.sql，创建 5 张主数据表：
   - md_customer / md_contract / md_product / md_machine / md_iccid
 - 引用原则（3.18 冻结）：只用业务主键互相引用：
