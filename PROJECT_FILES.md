@@ -1,6 +1,6 @@
 # DFBS 项目文件清单（自动生成）
 
-生成时间：2026-01-19 12:49:51
+生成时间：2026-01-19 13:12:00
 
 ## 常用索引（自动生成，按分组）
 > 这一段用于让 ChatGPT / 自己快速定位关键文件，不需要手工维护。
@@ -55,6 +55,7 @@
 .gitignore
 DFBS-END.bat
 DFBS-GEN-PROJECT-FILES.bat
+DFBS-NEW-MODULE.bat
 DFBS-START.bat
 PROJECT_FILES.md
 PROJECT_STATUS.md
@@ -99,4 +100,5 @@ docs/baseline/final_02_module_map_v2_1_final_full.mmd
 docs/baseline/final_03_project_structure_v2_1_final_full.txt
 gen_project_files.py
 infra/docker-compose.yml
+tools/new_module.py
 ```

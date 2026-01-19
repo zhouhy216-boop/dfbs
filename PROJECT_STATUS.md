@@ -149,6 +149,31 @@
   - 删除旧生成/启动脚本（如 dfbs_boot.py、DFBS-一键启动.bat）属于“入口收敛”的一部分
 - 验收标准：
   - 运行 DFBS-GEN-PROJECT-FILES.bat 输出 OK -> PROJECT_FILES.md 且 git status 显示 PROJECT_FILES.md 变化
+### 3.11 代码包路径分层落地（platform / modules / application / interfaces）【已封板】
+- 完成内容：
+  - Controller → interfaces
+  - Service → application
+  - Entity / Repository → modules
+- 清理内容：
+  - 删除旧 com.dfbs.app.quote.* 源码，避免 Spring Bean 冲突
+- 验收结果：
+  - mvnw compile / test-compile 通过
+  - Spring Boot 正常启动
+  - /api/healthz 返回 OK
+- 风险说明：
+  - 若本地修改未 push，DFBS-START.bat 的 git pull 会还原旧代码
+  - 已通过提交远端解决
+### 3.12 新模块标准骨架生成规则（DFBS-NEW-MODULE）✅ 封板
+- 目的：新增模块不允许手工“猜放哪层”，统一生成骨架，避免后续大规模返工
+- 强制分层路径：
+  - interfaces：backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/<module_key>/
+  - application：backend/dfbs-app/src/main/java/com/dfbs/app/application/<module_key>/
+  - modules：backend/dfbs-app/src/main/java/com/dfbs/app/modules/<module_key>/
+  - test：backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/<module_key>/
+- 工具：
+  - DFBS-NEW-MODULE.bat + tools/new_module.py
+- 验收：
+  - 生成 demo 模块后，mvnw clean test 通过
 
 
 ## 4. 当前工程状态
