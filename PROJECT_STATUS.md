@@ -138,6 +138,7 @@
 - 验收标准：
   - 双击 DFBS-START.bat 最终输出：ALL DONE: START OK 且 TESTS PASS
   - 双击 DFBS-END.bat 最终输出：ALL DONE: END OK 且远端 main 更新或 up-to-date
+- 说明：3.7 与 3.9 内容同属“入口脚本收敛（START/END）”，3.9 为最终表述；保留 3.7 作为历史记录。
 
 ### 3.10 PROJECT_FILES.md 自动生成机制（gen_project_files）✅ 封板
 - 目标：PROJECT_FILES.md 由脚本自动生成，作为“文件路径/结构”的唯一准据；禁止手工维护该文件内容。
@@ -163,6 +164,7 @@
 - 风险说明：
   - 若本地修改未 push，DFBS-START.bat 的 git pull 会还原旧代码
   - 已通过提交远端解决
+- 说明：3.1~3.6 中出现的 com.dfbs.app.quote.* 路径属于历史记录；自 3.11 起按分层结构迁移为 interfaces/application/modules 下的同名组件。
 ### 3.12 新模块标准骨架生成规则（DFBS-NEW-MODULE）✅ 封板
 - 目的：新增模块不允许手工“猜放哪层”，统一生成骨架，避免后续大规模返工
 - 强制分层路径：
@@ -186,6 +188,51 @@
 - 单向依赖强制：interfaces → application → modules → platform
 - 落地方式：引入 ArchUnit 测试（ArchitectureRulesTest）作为守门员，违反规则则 mvnw test 失败
 - 验收：mvnw clean test 通过
+### 3.15 业务模块推进顺序（地基 -> 承重 -> 上层）✅ 封板
+- 冻结推进顺序（避免返工）：
+  1) 主数据（customer / contract / product / machine / iccid）
+  2) 报价（quote）
+  3) 发货（shipment）
+  4) 售后/维修/收费
+  5) 平台费 / ICCID 计费
+  6) 报表 / 审计 / 对外接口
+- 约束：本条仅冻结“先后顺序”，不进入字段/表/API 设计
+
+### 3.16 主数据模块拆分（边界与引用方向）✅ 封板
+- 主数据拆分为 5 个模块：
+  - customer / contract / product / machine / iccid
+- 允许引用方向（单向）：
+  - contract -> customer
+  - machine -> contract
+  - machine -> product
+  - iccid -> machine
+- 禁止：任何主数据模块双向引用、反向引用
+
+### 3.17 主数据模块骨架生成（空骨架占坑）✅ 封板
+- 使用 DFBS-NEW-MODULE 生成 5 个模块骨架（不写字段、不写业务逻辑）：
+  - customer / contract / product / machine / iccid
+- 验收：mvnw clean test 通过
+
+### 3.18 主数据模块内关系冻结（字段级之前最后一道关）✅ 封板
+- 职责冻结：
+  - customer：客户身份与唯一编号；不包含合同/设备/ICCID；不包含平台费 org_code
+  - contract：合同编号与引用 customer；不包含机器/ICCID 清单
+  - product：型号定义；不包含客户/合同/ICCID
+  - machine：引用 contract 与 product；客户只能通过 contract 间接关联
+  - iccid：引用 machine（允许为空/解绑）；不直接引用 customer/contract/product
+- 引用方式冻结：只允许用对方“业务主键”引用（不引用名称等描述字段）
+- 软删除冻结：deleted_at 作为软删除标记；业务主键不复用
+
+### 3.15 主数据最小字段集 + 首次建表（Flyway V0004）✅ 封板
+- 新增迁移：V0004__masterdata_init.sql，创建 5 张主数据表：
+  - md_customer / md_contract / md_product / md_machine / md_iccid
+- 引用原则（3.18 冻结）：只用业务主键互相引用：
+  - contract.customer_code -> customer.customer_code
+  - machine.contract_no -> contract.contract_no
+  - machine.product_code -> product.product_code
+  - iccid.machine_sn -> machine.machine_sn（允许为空）
+- 软删除：deleted_at 为空=有效；不物理删除；业务主键保持唯一避免复用
+- 验收：mvnw -q clean test 通过
 
 
 ## 4. 当前工程状态
