@@ -275,6 +275,18 @@
 - 验收：
   - 双击 DFBS-TEST.bat
   - 输出 [OK] TESTS PASS / BUILD SUCCESS
+### 3.24 主数据 Repo 写方法调用自动化守门（加强）✅ 封板
+- 背景：仅限制 Repo 依赖范围（3.21）仍可能出现 repo.save/delete 被误调用的情况。
+- 决策：通过 ArchUnit 测试，限制主数据 Repo 的写方法（save/delete*）只能在 *MasterDataService 中调用。
+- 规则说明：
+  - 检查范围：main 代码（排除 test）
+  - 允许位置：*MasterDataService
+  - 禁止行为：在其他类中直接调用主数据 Repo 的 save / delete* 方法
+- 文件：
+  - backend/dfbs-app/src/test/java/com/dfbs/app/MasterDataReadOnlyRulesTest.java
+- 验收：
+  - 双击 DFBS-TEST.bat
+  - 所有测试通过（BUILD SUCCESS）
 
 
 ## 4. 当前工程状态
