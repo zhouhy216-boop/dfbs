@@ -1,13 +1,11 @@
 # DFBS 项目文件清单（自动生成）
 
-生成时间：2026-01-20 12:48:31
+生成时间：2026-01-20 13:50:26
 
 ## 常用索引（自动生成，按分组）
 > 这一段用于让 ChatGPT / 自己快速定位关键文件，不需要手工维护。
 
 ### 本地入口脚本（START/END）
-- DFBS-START.bat
-- DFBS-END.bat
 - gen_project_files.py
 
 ### 基础设施（Docker）
@@ -56,21 +54,18 @@
 .gitignore
 DFBS-APP-RUN.ps1
 DFBS-DEV.ps1
-DFBS-END.bat
 DFBS-END.ps1
-DFBS-GEN-PROJECT-FILES.bat
 DFBS-GEN-PROJECT-FILES.ps1
 DFBS-GIT-PULL.ps1
 DFBS-HEALTHZ.ps1
 DFBS-INFRA-UP.ps1
-DFBS-NEW-MODULE.bat
+DFBS-LOG-CLEAN.ps1
 DFBS-NEW-MODULE.ps1
-DFBS-START.bat
 DFBS-STOP-APP.ps1
-DFBS-TEST.bat
 DFBS-TEST.ps1
 PROJECT_FILES.md
 PROJECT_STATUS.md
+PROJECT_STATUS_OLD.md
 README.md
 backend/dfbs-app/.gitattributes
 backend/dfbs-app/.gitignore
@@ -125,6 +120,11 @@ backend/dfbs-modules/README.md
 backend/dfbs-platform/.gitkeep
 backend/dfbs-platform/README.md
 backend/pom.xml
+deprecated-bat/DFBS-END.bat
+deprecated-bat/DFBS-GEN-PROJECT-FILES.bat
+deprecated-bat/DFBS-NEW-MODULE.bat
+deprecated-bat/DFBS-START.bat
+deprecated-bat/DFBS-TEST.bat
 docs/DECISIONS.md
 docs/baseline/final_01_mvp_scope_v2_1_final_full.md
 docs/baseline/final_02_module_map_v2_1_final_full.mmd
@@ -143,13 +143,19 @@ logs/dfbs-app-run_20260120_122157.log
 logs/dfbs-app-run_20260120_124226.log
 logs/dfbs-app-run_20260120_124534.log
 logs/dfbs-app-run_20260120_124620.log
+logs/dfbs-app-run_20260120_124928.log
 logs/dfbs-end_20260120_113931.log
 logs/dfbs-end_20260120_120642.log
 logs/dfbs-end_20260120_121355.log
 logs/dfbs-end_20260120_121727.log
 logs/dfbs-end_20260120_122147.log
+logs/dfbs-end_20260120_124855.log
+logs/dfbs-end_20260120_125247.log
 logs/dfbs-gen-project-files_20260120_113856.log
 logs/dfbs-gen-project-files_20260120_124830.log
+logs/dfbs-gen-project-files_20260120_125254.log
+logs/dfbs-gen-project-files_20260120_135025.log
+logs/dfbs-git-pull_20260120_125302.log
 logs/dfbs-healthz_20260120_111643.log
 logs/dfbs-healthz_20260120_111812.log
 logs/dfbs-healthz_20260120_112921.log
@@ -161,6 +167,7 @@ logs/dfbs-healthz_20260120_122124.log
 logs/dfbs-healthz_20260120_122202.log
 logs/dfbs-healthz_20260120_124557.log
 logs/dfbs-healthz_20260120_124640.log
+logs/dfbs-healthz_20260120_124943.log
 logs/dfbs-infra-up_20260120_104812.log
 logs/dfbs-infra-up_20260120_104853.log
 logs/dfbs-infra-up_20260120_105019.log
@@ -177,11 +184,15 @@ logs/dfbs-infra-up_20260120_122157.log
 logs/dfbs-infra-up_20260120_124226.log
 logs/dfbs-infra-up_20260120_124534.log
 logs/dfbs-infra-up_20260120_124620.log
+logs/dfbs-infra-up_20260120_124918.log
 logs/dfbs-stop-app_20260120_124216.log
 logs/dfbs-stop-app_20260120_124343.log
 logs/dfbs-stop-app_20260120_124522.log
 logs/dfbs-stop-app_20260120_124612.log
 logs/dfbs-stop-app_20260120_124754.log
+logs/dfbs-stop-app_20260120_124908.log
+logs/dfbs-stop-app_20260120_125000.log
+logs/dfbs-stop-app_20260120_125242.log
 logs/dfbs-test_20260120_110415.log
 logs/dfbs-test_20260120_111900.log
 logs/dfbs-test_20260120_113907.log
