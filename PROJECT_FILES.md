@@ -1,6 +1,6 @@
 # DFBS 项目文件清单（自动生成）
 
-生成时间：2026-01-20 13:50:26
+生成时间：2026-01-20 16:28:52
 
 ## 常用索引（自动生成，按分组）
 > 这一段用于让 ChatGPT / 自己快速定位关键文件，不需要手工维护。
@@ -88,6 +88,7 @@ backend/dfbs-app/src/main/java/com/dfbs/app/application/iccid/IccidMasterDataSer
 backend/dfbs-app/src/main/java/com/dfbs/app/application/machine/MachineMasterDataService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/product/ProductMasterDataService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/quote/QuoteVersionService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/customer/CustomerMasterDataController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/QuoteVersionController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/contract/ContractEntity.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/contract/ContractRepo.java
@@ -110,6 +111,7 @@ backend/dfbs-app/src/main/resources/db/migration/V0004__masterdata_init.sql
 backend/dfbs-app/src/test/java/com/dfbs/app/ArchitectureRulesTest.java
 backend/dfbs-app/src/test/java/com/dfbs/app/DfbsAppApplicationTests.java
 backend/dfbs-app/src/test/java/com/dfbs/app/MasterDataReadOnlyRulesTest.java
+backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/customer/CustomerMasterDataCreateTest.java
 backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/quote/QuoteVersionActivateTest.java
 backend/dfbs-application/.gitkeep
 backend/dfbs-application/README.md
@@ -144,6 +146,9 @@ logs/dfbs-app-run_20260120_124226.log
 logs/dfbs-app-run_20260120_124534.log
 logs/dfbs-app-run_20260120_124620.log
 logs/dfbs-app-run_20260120_124928.log
+logs/dfbs-app-run_20260120_135619.log
+logs/dfbs-app-run_20260120_135704.log
+logs/dfbs-app-run_20260120_135948.log
 logs/dfbs-end_20260120_113931.log
 logs/dfbs-end_20260120_120642.log
 logs/dfbs-end_20260120_121355.log
@@ -151,10 +156,13 @@ logs/dfbs-end_20260120_121727.log
 logs/dfbs-end_20260120_122147.log
 logs/dfbs-end_20260120_124855.log
 logs/dfbs-end_20260120_125247.log
+logs/dfbs-end_20260120_135127.log
+logs/dfbs-end_20260120_162842.log
 logs/dfbs-gen-project-files_20260120_113856.log
 logs/dfbs-gen-project-files_20260120_124830.log
 logs/dfbs-gen-project-files_20260120_125254.log
 logs/dfbs-gen-project-files_20260120_135025.log
+logs/dfbs-gen-project-files_20260120_162851.log
 logs/dfbs-git-pull_20260120_125302.log
 logs/dfbs-healthz_20260120_111643.log
 logs/dfbs-healthz_20260120_111812.log
@@ -168,6 +176,9 @@ logs/dfbs-healthz_20260120_122202.log
 logs/dfbs-healthz_20260120_124557.log
 logs/dfbs-healthz_20260120_124640.log
 logs/dfbs-healthz_20260120_124943.log
+logs/dfbs-healthz_20260120_142115.log
+logs/dfbs-healthz_20260120_145912.log
+logs/dfbs-healthz_20260120_150634.log
 logs/dfbs-infra-up_20260120_104812.log
 logs/dfbs-infra-up_20260120_104853.log
 logs/dfbs-infra-up_20260120_105019.log
@@ -185,6 +196,9 @@ logs/dfbs-infra-up_20260120_124226.log
 logs/dfbs-infra-up_20260120_124534.log
 logs/dfbs-infra-up_20260120_124620.log
 logs/dfbs-infra-up_20260120_124918.log
+logs/dfbs-infra-up_20260120_135619.log
+logs/dfbs-infra-up_20260120_135657.log
+logs/dfbs-infra-up_20260120_135905.log
 logs/dfbs-stop-app_20260120_124216.log
 logs/dfbs-stop-app_20260120_124343.log
 logs/dfbs-stop-app_20260120_124522.log
@@ -193,9 +207,36 @@ logs/dfbs-stop-app_20260120_124754.log
 logs/dfbs-stop-app_20260120_124908.log
 logs/dfbs-stop-app_20260120_125000.log
 logs/dfbs-stop-app_20260120_125242.log
+logs/dfbs-stop-app_20260120_135612.log
+logs/dfbs-stop-app_20260120_135644.log
+logs/dfbs-stop-app_20260120_135844.log
+logs/dfbs-stop-app_20260120_135901.log
+logs/dfbs-stop-app_20260120_162833.log
 logs/dfbs-test_20260120_110415.log
 logs/dfbs-test_20260120_111900.log
 logs/dfbs-test_20260120_113907.log
 logs/dfbs-test_20260120_124711.log
+logs/dfbs-test_20260120_135737.log
+logs/dfbs-test_20260120_135848.log
+logs/dfbs-test_20260120_135914.log
+logs/dfbs-test_20260120_141100.log
+logs/dfbs-test_20260120_141713.log
+logs/dfbs-test_20260120_141826.log
+logs/dfbs-test_20260120_142051.log
+logs/dfbs-test_20260120_142803.log
+logs/dfbs-test_20260120_143254.log
+logs/dfbs-test_20260120_144817.log
+logs/dfbs-test_20260120_145848.log
+logs/dfbs-test_20260120_150607.log
+logs/dfbs-test_20260120_150707.log
+logs/dfbs-test_20260120_150913.log
+logs/dfbs-test_20260120_151205.log
+logs/dfbs-test_20260120_151322.log
+logs/dfbs-test_20260120_151434.log
+logs/dfbs-test_20260120_151536.log
+logs/dfbs-test_20260120_151853.log
+logs/dfbs-test_20260120_152022.log
+logs/dfbs-test_20260120_152050.log
+logs/dfbs-test_20260120_153519.log
 tools/new_module.py
 ```
