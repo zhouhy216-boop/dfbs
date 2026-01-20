@@ -1,6 +1,6 @@
 # DFBS 项目文件清单（自动生成）
 
-生成时间：2026-01-19 16:21:00
+生成时间：2026-01-20 11:38:56
 
 ## 常用索引（自动生成，按分组）
 > 这一段用于让 ChatGPT / 自己快速定位关键文件，不需要手工维护。
@@ -54,11 +54,20 @@
 
 ```
 .gitignore
+DFBS-APP-RUN.ps1
+DFBS-DEV.ps1
 DFBS-END.bat
+DFBS-END.ps1
 DFBS-GEN-PROJECT-FILES.bat
+DFBS-GEN-PROJECT-FILES.ps1
+DFBS-GIT-PULL.ps1
+DFBS-HEALTHZ.ps1
+DFBS-INFRA-UP.ps1
 DFBS-NEW-MODULE.bat
+DFBS-NEW-MODULE.ps1
 DFBS-START.bat
 DFBS-TEST.bat
+DFBS-TEST.ps1
 PROJECT_FILES.md
 PROJECT_STATUS.md
 README.md
@@ -70,6 +79,7 @@ backend/dfbs-app/README.md
 backend/dfbs-app/dep.txt
 backend/dfbs-app/logs/dfbs-app.log
 backend/dfbs-app/logs/dfbs-app.log.2026-01-16.0.gz
+backend/dfbs-app/logs/dfbs-app.log.2026-01-19.0.gz
 backend/dfbs-app/mvnw
 backend/dfbs-app/mvnw.cmd
 backend/dfbs-app/pom.xml
@@ -120,5 +130,26 @@ docs/baseline/final_02_module_map_v2_1_final_full.mmd
 docs/baseline/final_03_project_structure_v2_1_final_full.txt
 gen_project_files.py
 infra/docker-compose.yml
+logs/dfbs-app-run_20260120_105306.log
+logs/dfbs-app-run_20260120_111624.log
+logs/dfbs-app-run_20260120_112153.log
+logs/dfbs-app-run_20260120_112915.log
+logs/dfbs-app-run_20260120_113746.log
+logs/dfbs-gen-project-files_20260120_113856.log
+logs/dfbs-healthz_20260120_111643.log
+logs/dfbs-healthz_20260120_111812.log
+logs/dfbs-healthz_20260120_112921.log
+logs/dfbs-healthz_20260120_113751.log
+logs/dfbs-infra-up_20260120_104812.log
+logs/dfbs-infra-up_20260120_104853.log
+logs/dfbs-infra-up_20260120_105019.log
+logs/dfbs-infra-up_20260120_105259.log
+logs/dfbs-infra-up_20260120_111457.log
+logs/dfbs-infra-up_20260120_111613.log
+logs/dfbs-infra-up_20260120_112152.log
+logs/dfbs-infra-up_20260120_112915.log
+logs/dfbs-infra-up_20260120_113744.log
+logs/dfbs-test_20260120_110415.log
+logs/dfbs-test_20260120_111900.log
 tools/new_module.py
 ```
