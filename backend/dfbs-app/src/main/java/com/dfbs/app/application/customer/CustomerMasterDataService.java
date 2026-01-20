@@ -1,24 +1,61 @@
 package com.dfbs.app.application.customer;
 
+import com.dfbs.app.modules.customer.CustomerEntity;
 import com.dfbs.app.modules.customer.CustomerRepo;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 主数据 Customer 的“唯一写入口”（占坑）。
- *
- * 当前阶段（3.22）规则：
- * - 只创建空骨架，不引入任何业务逻辑
- * - 未来所有对 Customer 主数据的写入（新增/修改/作废/软删除）只能收敛到这里
- * - 其他模块禁止直接调用 CustomerRepo.save/delete（由 ArchUnit 守门）
- */
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
 @Service
 public class CustomerMasterDataService {
 
-    private final CustomerRepo customerRepo;
+    private final CustomerRepo repo;
 
-    public CustomerMasterDataService(CustomerRepo customerRepo) {
-        this.customerRepo = customerRepo;
+    public CustomerMasterDataService(CustomerRepo repo) {
+        this.repo = repo;
     }
 
-    // 3.22：先不提供任何方法，避免引入写逻辑与新业务假设
+    @Transactional
+    public CreateCustomerResult createCustomer(String customerNoRaw, String nameRaw) {
+
+        String customerNo = normalizeRequired(customerNoRaw, "customerNo");
+        String name = normalizeRequired(nameRaw, "name");
+
+        // 内部字段叫 customerCode，但对外字段统一为 customerNo
+        repo.findByCustomerCodeAndDeletedAtIsNull(customerNo).ifPresent(e -> {
+            throw new IllegalStateException("customerNo already exists: " + customerNo);
+        });
+
+        CustomerEntity entity = new CustomerEntity();
+        entity.setId(UUID.randomUUID());
+        entity.setCustomerCode(customerNo);
+        entity.setName(name);
+
+        OffsetDateTime now = OffsetDateTime.now();
+        entity.setCreatedAt(now);
+        entity.setUpdatedAt(now);
+
+        CustomerEntity saved = repo.save(entity);
+
+        return new CreateCustomerResult(
+                customerNo,
+                saved.getName(),
+                saved.getCreatedAt()
+        );
+    }
+
+    private String normalizeRequired(String raw, String field) {
+        if (raw == null || raw.trim().isEmpty()) {
+            throw new IllegalArgumentException(field + " is required");
+        }
+        return raw.trim();
+    }
+
+    public record CreateCustomerResult(
+            String customerNo,
+            String name,
+            OffsetDateTime createdAt
+    ) {}
 }

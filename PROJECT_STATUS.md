@@ -28,6 +28,52 @@
     - 默认给出【最省事方案】（尽量“一次覆盖整文件/一次运行一个脚本”）
 - 需要前置信息时：必须明确让用户贴哪个文件或哪段内容
 - 本约定与 v2.1_final 同级，不得违反
+### 1.1 已有文件修改前置规则（冻结）✅ 封板
+
+- 当需要修改任何【本地已存在的代码文件】时：
+  - 若该文件的完整内容未在当前对话中给出，必须先由用户上传该文件的完整原始内容。
+  - 在未获得原文件全文之前，禁止直接给出修改方案或替换代码。
+- 助手仅允许在以下前提下输出修改指令：
+  - 基于用户上传的原文件内容；
+  - 输出形式必须为：
+    1) 可整体替换的完整文件，或
+    2) 明确到文件路径 + 行号的最小修改说明。
+- 未提供原文件全文的情况下，一律视为“不可修改状态”。
+
+> 目的：避免因本地源文件不一致导致的反复返工与误修改。
+### 1.2 需求边界与冻结基准确认规则（冻结）✅ 封板
+
+- v2.1_final 的唯一权威需求与结构基准文件，统一存放于目录：
+  - docs/baseline/
+
+- v2.1_final 的唯一权威基准文件清单：
+  - docs/baseline/final_01_mvp_scope_v2_1_final_full.md
+  - docs/baseline/final_02_module_map_v2_1_final_full.mmd
+  - docs/baseline/final_03_project_structure_v2_1_final_full.txt
+
+- 禁止新增、复制或维护任何其它“基准文件”副本，避免多份文件不一致导致返工。
+
+- 当实现或修改代码涉及以下内容，且上述基准文件中【未明确写出】时：
+  - 行为逻辑
+  - 字段定义
+  - 业务流程
+  - 页面/接口结构
+  - 状态与状态流转
+  - 权限规则
+  - 计费/报表口径
+  - 外部系统交互或扩展点
+
+  必须遵循以下流程：
+  - 助手需先用一句话明确说明“将要新增或引入的点是什么”
+  - 明确向用户请求确认：“做 / 不做 / 暂不做”
+  - 在用户确认之前，禁止继续落代码或给出实现方案
+
+> 目的：确保所有实现严格受控于 v2.1_final，避免隐性新增需求与结构性返工。
+- 字段命名映射（冻结）：
+  - 对外（接口/报表/页面/导入导出）统一使用：customerNo
+  - 对内（Entity/DB 字段）保留：customerCode
+  - 映射规则固定为：customerNo ⇄ customerCode
+  - 禁止在对外层出现 customerCode；禁止在对外 JSON 出现 code/customerCode 等别名
 
 ---
 
@@ -113,6 +159,26 @@
     - application/<module>/<Module>MasterDataService
 - 仅最小空实现，占位不引入业务逻辑
 - 不破坏主数据 Repo 只读守门规则
+### 5.7 Customer 主数据写入口（最小写入闭环）✅ 封板
+
+- 写入口唯一性：
+  - Customer 写入只能通过 CustomerMasterDataService
+  - 禁止在任何其它位置调用 CustomerRepo.save/delete*（ArchUnit 守门）
+
+- API（对外）字段命名冻结：
+  - 对外（接口/报表/页面/导入导出）统一使用：customerNo
+  - 对内（Entity/DB 字段）保留：customerCode
+  - 映射规则固定为：customerNo ⇄ customerCode
+  - 禁止对外出现 customerCode / code / customerNo 的多套别名
+
+- 主键策略冻结：
+  - CustomerEntity.id 为手动赋值型
+  - CustomerMasterDataService 在保存前必须生成 UUID 并 setId
+
+- 最小写入闭环验收标准：
+  - DFBS-TEST.ps1 输出 BUILD SUCCESS
+  - CustomerMasterDataCreateTest 通过
+  - ArchitectureRulesTest / MasterDataReadOnlyRulesTest 通过
 
 ---
 
