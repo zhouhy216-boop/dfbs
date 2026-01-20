@@ -1,6 +1,6 @@
 # DFBS 项目文件清单（自动生成）
 
-生成时间：2026-01-20 16:28:52
+生成时间：2026-01-20 16:36:20
 
 ## 常用索引（自动生成，按分组）
 > 这一段用于让 ChatGPT / 自己快速定位关键文件，不需要手工维护。
@@ -158,11 +158,13 @@ logs/dfbs-end_20260120_124855.log
 logs/dfbs-end_20260120_125247.log
 logs/dfbs-end_20260120_135127.log
 logs/dfbs-end_20260120_162842.log
+logs/dfbs-end_20260120_162857.log
 logs/dfbs-gen-project-files_20260120_113856.log
 logs/dfbs-gen-project-files_20260120_124830.log
 logs/dfbs-gen-project-files_20260120_125254.log
 logs/dfbs-gen-project-files_20260120_135025.log
 logs/dfbs-gen-project-files_20260120_162851.log
+logs/dfbs-gen-project-files_20260120_163620.log
 logs/dfbs-git-pull_20260120_125302.log
 logs/dfbs-healthz_20260120_111643.log
 logs/dfbs-healthz_20260120_111812.log
@@ -212,6 +214,7 @@ logs/dfbs-stop-app_20260120_135644.log
 logs/dfbs-stop-app_20260120_135844.log
 logs/dfbs-stop-app_20260120_135901.log
 logs/dfbs-stop-app_20260120_162833.log
+logs/dfbs-stop-app_20260120_163612.log
 logs/dfbs-test_20260120_110415.log
 logs/dfbs-test_20260120_111900.log
 logs/dfbs-test_20260120_113907.log
