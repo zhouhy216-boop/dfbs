@@ -26,13 +26,6 @@ Write-Host ""
 
 # 3) healthz in a new window (delay to let app start)
 # Use -ExecutionPolicy Bypass to avoid policy prompts; -NoExit so window stays.
-$healthzScript = Join-Path $Root "DFBS-HEALTHZ.ps1"
-$healthzCmd = "Start-Sleep -Seconds 5; & `"$healthzScript`""
-Start-Process powershell.exe -ArgumentList @(
-  "-NoProfile",
-  "-ExecutionPolicy", "Bypass",
-  "-Command", $healthzCmd
-) | Out-Null
 
 # 2) app run (long-running in this window)
 Write-Host "=================================================="
