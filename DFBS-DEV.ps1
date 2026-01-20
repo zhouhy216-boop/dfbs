@@ -31,7 +31,6 @@ $healthzCmd = "Start-Sleep -Seconds 5; & `"$healthzScript`""
 Start-Process powershell.exe -ArgumentList @(
   "-NoProfile",
   "-ExecutionPolicy", "Bypass",
-  "-NoExit",
   "-Command", $healthzCmd
 ) | Out-Null
 
