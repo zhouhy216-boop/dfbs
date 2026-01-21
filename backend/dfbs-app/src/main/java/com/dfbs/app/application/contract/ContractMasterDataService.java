@@ -1,22 +1,39 @@
 package com.dfbs.app.application.contract;
 
+import com.dfbs.app.modules.contract.ContractEntity;
 import com.dfbs.app.modules.contract.ContractRepo;
+import com.dfbs.app.modules.customer.CustomerRepo;
 import org.springframework.stereotype.Service;
 
-/**
- * 主数据 Contract 的“唯一写入口”（占坑）。
- *
- * 3.22：仅骨架占坑，不写业务逻辑。
- * 未来 contract 的写入只能从这里进入，避免 repo 写入散落导致返工。
- */
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
 @Service
 public class ContractMasterDataService {
 
     private final ContractRepo contractRepo;
+    private final CustomerRepo customerRepo;
 
-    public ContractMasterDataService(ContractRepo contractRepo) {
+    public ContractMasterDataService(
+            ContractRepo contractRepo,
+            CustomerRepo customerRepo
+    ) {
         this.contractRepo = contractRepo;
+        this.customerRepo = customerRepo;
     }
 
-    // 3.22：空实现
+    public ContractEntity create(String contractNo, String customerCode) {
+        customerRepo.findByCustomerCodeAndDeletedAtIsNull(customerCode)
+                .orElseThrow(() -> new IllegalStateException("customer not found"));
+
+        ContractEntity entity = new ContractEntity();
+        entity.setId(UUID.randomUUID());
+        entity.setContractNo(contractNo);
+        entity.setCustomerCode(customerCode);
+        entity.setStatus("ACTIVE");
+        entity.setCreatedAt(OffsetDateTime.now());
+        entity.setUpdatedAt(OffsetDateTime.now());
+
+        return contractRepo.save(entity);
+    }
 }

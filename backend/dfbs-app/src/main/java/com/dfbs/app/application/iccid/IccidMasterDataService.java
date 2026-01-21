@@ -1,21 +1,41 @@
 package com.dfbs.app.application.iccid;
 
+import com.dfbs.app.modules.iccid.IccidEntity;
 import com.dfbs.app.modules.iccid.IccidRepo;
+import com.dfbs.app.modules.machine.MachineRepo;
 import org.springframework.stereotype.Service;
 
-/**
- * 主数据 ICCID 的“唯一写入口”（占坑）。
- *
- * 3.22：仅骨架占坑，不写业务逻辑。
- */
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
 @Service
 public class IccidMasterDataService {
 
     private final IccidRepo iccidRepo;
+    private final MachineRepo machineRepo;
 
-    public IccidMasterDataService(IccidRepo iccidRepo) {
+    public IccidMasterDataService(
+            IccidRepo iccidRepo,
+            MachineRepo machineRepo
+    ) {
         this.iccidRepo = iccidRepo;
+        this.machineRepo = machineRepo;
     }
 
-    // 3.22：空实现
+    public IccidEntity create(String iccidNo, String machineSn) {
+        if (machineSn != null) {
+            machineRepo.findByMachineSn(machineSn)
+                    .orElseThrow(() -> new IllegalStateException("machine not found"));
+        }
+
+        IccidEntity entity = new IccidEntity();
+        entity.setId(UUID.randomUUID());
+        entity.setIccidNo(iccidNo);
+        entity.setMachineSn(machineSn);
+        entity.setStatus("ACTIVE");
+        entity.setCreatedAt(OffsetDateTime.now());
+        entity.setUpdatedAt(OffsetDateTime.now());
+
+        return iccidRepo.save(entity);
+    }
 }

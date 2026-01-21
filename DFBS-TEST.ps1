@@ -1,10 +1,12 @@
-# DFBS-TEST.ps1 - run backend tests only (SAFE)
-# - NO git pull
-# - NO docker compose
-# - NO app start
-# - Always write FULL output log to logs\
-# - Keep window open (Press Enter to close)
 param([switch]$NoPause)
+
+# ==================================================
+# DFBS-TEST.ps1 (PowerShell 7+ only)
+# 目标：
+# - 实时滚动输出（避免“像卡死”）
+# - 同时生成 FULL LOG + SUMMARY LOG
+# - PASS/FAIL 只由 mvnw exit code 决定（忽略 warning）
+# ==================================================
 
 $Root   = $PSScriptRoot
 $App    = Join-Path $Root "backend\dfbs-app"
@@ -12,105 +14,97 @@ $LogDir = Join-Path $Root "logs"
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 
 $Ts = Get-Date -Format "yyyyMMdd_HHmmss"
-$LogFile = Join-Path $LogDir ("dfbs-test_{0}.log" -f $Ts)
+$LogFile     = Join-Path $LogDir ("dfbs-test_{0}.log" -f $Ts)
+$SummaryFile = Join-Path $LogDir ("dfbs-test_{0}.summary.log" -f $Ts)
 
-function Write-Header {
-  "==================================================" | Out-File -FilePath $LogFile -Encoding UTF8
-  "DFBS TEST - mvnw clean test" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  ("Time: {0}" -f (Get-Date)) | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  ("Root: {0}" -f $Root) | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  ("App : {0}" -f $App)  | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  "==================================================" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  "" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  "[RUN] mvnw clean test" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
+function Write-Header([string]$path) {
+  "==================================================" | Out-File -FilePath $path -Encoding UTF8
+  "DFBS TEST - mvnw clean test"                        | Out-File -FilePath $path -Encoding UTF8 -Append
+  ("Time: {0}" -f (Get-Date -Format "yyyy/M/d HH:mm:ss")) | Out-File -FilePath $path -Encoding UTF8 -Append
+  ("Root: {0}" -f $Root)                              | Out-File -FilePath $path -Encoding UTF8 -Append
+  ("App : {0}" -f $App)                               | Out-File -FilePath $path -Encoding UTF8 -Append
+  "==================================================" | Out-File -FilePath $path -Encoding UTF8 -Append
+  ""                                                  | Out-File -FilePath $path -Encoding UTF8 -Append
 }
 
-try {
-  Write-Host "=================================================="
-  Write-Host "DFBS TEST - mvnw clean test"
-  Write-Host "Time: $(Get-Date)"
-  Write-Host "Root: $Root"
-  Write-Host "App : $App"
-  Write-Host "Log : $LogFile"
-  Write-Host "=================================================="
-  Write-Host ""
+function Build-Summary([string]$fullLog, [string]$summaryLog, [int]$exitCode) {
+  $lines = Get-Content -Path $fullLog -Encoding UTF8
 
-  if (!(Test-Path $App)) { throw "App folder not found: $App" }
+  $out = New-Object System.Collections.Generic.List[string]
+  $out.Add("==================================================")
+  $out.Add("DFBS TEST - SUMMARY")
+  $out.Add(("Time: {0}" -f (Get-Date -Format "yyyy/M/d HH:mm:ss")))
+  $out.Add(("RESULT: {0} (exit code={1})" -f ($(if ($exitCode -eq 0) {"SUCCESS"} else {"FAILURE"}), $exitCode)))
+  $out.Add(("FULL LOG   : {0}" -f $fullLog))
+  $out.Add(("SUMMARY LOG: {0}" -f $summaryLog))
+  $out.Add("==================================================")
+  $out.Add("")
 
-  $mvnw = Join-Path $App "mvnw.cmd"
-  if (!(Test-Path $mvnw)) { throw "mvnw.cmd not found: $mvnw" }
-
-  Write-Header
-
-  # 用 Start-Process 运行，确保：
-  # - 输出一定写到日志（stdout+stderr）
-  # - 退出码一定可靠
-  $psi = New-Object System.Diagnostics.ProcessStartInfo
-  $psi.FileName = "cmd.exe"
-  $psi.Arguments = "/c `"$mvnw`" clean test"
-  $psi.WorkingDirectory = $App
-  $psi.UseShellExecute = $false
-  $psi.RedirectStandardOutput = $true
-  $psi.RedirectStandardError  = $true
-  $psi.CreateNoWindow = $true
-
-  $p = New-Object System.Diagnostics.Process
-  $p.StartInfo = $psi
-
-  [void]$p.Start()
-
-  # 实时把输出写入日志，同时打印到控制台
-  while (-not $p.HasExited) {
-    while (-not $p.StandardOutput.EndOfStream) {
-      $line = $p.StandardOutput.ReadLine()
-      $line | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-      Write-Host $line
+  # 关键行：少而关键
+  foreach ($line in $lines) {
+    if ($line -match 'Tests run:' -or
+        $line -match 'Failures:' -or
+        $line -match 'Errors:'   -or
+        $line -match 'Skipped:'  -or
+        $line -match 'BUILD SUCCESS' -or
+        $line -match 'BUILD FAILURE' -or
+        $line -match '^\[ERROR\]' -or
+        $line -match '^\[FAILED\]' -or
+        $line -match 'surefire-reports' -or
+        $line -match 'MojoFailureException') {
+      $out.Add($line)
     }
-    while (-not $p.StandardError.EndOfStream) {
-      $line = $p.StandardError.ReadLine()
-      $line | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-      Write-Host $line
-    }
-    Start-Sleep -Milliseconds 50
   }
 
-  # 把剩余的尾巴读完
-  while (-not $p.StandardOutput.EndOfStream) {
-    $line = $p.StandardOutput.ReadLine()
-    $line | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-    Write-Host $line
-  }
-  while (-not $p.StandardError.EndOfStream) {
-    $line = $p.StandardError.ReadLine()
-    $line | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-    Write-Host $line
-  }
-
-  $exitCode = $p.ExitCode
-
-  Write-Host ""
-  if ($exitCode -eq 0) {
-    "[OK] TESTS PASS" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-    Write-Host "[OK] TESTS PASS"
-  } else {
-    ("[FAILED] mvnw clean test (exit code={0})" -f $exitCode) | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-    ("Please open log: {0}" -f $LogFile) | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-    Write-Host ("[FAILED] mvnw clean test (exit code={0})" -f $exitCode)
-    Write-Host "Please open log: $LogFile"
-  }
-
-  if (-not $NoPause) { Read-Host "Press Enter to close" }
-
-  exit $exitCode
+  Set-Content -Path $summaryLog -Value $out -Encoding UTF8
 }
-catch {
-  "" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  ("[FAILED] {0}" -f $_.Exception.Message) | Out-File -FilePath $LogFile -Encoding UTF8 -Append
 
-  Write-Host ""
-  Write-Host "[FAILED] $($_.Exception.Message)"
-  Write-Host "Please open log: $LogFile"
+Write-Header -path $LogFile
 
+if (-not (Test-Path $App)) {
+  "[FAILED] App folder not found: $App" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
+  Write-Host "❌ TEST FAIL (app folder missing)"
+  Write-Host "FULL LOG   : $LogFile"
+  Write-Host "SUMMARY LOG: $SummaryFile"
   if (-not $NoPause) { Read-Host "Press Enter to close" }
   exit 1
 }
+
+Push-Location $App
+
+$mvnw = Join-Path $App "mvnw.cmd"
+if (-not (Test-Path $mvnw)) { $mvnw = Join-Path $App "mvnw" }
+if (-not (Test-Path $mvnw)) {
+  Pop-Location
+  "[FAILED] mvnw not found" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
+  Write-Host "❌ TEST FAIL (mvnw not found)"
+  Write-Host "FULL LOG   : $LogFile"
+  Write-Host "SUMMARY LOG: $SummaryFile"
+  if (-not $NoPause) { Read-Host "Press Enter to close" }
+  exit 1
+}
+
+"[RUN] mvnw clean test" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
+
+# ✅ 实时滚动输出：
+# - 控制台边跑边输出
+# - 同时把输出追加写入 LogFile
+# - 不做任何“把 warning 当失败”的判断
+& $mvnw clean test 2>&1 | Tee-Object -FilePath $LogFile -Append
+
+$exitCode = $LASTEXITCODE
+Pop-Location
+
+Build-Summary -fullLog $LogFile -summaryLog $SummaryFile -exitCode $exitCode
+
+Write-Host ""
+if ($exitCode -eq 0) {
+  Write-Host "✅ TEST PASS (exit code=0)"
+} else {
+  Write-Host "❌ TEST FAIL (exit code=$exitCode)"
+}
+Write-Host "FULL LOG   : $LogFile"
+Write-Host "SUMMARY LOG: $SummaryFile"
+
+if (-not $NoPause) { Read-Host "Press Enter to close" }
+exit $exitCode

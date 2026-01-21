@@ -244,6 +244,195 @@
   - CustomerMasterDataCreateTest 通过
   - MasterDataReadOnlyRulesTest 通过
 
+---
+
+## 11. 主数据 Customer（Soft Delete）✅ 封板
+
+- 能力：Customer 软删除（仅标记 deleted_at，不物理删除）
+- HTTP：DELETE /api/masterdata/customers/{id} → 204
+- 创建冲突：customerNo 已存在 → 409 Conflict（业务主键不复用，即使软删除也不允许复用）
+- 规则：
+  - 已删除记录不可再次删除（找不到或已删除 → 404）
+  - 已删除记录不参与“未删除列表/查询”（只读查询默认过滤 deleted_at）
+- 约束：
+  - Repo 写入仅允许发生在 CustomerMasterDataService
+  - 不允许物理 delete
+- 验收：
+  - DFBS-TEST.ps1 → BUILD SUCCESS
+  - 删除后再次使用同 customerNo 创建 → 409
+
+---
+
+## 12. 主数据 Customer（Update 最小写闭环）✅ 封板
+
+- 能力：Customer 更新（最小闭环：仅更新 name）
+- HTTP：PATCH /api/masterdata/customers/{id}
+- 规则：
+  - 仅允许更新 name；不允许更新 customerNo/customerCode（业务主键不复用）
+  - 找不到或已删除（deleted_at != null）→ 404
+- 架构约束：
+  - 写操作仅允许发生在 CustomerMasterDataService
+- 验收：
+  - DFBS-TEST.ps1 → ✅ TEST PASS (exit code=0)
+  - 测试覆盖：创建后可更新 name，并返回更新后的值
+
+---
+
+## 13. 主数据 Customer（Read by ID 最小写闭环）✅ 封板
+
+- 能力：按 ID 读取 Customer
+- HTTP：GET /api/masterdata/customers/{id}
+- 规则：
+  - 仅返回未删除记录
+  - 找不到或已软删除（deleted_at != null）→ 404
+- 架构约束：
+  - 业务异常由 Controller 映射为 HTTP 语义
+  - Service 不感知 HTTP
+- 验收：
+  - DFBS-TEST.ps1 → TEST PASS (exit code=0)
+  - 测试覆盖：
+    - 创建后可按 ID 读取
+    - 软删除后读取返回 404
+
+---
+
+## 14. 【主数据 Contract｜Create 最小写闭环】✅ 已封板
+
+- 能力范围（冻结）：
+  - Contract Create（仅创建）
+  - HTTP：POST /api/masterdata/contracts → 201
+  - 不包含：Read / Update / Delete / List
+
+- 分层与约束：
+  - interfaces：
+    - ContractMasterDataController（仅 HTTP 入口）
+  - application：
+    - ContractMasterDataService（唯一写入口，事务边界）
+  - modules：
+    - ContractEntity / ContractRepo
+  - 强约束：
+    - ContractRepo 禁止在 Service 之外写入
+    - Controller 不得直接依赖 Repo（ArchUnit 守门）
+
+- 数据规则：
+  - contract_no 全局唯一
+  - customer_code 必须存在且未软删除
+  - 软删除字段：deleted_at（本阶段未启用）
+
+- 测试与验收：
+  - ContractMasterDataCreateTest：PASS
+  - 架构守门 / 只读规则：PASS
+  - DFBS-TEST.ps1：SUCCESS（exit code = 0）
+
+- 结论：
+  - Contract Create 工程闭环完成
+  - 封板，不回头
+
+---
+
+## 15. 【主数据 Product｜Create 最小写闭环】✅ 已封板
+
+- 能力范围（冻结）：
+  - Product Create（仅创建）
+  - HTTP：POST /api/masterdata/products → 201
+  - 不包含：Read / Update / Delete / List
+
+- 分层与约束：
+  - interfaces：
+    - ProductMasterDataController（仅 HTTP 入口）
+  - application：
+    - ProductMasterDataService（唯一写入口，事务边界）
+  - modules：
+    - ProductEntity / ProductRepo
+  - 强约束：
+    - ProductRepo 禁止在 Service 之外写入
+    - Controller 不得直接依赖 Repo（ArchUnit 守门）
+
+- 数据规则：
+  - product_code 全局唯一
+  - 软删除字段：deleted_at（本阶段未启用）
+
+- 测试与验收：
+  - ProductMasterDataCreateTest：PASS
+  - 架构守门 / 只读规则：PASS
+  - DFBS-TEST.ps1：SUCCESS（exit code = 0）
+
+- 结论：
+  - Product Create 工程闭环完成
+  - 封板，不回头
+
+---
+
+## 16. 【主数据 Machine｜Create 最小写闭环】✅ 已封板
+
+- 能力范围（冻结）：
+  - Machine Create（仅创建）
+  - HTTP：POST /api/masterdata/machines → 201
+  - 不包含：Read / Update / Delete / Bind / Unbind / List
+
+- 分层与约束：
+  - interfaces：
+    - MachineMasterDataController（仅 HTTP 入口）
+  - application：
+    - MachineMasterDataService（唯一写入口，事务边界）
+  - modules：
+    - MachineEntity / MachineRepo
+  - 强约束：
+    - MachineRepo 禁止在 Service 之外写入
+    - Controller 不得直接依赖 Repo（ArchUnit 守门）
+
+- 数据规则：
+  - machine_sn 全局唯一
+  - contract_no 必须存在
+  - product_code 必须存在
+  - 仅允许通过业务主键关联（不使用 id）
+  - 软删除字段：deleted_at（本阶段未启用）
+
+- 测试与验收：
+  - MachineMasterDataCreateTest：PASS
+  - 架构守门 / 只读规则：PASS
+  - DFBS-TEST.ps1：SUCCESS（exit code = 0）
+
+- 结论：
+  - Machine Create 工程闭环完成
+  - 封板，不回头
+
+
+---
+
+## 17. 【主数据 ICCID｜Create 最小写闭环】✅ 已封板
+
+- 能力范围（冻结）：
+  - ICCID Create（仅创建）
+  - HTTP：POST /api/masterdata/iccid → 201
+  - 支持：machine_sn 为空（允许未绑定/解绑）
+  - 不包含：Read / Update / Delete / Bind / Unbind / List
+
+- 分层与约束：
+  - interfaces：
+    - IccidMasterDataController（仅 HTTP 入口）
+  - application：
+    - IccidMasterDataService（唯一写入口，事务边界）
+  - modules：
+    - IccidEntity / IccidRepo
+  - 强约束：
+    - IccidRepo 禁止在 Service 之外写入
+    - Controller 不得直接依赖 Repo（ArchUnit 守门）
+
+- 数据规则：
+  - iccid_no 全局唯一
+  - machine_sn 允许为空；若不为空，则必须存在
+  - 仅允许通过业务主键关联（不使用 id）
+  - 软删除字段：deleted_at（本阶段未启用）
+
+- 测试与验收：
+  - IccidMasterDataCreateTest：PASS
+  - 架构守门 / 只读规则：PASS
+  - DFBS-TEST.ps1：SUCCESS（exit code = 0）
+
+- 结论：
+  - ICCID Create 工程闭环完成
+  - 封板，不回头
 
 
 

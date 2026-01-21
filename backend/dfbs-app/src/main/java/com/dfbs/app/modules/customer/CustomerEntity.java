@@ -1,6 +1,7 @@
 package com.dfbs.app.modules.customer;
 
 import jakarta.persistence.*;
+
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -12,14 +13,14 @@ public class CustomerEntity {
     @Column(nullable = false)
     private UUID id;
 
-    @Column(name = "customer_code", nullable = false, length = 64, unique = true)
+    @Column(name = "customer_code", nullable = false, unique = true)
     private String customerCode;
 
-    @Column(nullable = false, length = 200)
+    @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false, length = 32)
-    private String status = "ACTIVE";
+    @Column(nullable = false)
+    private String status;
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
@@ -30,27 +31,38 @@ public class CustomerEntity {
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 
-    public CustomerEntity() {}
+    protected CustomerEntity() {
+    }
 
-    // --- getters/setters ---
+    public static CustomerEntity create(String customerCode, String name) {
+        CustomerEntity e = new CustomerEntity();
+        e.id = UUID.randomUUID();
+        e.customerCode = customerCode;
+        e.name = name;
+        e.status = "ACTIVE";
+        e.createdAt = OffsetDateTime.now();
+        e.updatedAt = e.createdAt;
+        return e;
+    }
+
+    // ===== 新增：领域内更新方法 =====
+    public void updateName(String name) {
+        this.name = name;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    // ===== getters =====
     public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
-
     public String getCustomerCode() { return customerCode; }
-    public void setCustomerCode(String customerCode) { this.customerCode = customerCode; }
-
     public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-
     public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-
     public OffsetDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
-
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
-
     public OffsetDateTime getDeletedAt() { return deletedAt; }
-    public void setDeletedAt(OffsetDateTime deletedAt) { this.deletedAt = deletedAt; }
+
+    // ===== setters（仅内部使用）=====
+    public void setDeletedAt(OffsetDateTime deletedAt) {
+        this.deletedAt = deletedAt;
+        this.updatedAt = OffsetDateTime.now();
+    }
 }

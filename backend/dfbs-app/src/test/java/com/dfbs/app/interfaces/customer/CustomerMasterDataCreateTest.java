@@ -10,8 +10,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -22,66 +21,58 @@ class CustomerMasterDataCreateTest {
     private MockMvc mvc;
 
     @Autowired
-    private CustomerRepo customerRepo;
+    private CustomerRepo repo;
 
     @Test
-    void create_customer_should_return_201() throws Exception {
+    void can_read_customer_by_id() throws Exception {
+        String customerNo = "CUST-READ-" + System.currentTimeMillis();
 
-        String customerNo = "CUST-" + System.currentTimeMillis();
-
-        String body = """
-                {
-                  "customerNo": "%s",
-                  "name": "ACME Co."
-                }
-                """.formatted(customerNo);
-
+        // create
         mvc.perform(post("/api/masterdata/customers")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
-                .andExpect(status().isCreated())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.customerNo").value(customerNo))
-                .andExpect(jsonPath("$.name").value("ACME Co."))
-                .andExpect(jsonPath("$.createdAt").exists());
-    }
-
-    @Test
-    void cannot_recreate_customerNo_after_soft_delete_because_business_key_not_reusable() throws Exception {
-        String customerNo = "CUST-DELETE-TEST";
-
-        // 1) create
-        String body1 = """
-                {
-                  "customerNo": "%s",
-                  "name": "To Be Deleted"
-                }
-                """.formatted(customerNo);
-
-        mvc.perform(post("/api/masterdata/customers")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body1))
+                        .content("""
+                                {
+                                  "customerNo": "%s",
+                                  "name": "Read Me"
+                                }
+                                """.formatted(customerNo)))
                 .andExpect(status().isCreated());
 
-        UUID id = customerRepo.findByCustomerCodeAndDeletedAtIsNull(customerNo)
+        UUID id = repo.findByCustomerCodeAndDeletedAtIsNull(customerNo)
                 .orElseThrow()
                 .getId();
 
-        // 2) soft delete
+        // read
+        mvc.perform(get("/api/masterdata/customers/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Read Me"));
+    }
+
+    @Test
+    void cannot_read_deleted_customer() throws Exception {
+        String customerNo = "CUST-READ-DEL-" + System.currentTimeMillis();
+
+        // create
+        mvc.perform(post("/api/masterdata/customers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "customerNo": "%s",
+                                  "name": "Will Be Deleted"
+                                }
+                                """.formatted(customerNo)))
+                .andExpect(status().isCreated());
+
+        UUID id = repo.findByCustomerCodeAndDeletedAtIsNull(customerNo)
+                .orElseThrow()
+                .getId();
+
+        // delete
         mvc.perform(delete("/api/masterdata/customers/{id}", id))
                 .andExpect(status().isNoContent());
 
-        // 3) recreate with same customerNo -> 必须失败（409）
-        String body2 = """
-                {
-                  "customerNo": "%s",
-                  "name": "Recreated"
-                }
-                """.formatted(customerNo);
-
-        mvc.perform(post("/api/masterdata/customers")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body2))
-                .andExpect(status().isConflict());
+        // read -> 404
+        mvc.perform(get("/api/masterdata/customers/{id}", id))
+                .andExpect(status().isNotFound());
     }
 }

@@ -18,59 +18,52 @@ public class CustomerMasterDataService {
     }
 
     @Transactional
-    public CreateCustomerResult createCustomer(String customerNoRaw, String nameRaw) {
+    public CustomerEntity create(String customerNo, String name) {
+        repo.findByCustomerCode(customerNo)
+                .ifPresent(c -> {
+                    throw new IllegalStateException("customerNo already exists: " + customerNo);
+                });
 
-        String customerNo = normalizeRequired(customerNoRaw, "customerNo");
-        String name = normalizeRequired(nameRaw, "name");
-
-        // ✅ 业务主键不复用：即使软删除也不能再创建相同 customerNo
-        repo.findByCustomerCode(customerNo).ifPresent(e -> {
-            throw new IllegalStateException("customerNo already exists: " + customerNo);
-        });
-
-        CustomerEntity entity = new CustomerEntity();
-        entity.setId(UUID.randomUUID());
-        entity.setCustomerCode(customerNo);
-        entity.setName(name);
-
-        OffsetDateTime now = OffsetDateTime.now();
-        entity.setCreatedAt(now);
-        entity.setUpdatedAt(now);
-
-        CustomerEntity saved = repo.save(entity);
-
-        return new CreateCustomerResult(
-                customerNo,
-                saved.getName(),
-                saved.getCreatedAt()
-        );
+        CustomerEntity entity = CustomerEntity.create(customerNo, name);
+        return repo.save(entity);
     }
 
-    /**
-     * 软删除：只写 deletedAt，不做物理删除
-     */
+    // ===== 新增：Read（按 id，过滤软删除）=====
+    @Transactional(readOnly = true)
+    public CustomerEntity getById(UUID id) {
+        CustomerEntity entity = repo.findById(id)
+                .orElseThrow(() -> new IllegalStateException("customer not found"));
+
+        if (entity.getDeletedAt() != null) {
+            throw new IllegalStateException("customer not found");
+        }
+
+        return entity;
+    }
+
+    @Transactional
+    public CustomerEntity updateName(UUID id, String name) {
+        CustomerEntity entity = repo.findById(id)
+                .orElseThrow(() -> new IllegalStateException("customer not found"));
+
+        if (entity.getDeletedAt() != null) {
+            throw new IllegalStateException("customer already deleted");
+        }
+
+        entity.updateName(name);
+        return repo.save(entity);
+    }
+
     @Transactional
     public void softDelete(UUID id) {
-        CustomerEntity customer = repo.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new IllegalStateException("Customer not found or already deleted"));
+        CustomerEntity entity = repo.findById(id)
+                .orElseThrow(() -> new IllegalStateException("customer not found"));
 
-        OffsetDateTime now = OffsetDateTime.now();
-        customer.setDeletedAt(now);
-        customer.setUpdatedAt(now);
-
-        repo.save(customer);
-    }
-
-    private String normalizeRequired(String raw, String field) {
-        if (raw == null || raw.trim().isEmpty()) {
-            throw new IllegalArgumentException(field + " is required");
+        if (entity.getDeletedAt() != null) {
+            throw new IllegalStateException("customer already deleted");
         }
-        return raw.trim();
-    }
 
-    public record CreateCustomerResult(
-            String customerNo,
-            String name,
-            OffsetDateTime createdAt
-    ) {}
+        entity.setDeletedAt(OffsetDateTime.now());
+        repo.save(entity);
+    }
 }

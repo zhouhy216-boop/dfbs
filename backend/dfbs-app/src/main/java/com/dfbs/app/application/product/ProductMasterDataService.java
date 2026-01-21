@@ -1,13 +1,12 @@
 package com.dfbs.app.application.product;
 
+import com.dfbs.app.modules.product.ProductEntity;
 import com.dfbs.app.modules.product.ProductRepo;
 import org.springframework.stereotype.Service;
 
-/**
- * 主数据 Product 的“唯一写入口”（占坑）。
- *
- * 3.22：仅骨架占坑，不写业务逻辑。
- */
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
 @Service
 public class ProductMasterDataService {
 
@@ -17,5 +16,14 @@ public class ProductMasterDataService {
         this.productRepo = productRepo;
     }
 
-    // 3.22：空实现
+    public ProductEntity create(String productCode, String name) {
+        ProductEntity entity = new ProductEntity();
+        entity.setId(UUID.randomUUID());
+        entity.setProductCode(productCode);
+        entity.setName(name);
+        entity.setStatus("ACTIVE");
+        entity.setCreatedAt(OffsetDateTime.now());
+        entity.setUpdatedAt(OffsetDateTime.now());
+        return productRepo.save(entity);
+    }
 }
