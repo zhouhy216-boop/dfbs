@@ -1,6 +1,6 @@
 # DFBS 项目文件清单（自动生成）
 
-生成时间：2026-01-21 15:31:52
+生成时间：2026-01-21 16:38:56
 
 ## 常用索引（自动生成，按分组）
 > 这一段用于让 ChatGPT / 自己快速定位关键文件，不需要手工维护。
@@ -83,7 +83,11 @@ backend/dfbs-app/src/main/java/com/dfbs/app/application/iccid/IccidMasterDataSer
 backend/dfbs-app/src/main/java/com/dfbs/app/application/machine/MachineMasterDataService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/product/ProductMasterDataService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/quote/QuoteVersionService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/contract/ContractMasterDataController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/customer/CustomerMasterDataController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/iccid/IccidMasterDataController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/machine/MachineMasterDataController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/product/ProductMasterDataController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/QuoteVersionController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/contract/ContractEntity.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/contract/ContractRepo.java
@@ -106,7 +110,11 @@ backend/dfbs-app/src/main/resources/db/migration/V0004__masterdata_init.sql
 backend/dfbs-app/src/test/java/com/dfbs/app/ArchitectureRulesTest.java
 backend/dfbs-app/src/test/java/com/dfbs/app/DfbsAppApplicationTests.java
 backend/dfbs-app/src/test/java/com/dfbs/app/MasterDataReadOnlyRulesTest.java
+backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/contract/ContractMasterDataCreateTest.java
 backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/customer/CustomerMasterDataCreateTest.java
+backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/iccid/IccidMasterDataCreateTest.java
+backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/machine/MachineMasterDataCreateTest.java
+backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/product/ProductMasterDataCreateTest.java
 backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/quote/QuoteVersionActivateTest.java
 backend/dfbs-application/.gitkeep
 backend/dfbs-application/README.md
