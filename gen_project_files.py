@@ -8,9 +8,21 @@ from typing import Iterable
 ROOT = Path(__file__).resolve().parent
 OUT_MD = ROOT / "PROJECT_FILES.md"
 
+# 目录级排除（任何路径段命中即排除）
 EXCLUDE_DIRS = {
     ".git", ".idea", ".vscode", "target", "node_modules", "dist", "build", "out",
-    ".gradle", "__pycache__"
+    ".gradle", "__pycache__",
+    # ✅ 运行产物目录：不应进入 PROJECT_FILES.md（避免噪音淹没关键文件）
+    "logs",
+}
+
+# 文件级排除（按后缀/文件名）
+EXCLUDE_FILE_SUFFIXES = {
+    ".log",
+    ".gz",
+}
+EXCLUDE_FILE_NAMES = {
+    "run.log",  # backend/dfbs-app/run.log 这类运行产物也排除
 }
 
 @dataclass(frozen=True)
@@ -18,12 +30,10 @@ class Group:
     title: str
     patterns: tuple[str, ...]
 
-
 # ✅ 注意：GROUPS 必须在 class 之外
 GROUPS: list[Group] = [
     Group("本地入口脚本（START/END）", (
-        "DFBS-START.bat",
-        "DFBS-END.bat",
+        # 项目当前事实：ps1 在根目录；这里保留 gen_project_files.py 便于定位
         "gen_project_files.py",
     )),
     Group("基础设施（Docker）", (
@@ -56,8 +66,21 @@ GROUPS: list[Group] = [
     )),
 ]
 
-def is_excluded(path: Path) -> bool:
+def is_excluded_dir(path: Path) -> bool:
     return any(part in EXCLUDE_DIRS for part in path.parts)
+
+def is_excluded_file(path: Path) -> bool:
+    if path.name in EXCLUDE_FILE_NAMES:
+        return True
+    return path.suffix.lower() in EXCLUDE_FILE_SUFFIXES
+
+def is_excluded(path: Path) -> bool:
+    # 先排目录，再排文件
+    if is_excluded_dir(path):
+        return True
+    if path.is_file() and is_excluded_file(path):
+        return True
+    return False
 
 def rel_posix(p: Path) -> str:
     return p.relative_to(ROOT).as_posix()

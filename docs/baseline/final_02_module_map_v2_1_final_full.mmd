@@ -17,6 +17,23 @@ mindmap
     主数据
       客户(Customer)
       合同(Contract)
+        ├─ ContractMasterData
+        │   ├─ 合同号（全局唯一）
+        │   ├─ 客户关联
+        │   ├─ 合同档案 / 附件
+        │   └─ 审计日志
+        └─ 合同价格条款(ContractPricing)
+           - 结构化价格规则（录入时填写，不解析合同文本）
+           - 一合同一套规则；一客户可多合同，因此可存在多套规则
+           - 用于报价模块自动引用（如最低价/最新生效/优先级）
+           - 覆盖范围示例：平台费、ICCID 卡费、售后维修价格
+            ├─ 一合同一套价格规则
+            ├─ 平台费
+            ├─ ICCID 卡费
+            ├─ 售后维修价格
+            ├─ 生效期（From / To）
+            ├─ 优先级
+            └─ 报价自动引用
       机型(Model)
       机器(Machine)
       ICCID
@@ -86,4 +103,3 @@ Invoice --> PaymentAllocation
 Order --> PaymentAllocation
 Customer --> CustomerAlias
 ImportExport --> ImportReview
-

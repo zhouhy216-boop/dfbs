@@ -23,8 +23,8 @@ public class CustomerMasterDataService {
         String customerNo = normalizeRequired(customerNoRaw, "customerNo");
         String name = normalizeRequired(nameRaw, "name");
 
-        // 内部字段叫 customerCode，但对外字段统一为 customerNo
-        repo.findByCustomerCodeAndDeletedAtIsNull(customerNo).ifPresent(e -> {
+        // ✅ 业务主键不复用：即使软删除也不能再创建相同 customerNo
+        repo.findByCustomerCode(customerNo).ifPresent(e -> {
             throw new IllegalStateException("customerNo already exists: " + customerNo);
         });
 
@@ -44,6 +44,21 @@ public class CustomerMasterDataService {
                 saved.getName(),
                 saved.getCreatedAt()
         );
+    }
+
+    /**
+     * 软删除：只写 deletedAt，不做物理删除
+     */
+    @Transactional
+    public void softDelete(UUID id) {
+        CustomerEntity customer = repo.findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> new IllegalStateException("Customer not found or already deleted"));
+
+        OffsetDateTime now = OffsetDateTime.now();
+        customer.setDeletedAt(now);
+        customer.setUpdatedAt(now);
+
+        repo.save(customer);
     }
 
     private String normalizeRequired(String raw, String field) {
