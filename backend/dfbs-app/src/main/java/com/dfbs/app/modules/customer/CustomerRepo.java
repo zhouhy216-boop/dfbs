@@ -1,11 +1,12 @@
 package com.dfbs.app.modules.customer;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.Optional;
 import java.util.UUID;
 
-public interface CustomerRepo extends JpaRepository<CustomerEntity, UUID> {
+public interface CustomerRepo extends JpaRepository<CustomerEntity, UUID>, JpaSpecificationExecutor<CustomerEntity> {
 
     /**
      * 注意：customer_code 是业务主键（全局唯一，不复用），

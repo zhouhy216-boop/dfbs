@@ -2,6 +2,9 @@ package com.dfbs.app.application.customer;
 
 import com.dfbs.app.modules.customer.CustomerEntity;
 import com.dfbs.app.modules.customer.CustomerRepo;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -65,5 +68,18 @@ public class CustomerMasterDataService {
 
         entity.setDeletedAt(OffsetDateTime.now());
         repo.save(entity);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<CustomerEntity> search(String keyword, Pageable pageable) {
+        Specification<CustomerEntity> spec = (root, query, cb) -> cb.isNull(root.get("deletedAt"));
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            Specification<CustomerEntity> keywordSpec = (root, query, cb) ->
+                    cb.like(cb.lower(root.get("name")), "%" + keyword.toLowerCase() + "%");
+            spec = spec.and(keywordSpec);
+        }
+
+        return repo.findAll(spec, pageable);
     }
 }

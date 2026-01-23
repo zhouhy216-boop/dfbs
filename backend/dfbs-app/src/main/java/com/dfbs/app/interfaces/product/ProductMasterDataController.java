@@ -2,13 +2,15 @@ package com.dfbs.app.interfaces.product;
 
 import com.dfbs.app.application.product.ProductMasterDataService;
 import com.dfbs.app.modules.product.ProductEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/masterdata/products")
 public class ProductMasterDataController {
 
     private final ProductMasterDataService service;
@@ -17,12 +19,23 @@ public class ProductMasterDataController {
         this.service = service;
     }
 
-    @PostMapping
+    @PostMapping("/api/masterdata/products")
     @ResponseStatus(HttpStatus.CREATED)
     public ProductEntity create(@RequestBody Map<String, String> body) {
         return service.create(
                 body.get("productCode"),
                 body.get("name")
         );
+    }
+
+    // ===== Search =====
+    @GetMapping("/api/v1/products")
+    public ResponseEntity<Page<ProductDto>> search(
+            @RequestParam(required = false) String keyword,
+            Pageable pageable
+    ) {
+        Page<ProductEntity> page = service.search(keyword, pageable);
+        Page<ProductDto> dtoPage = page.map(ProductDto::from);
+        return ResponseEntity.ok(dtoPage);
     }
 }

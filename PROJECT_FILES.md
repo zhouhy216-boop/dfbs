@@ -1,6 +1,6 @@
 # DFBS 项目文件清单（自动生成）
 
-生成时间：2026-01-21 16:38:56
+生成时间：2026-01-23 15:03:32
 
 ## 常用索引（自动生成，按分组）
 > 这一段用于让 ChatGPT / 自己快速定位关键文件，不需要手工维护。
@@ -26,16 +26,41 @@
 - backend/dfbs-app/src/main/resources/application.yml
 
 ### 报价模块（当前关注）
+- backend/dfbs-app/src/main/java/com/dfbs/app/application/quote/QuoteItemService.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/application/quote/QuoteNumberService.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/application/quote/QuoteService.java
 - backend/dfbs-app/src/main/java/com/dfbs/app/application/quote/QuoteVersionService.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/QuoteController.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/QuoteItemController.java
 - backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/QuoteVersionController.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/CreateItemRequest.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/CreateQuoteRequest.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/QuoteItemDto.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/QuoteResponseDto.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/UpdateItemRequest.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/UpdateQuoteRequest.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteEntity.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteItemEntity.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteItemRepo.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteRepo.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteSequenceEntity.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteSequenceRepo.java
 - backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteVersionEntity.java
 - backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteVersionRepo.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/enums/Currency.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/enums/QuoteExpenseType.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/enums/QuoteItemWarehouse.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/enums/QuoteSourceType.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/enums/QuoteStatus.java
 
 ### 数据库迁移（Flyway）
 - backend/dfbs-app/src/main/resources/db/migration/V0001__init.sql
 - backend/dfbs-app/src/main/resources/db/migration/V0002__quote_version.sql
 - backend/dfbs-app/src/main/resources/db/migration/V0003__quote_version_only_one_active.sql
 - backend/dfbs-app/src/main/resources/db/migration/V0004__masterdata_init.sql
+- backend/dfbs-app/src/main/resources/db/migration/V0005__quote_item.sql
+- backend/dfbs-app/src/main/resources/db/migration/V0006__quote_header_and_sequence.sql
+- backend/dfbs-app/src/main/resources/db/migration/V0007__quote_item_mvp.sql
 
 ### 后端工程骨架（分层目录）
 - backend/pom.xml
@@ -51,6 +76,7 @@
 ## 全量文件列表（自动生成）
 
 ```
+.cursorrules
 .gitignore
 DFBS-APP-RUN.ps1
 DFBS-DEV.ps1
@@ -64,6 +90,7 @@ DFBS-NEW-MODULE.ps1
 DFBS-STOP-APP.ps1
 DFBS-TEST.ps1
 PROJECT_FILES.md
+PROJECT_PARKING_LOT.md
 PROJECT_STATUS.md
 README.md
 backend/dfbs-app/.gitattributes
@@ -82,13 +109,29 @@ backend/dfbs-app/src/main/java/com/dfbs/app/application/customer/CustomerMasterD
 backend/dfbs-app/src/main/java/com/dfbs/app/application/iccid/IccidMasterDataService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/machine/MachineMasterDataService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/product/ProductMasterDataService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/quote/QuoteItemService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/quote/QuoteNumberService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/quote/QuoteService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/quote/QuoteVersionService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/config/CurrentUserProvider.java
+backend/dfbs-app/src/main/java/com/dfbs/app/config/JpaAuditingConfig.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/contract/ContractDto.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/contract/ContractMasterDataController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/customer/CustomerDto.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/customer/CustomerMasterDataController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/iccid/IccidMasterDataController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/machine/MachineMasterDataController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/product/ProductDto.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/product/ProductMasterDataController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/QuoteController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/QuoteItemController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/QuoteVersionController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/CreateItemRequest.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/CreateQuoteRequest.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/QuoteItemDto.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/QuoteResponseDto.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/UpdateItemRequest.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/UpdateQuoteRequest.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/contract/ContractEntity.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/contract/ContractRepo.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/customer/CustomerEntity.java
@@ -99,23 +142,45 @@ backend/dfbs-app/src/main/java/com/dfbs/app/modules/machine/MachineEntity.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/machine/MachineRepo.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/product/ProductEntity.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/product/ProductRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteItemEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteItemRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteSequenceEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteSequenceRepo.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteVersionEntity.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteVersionRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/enums/Currency.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/enums/QuoteExpenseType.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/enums/QuoteItemWarehouse.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/enums/QuoteSourceType.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/enums/QuoteStatus.java
 backend/dfbs-app/src/main/resources/application.properties.bak
 backend/dfbs-app/src/main/resources/application.yml
 backend/dfbs-app/src/main/resources/db/migration/V0001__init.sql
 backend/dfbs-app/src/main/resources/db/migration/V0002__quote_version.sql
 backend/dfbs-app/src/main/resources/db/migration/V0003__quote_version_only_one_active.sql
 backend/dfbs-app/src/main/resources/db/migration/V0004__masterdata_init.sql
+backend/dfbs-app/src/main/resources/db/migration/V0005__quote_item.sql
+backend/dfbs-app/src/main/resources/db/migration/V0006__quote_header_and_sequence.sql
+backend/dfbs-app/src/main/resources/db/migration/V0007__quote_item_mvp.sql
 backend/dfbs-app/src/test/java/com/dfbs/app/ArchitectureRulesTest.java
 backend/dfbs-app/src/test/java/com/dfbs/app/DfbsAppApplicationTests.java
 backend/dfbs-app/src/test/java/com/dfbs/app/MasterDataReadOnlyRulesTest.java
 backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/contract/ContractMasterDataCreateTest.java
+backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/contract/ContractMasterDataSearchTest.java
 backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/customer/CustomerMasterDataCreateTest.java
+backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/customer/CustomerMasterDataSearchTest.java
 backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/iccid/IccidMasterDataCreateTest.java
 backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/machine/MachineMasterDataCreateTest.java
 backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/product/ProductMasterDataCreateTest.java
+backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/product/ProductMasterDataSearchTest.java
 backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/quote/QuoteVersionActivateTest.java
+backend/dfbs-app/src/test/java/com/dfbs/app/modules/quote/QuoteItemTest.java
+backend/dfbs-app/src/test/java/com/dfbs/app/modules/quote/QuoteNumberingTest.java
+backend/dfbs-app/src/test/java/com/dfbs/app/modules/quote/QuoteNumberingTestConfig.java
+backend/dfbs-app/src/test/java/com/dfbs/app/modules/quote/QuoteStateTest.java
+backend/dfbs-app/src/test/java/com/dfbs/app/modules/quote/TestClock.java
 backend/dfbs-application/.gitkeep
 backend/dfbs-application/README.md
 backend/dfbs-interfaces/.gitkeep
