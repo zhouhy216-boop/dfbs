@@ -35,6 +35,10 @@
 - **🔴 禁飞区 (Read-Only)**: `backend/dfbs-app/src/main/java/com/dfbs/app/masterdata`
   - 解释: 主数据模块已验收。除非指令明确要求 "Refactor Master Data"，否则**只读不改**。
 - **🔴 禁止臆测**: 遇到 `PROJECT_STATUS.md` 中未描述的模糊逻辑，**停止并询问**，不要自己发挥。
+- **🔴 架构红线 (Architectural Iron Laws)**: 严禁违反分层原则
+  - **No Shortcuts**: Controller MUST ONLY talk to Service (NEVER directly to Repository).
+  - **Dependency Rule**: Service (Inner Layer) MUST NOT import classes from `interfaces` (Outer Layer). DTOs used by Service must be defined in `application` or deeper.
+  - **Test Location**: Integration Tests for Services MUST be located in `src/test/java/.../application/...` package, NOT in `modules`.
 
 # 4. Coding Standards (开发标准)
 - **技术栈**: Java 21 + Spring Boot 3 + JPA + PostgreSQL + Flyway。

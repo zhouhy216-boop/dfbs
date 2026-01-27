@@ -1,4 +1,4 @@
-package com.dfbs.app.modules.quote;
+package com.dfbs.app.application.quote;
 
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -16,3 +16,4 @@ public class QuoteNumberingTestConfig {
         return new TestClock(ZoneId.of("UTC"), Instant.parse("2026-01-15T10:00:00Z"));
     }
 }
+

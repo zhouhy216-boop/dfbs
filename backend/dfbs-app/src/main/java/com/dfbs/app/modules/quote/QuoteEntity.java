@@ -1,8 +1,10 @@
 package com.dfbs.app.modules.quote;
 
 import com.dfbs.app.modules.quote.enums.Currency;
+import com.dfbs.app.modules.quote.enums.QuotePaymentStatus;
 import com.dfbs.app.modules.quote.enums.QuoteSourceType;
 import com.dfbs.app.modules.quote.enums.QuoteStatus;
+import com.dfbs.app.modules.quote.enums.QuoteVoidStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.springframework.data.annotation.CreatedBy;
@@ -35,6 +37,15 @@ public class QuoteEntity {
     @Column(name = "source_ref_id")
     private String sourceRefId;
 
+    @Column(name = "source_id")
+    private String sourceId;
+
+    @Column(name = "machine_info", length = 1000)
+    private String machineInfo;
+
+    @Column(name = "assignee_id")
+    private Long assigneeId;
+
     @Column(name = "customer_id", nullable = false)
     private Long customerId;
 
@@ -44,6 +55,29 @@ public class QuoteEntity {
 
     @Enumerated(EnumType.STRING)
     private Currency currency;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", nullable = false, length = 32)
+    private QuotePaymentStatus paymentStatus = QuotePaymentStatus.UNPAID;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "void_status", nullable = false, length = 32)
+    private QuoteVoidStatus voidStatus = QuoteVoidStatus.NONE;
+
+    @Column(name = "collector_id")
+    private Long collectorId;  // The person responsible for collecting money
+
+    @Column(name = "parent_quote_id")
+    private Long parentQuoteId;  // To link "Balance Adjustment Quote" to original
+
+    @Column(name = "business_line_id")
+    private Long businessLineId;  // FK to BusinessLineEntity
+
+    @Column(name = "is_warehouse_cc_sent", nullable = false)
+    private Boolean isWarehouseCcSent = false;  // Strict de-duplication flag for CC notification
+
+    @Column(name = "is_warehouse_ship_sent", nullable = false)
+    private Boolean isWarehouseShipSent = false;  // Strict de-duplication flag for Ship notification
 
     @CreatedBy
     @Column(name = "created_by")

@@ -1,4 +1,4 @@
-package com.dfbs.app.modules.quote;
+package com.dfbs.app.application.quote;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -36,3 +36,4 @@ public class TestClock extends Clock {
         return new TestClock(zone, instant);
     }
 }
+

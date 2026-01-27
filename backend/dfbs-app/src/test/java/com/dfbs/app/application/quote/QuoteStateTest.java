@@ -1,4 +1,4 @@
-package com.dfbs.app.modules.quote;
+package com.dfbs.app.application.quote;
 
 import com.dfbs.app.application.quote.QuoteService;
 import com.dfbs.app.modules.quote.enums.Currency;
@@ -63,3 +63,4 @@ class QuoteStateTest {
         assertThat(cancelled.getQuoteNo()).isEqualTo(quoteNoBefore);
     }
 }
+

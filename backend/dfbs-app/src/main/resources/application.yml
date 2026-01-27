@@ -1,6 +1,16 @@
 server:
   port: 8080
 
+dfbs:
+  company:
+    name: "DFBS 示例公司"
+    bank-name: "示例银行"
+    bank-no: "BANK001"
+    tax-no: "91110000MA0000000X"
+    account-no: "1234567890123456"
+    phone: "400-000-0000"
+    address: "示例地址"
+
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/dfbs

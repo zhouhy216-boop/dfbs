@@ -5,5 +5,6 @@ import com.dfbs.app.modules.quote.enums.QuoteSourceType;
 public record CreateQuoteRequest(
         QuoteSourceType sourceType,
         String sourceRefId,
-        Long customerId
+        Long customerId,
+        Long businessLineId  // Optional
 ) {}

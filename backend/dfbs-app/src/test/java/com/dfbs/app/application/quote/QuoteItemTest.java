@@ -1,7 +1,8 @@
-package com.dfbs.app.modules.quote;
+package com.dfbs.app.application.quote;
 
 import com.dfbs.app.application.quote.QuoteItemService;
 import com.dfbs.app.application.quote.QuoteService;
+import com.dfbs.app.modules.quote.dictionary.FeeTypeRepo;
 import com.dfbs.app.modules.quote.enums.QuoteExpenseType;
 import com.dfbs.app.modules.quote.enums.QuoteItemWarehouse;
 import com.dfbs.app.modules.quote.enums.QuoteSourceType;
@@ -25,6 +26,9 @@ class QuoteItemTest {
 
     @Autowired
     private QuoteItemService itemService;
+
+    @Autowired
+    private FeeTypeRepo feeTypeRepo;
 
     @Test
     void testCrudOperations() {
@@ -98,10 +102,18 @@ class QuoteItemTest {
         var quote2 = quoteService.createDraft(createCmd, "test-user");
         Long quoteId2 = quote2.getId();
 
+        // Get a valid FeeType for REPAIR (e.g., "技术服务费")
+        Long feeTypeId = feeTypeRepo.findByName("技术服务费")
+                .map(ft -> ft.getId())
+                .orElse(null);
+
         var addCmd2 = new QuoteItemService.CreateItemCommand();
         addCmd2.setExpenseType(QuoteExpenseType.REPAIR);
         addCmd2.setQuantity(1);
         addCmd2.setUnitPrice(new BigDecimal("20.00"));
+        if (feeTypeId != null) {
+            addCmd2.setFeeTypeId(feeTypeId);
+        }
         var item2 = itemService.addItem(quoteId2, addCmd2);
         Long itemId2 = item2.getId();
 
@@ -163,3 +175,4 @@ class QuoteItemTest {
         assertThat(items2.get(1).getAlertMessage()).isNull();
     }
 }
+

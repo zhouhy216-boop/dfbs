@@ -1,4 +1,4 @@
-package com.dfbs.app.modules.quote;
+package com.dfbs.app.application.quote;
 
 import com.dfbs.app.application.quote.QuoteNumberService;
 import com.dfbs.app.modules.quote.enums.QuoteSourceType;
@@ -75,3 +75,4 @@ class QuoteNumberingTest {
                 .startsWith("GN");
     }
 }
+

@@ -4,9 +4,12 @@ import com.dfbs.app.modules.quote.QuoteEntity;
 import com.dfbs.app.modules.quote.QuoteItemEntity;
 import com.dfbs.app.modules.quote.QuoteItemRepo;
 import com.dfbs.app.modules.quote.QuoteRepo;
+import com.dfbs.app.modules.quote.dictionary.FeeTypeEntity;
+import com.dfbs.app.modules.quote.dictionary.FeeTypeRepo;
 import com.dfbs.app.modules.quote.enums.QuoteExpenseType;
 import com.dfbs.app.modules.quote.enums.QuoteItemWarehouse;
 import com.dfbs.app.modules.quote.enums.QuoteStatus;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,10 +23,15 @@ public class QuoteItemService {
 
     private final QuoteRepo quoteRepo;
     private final QuoteItemRepo itemRepo;
+    private final FeeTypeRepo feeTypeRepo;
+    private final ApplicationContext applicationContext;
 
-    public QuoteItemService(QuoteRepo quoteRepo, QuoteItemRepo itemRepo) {
+    public QuoteItemService(QuoteRepo quoteRepo, QuoteItemRepo itemRepo, FeeTypeRepo feeTypeRepo,
+                           ApplicationContext applicationContext) {
         this.quoteRepo = quoteRepo;
         this.itemRepo = itemRepo;
+        this.feeTypeRepo = feeTypeRepo;
+        this.applicationContext = applicationContext;
     }
 
     @Transactional
@@ -44,6 +52,19 @@ public class QuoteItemService {
         item.setUnitPrice(cmd.getUnitPrice());
         item.setWarehouse(cmd.getWarehouse());
         item.setRemark(cmd.getRemark());
+        
+        // DRAFT mode: Allow null feeTypeId or partId (Free text mode)
+        // If feeTypeId is provided, verify it exists (basic check)
+        // For new items, prefer Active ones, but allow inactive if it was already set (historical)
+        if (cmd.getFeeTypeId() != null) {
+            FeeTypeEntity feeType = feeTypeRepo.findById(cmd.getFeeTypeId())
+                    .orElseThrow(() -> new IllegalStateException("FeeType not found: id=" + cmd.getFeeTypeId()));
+            item.setFeeTypeId(cmd.getFeeTypeId());
+        }
+        
+        if (cmd.getPartId() != null) {
+            item.setPartId(cmd.getPartId());
+        }
 
         // Default unit from expenseType if not provided
         if (cmd.getUnit() == null || cmd.getUnit().isBlank()) {
@@ -66,7 +87,14 @@ public class QuoteItemService {
                 .orElse(0);
         item.setLineOrder(maxOrder + 1);
 
-        return itemRepo.save(item);
+        QuoteItemEntity saved = itemRepo.save(item);
+        
+        // Trigger warehouse CC notification check after adding item
+        QuoteEntity updatedQuote = quoteRepo.findById(quoteId).orElseThrow();
+        QuoteService quoteService = applicationContext.getBean(QuoteService.class);
+        quoteService.checkAndSendWarehouseCcNotification(updatedQuote);
+        
+        return saved;
     }
 
     @Transactional
@@ -106,6 +134,25 @@ public class QuoteItemService {
         if (cmd.getRemark() != null) {
             item.setRemark(cmd.getRemark());
         }
+        
+        // DRAFT mode: Allow updating feeTypeId or partId (Free text mode)
+        // If feeTypeId is provided, verify it exists (basic check)
+        // Allow inactive if it was already set (historical), but for new assignments prefer Active
+        if (cmd.getFeeTypeId() != null) {
+            FeeTypeEntity feeType = feeTypeRepo.findById(cmd.getFeeTypeId())
+                    .orElseThrow(() -> new IllegalStateException("FeeType not found: id=" + cmd.getFeeTypeId()));
+            item.setFeeTypeId(cmd.getFeeTypeId());
+        } else if (cmd.getFeeTypeId() == null && item.getFeeTypeId() != null) {
+            // Allow clearing feeTypeId in DRAFT mode
+            item.setFeeTypeId(null);
+        }
+        
+        if (cmd.getPartId() != null) {
+            item.setPartId(cmd.getPartId());
+        } else if (cmd.getPartId() == null && item.getPartId() != null) {
+            // Allow clearing partId in DRAFT mode
+            item.setPartId(null);
+        }
 
         // Recalculate amount
         BigDecimal amount = item.getUnitPrice()
@@ -113,7 +160,14 @@ public class QuoteItemService {
                 .setScale(2, RoundingMode.HALF_UP);
         item.setAmount(amount);
 
-        return itemRepo.save(item);
+        QuoteItemEntity saved = itemRepo.save(item);
+        
+        // Trigger warehouse CC notification check after updating item
+        QuoteEntity updatedQuote = quoteRepo.findById(item.getQuoteId()).orElseThrow();
+        QuoteService quoteService = applicationContext.getBean(QuoteService.class);
+        quoteService.checkAndSendWarehouseCcNotification(updatedQuote);
+        
+        return saved;
     }
 
     @Transactional
@@ -154,6 +208,8 @@ public class QuoteItemService {
         private BigDecimal unitPrice;
         private QuoteItemWarehouse warehouse;
         private String remark;
+        private Long feeTypeId;  // Optional, for dictionary mode
+        private Long partId;     // Optional, for parts
 
         public QuoteExpenseType getExpenseType() { return expenseType; }
         public void setExpenseType(QuoteExpenseType expenseType) { this.expenseType = expenseType; }
@@ -171,6 +227,10 @@ public class QuoteItemService {
         public void setWarehouse(QuoteItemWarehouse warehouse) { this.warehouse = warehouse; }
         public String getRemark() { return remark; }
         public void setRemark(String remark) { this.remark = remark; }
+        public Long getFeeTypeId() { return feeTypeId; }
+        public void setFeeTypeId(Long feeTypeId) { this.feeTypeId = feeTypeId; }
+        public Long getPartId() { return partId; }
+        public void setPartId(Long partId) { this.partId = partId; }
     }
 
     /** Command for updating an item. */
@@ -183,6 +243,8 @@ public class QuoteItemService {
         private BigDecimal unitPrice;
         private QuoteItemWarehouse warehouse;
         private String remark;
+        private Long feeTypeId;  // Optional, for dictionary mode
+        private Long partId;     // Optional, for parts
 
         public QuoteExpenseType getExpenseType() { return expenseType; }
         public void setExpenseType(QuoteExpenseType expenseType) { this.expenseType = expenseType; }
@@ -200,6 +262,10 @@ public class QuoteItemService {
         public void setWarehouse(QuoteItemWarehouse warehouse) { this.warehouse = warehouse; }
         public String getRemark() { return remark; }
         public void setRemark(String remark) { this.remark = remark; }
+        public Long getFeeTypeId() { return feeTypeId; }
+        public void setFeeTypeId(Long feeTypeId) { this.feeTypeId = feeTypeId; }
+        public Long getPartId() { return partId; }
+        public void setPartId(Long partId) { this.partId = partId; }
     }
 
     /** DTO for item response. */

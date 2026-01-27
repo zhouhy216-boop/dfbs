@@ -6,5 +6,6 @@ public record UpdateQuoteRequest(
         Currency currency,
         String recipient,
         String phone,
-        String address
+        String address,
+        Long businessLineId  // Optional
 ) {}

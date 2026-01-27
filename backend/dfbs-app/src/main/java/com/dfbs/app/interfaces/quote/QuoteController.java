@@ -29,6 +29,9 @@ public class QuoteController {
         cmd.setSourceType(req.sourceType());
         cmd.setSourceRefId(req.sourceRefId());
         cmd.setCustomerId(req.customerId());
+        if (req.businessLineId() != null) {
+            cmd.setBusinessLineId(req.businessLineId());
+        }
         QuoteEntity created = quoteService.createDraft(cmd, currentUserProvider.getCurrentUser());
         return QuoteResponseDto.from(created);
     }
@@ -40,6 +43,9 @@ public class QuoteController {
         cmd.setRecipient(req.recipient());
         cmd.setPhone(req.phone());
         cmd.setAddress(req.address());
+        if (req.businessLineId() != null) {
+            cmd.setBusinessLineId(req.businessLineId());
+        }
         QuoteEntity updated = quoteService.updateHeader(id, cmd);
         return QuoteResponseDto.from(updated);
     }

@@ -26,6 +26,12 @@ public class QuoteItemEntity {
     @Column(name = "expense_type", nullable = false, length = 32)
     private QuoteExpenseType expenseType;
 
+    @Column(name = "fee_type_id")
+    private Long feeTypeId;  // FK to FeeTypeEntity, Nullable
+
+    @Column(name = "part_id")
+    private Long partId;  // FK to PartEntity, Nullable
+
     @Column(name = "description", length = 1000)
     private String description;
 
