@@ -12,9 +12,9 @@ public class MasterDataReadOnlyRulesTest {
 
     private static final String BASE = "com.dfbs.app..";
 
-    // 主数据 Repo 的“类名正则”（用最兼容的方式）
+    // 主数据 Repo 的“类名正则”（contract、machine 已迁至 masterdata）
     private static final String MASTERDATA_REPO_NAME_REGEX =
-            "com\\.dfbs\\.app\\.modules\\.(customer|contract|product|machine|iccid)\\..*Repo";
+            "com\\.dfbs\\.app\\.modules\\.(customer|product|iccid|masterdata)\\..*Repo";
 
     @Test
     void interfaces_must_not_depend_on_any_repo() {
@@ -35,12 +35,11 @@ public class MasterDataReadOnlyRulesTest {
                 .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
                 .importPackages(BASE);
 
-        // 允许依赖主数据 Repo 的包（只允许各自的 application 包）
+        // 允许依赖主数据 Repo 的包（contract 已迁至 masterdata）
         String[] allowed = new String[] {
                 "com.dfbs.app.application.customer..",
-                "com.dfbs.app.application.contract..",
                 "com.dfbs.app.application.product..",
-                "com.dfbs.app.application.machine..",
+                "com.dfbs.app.application.masterdata..",
                 "com.dfbs.app.application.iccid.."
         };
 

@@ -13,5 +13,7 @@ public record CreateItemRequest(
         Integer quantity,
         BigDecimal unitPrice,
         QuoteItemWarehouse warehouse,
-        String remark
+        String remark,
+        String manualPriceReason,  // Required when overriding contract-suggested price
+        Long partId  // Optional: link to Part master; fills description/spec/standardPrice
 ) {}

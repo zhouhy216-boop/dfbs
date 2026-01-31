@@ -1,10 +1,9 @@
 package com.dfbs.app.interfaces.customer;
 
 import java.time.OffsetDateTime;
-import java.util.UUID;
 
 public record CustomerDto(
-        UUID id,
+        Long id,
         String customerCode,
         String name,
         String status,

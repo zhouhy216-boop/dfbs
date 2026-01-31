@@ -1,5 +1,6 @@
 package com.dfbs.app.modules.quote.payment;
 
+import com.dfbs.app.modules.quote.enums.Currency;
 import com.dfbs.app.modules.quote.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -28,9 +29,22 @@ public class QuotePaymentEntity {
     @Column(name = "paid_at", nullable = false)
     private LocalDateTime paidAt;
 
+    @Column(name = "payment_time", nullable = false)
+    private LocalDateTime paymentTime;
+
+    @Column(name = "payment_batch_no", length = 64)
+    private String paymentBatchNo;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 16)
+    private Currency currency;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private PaymentStatus status = PaymentStatus.SUBMITTED;
+
+    @Column(name = "is_finance_confirmed", nullable = false)
+    private Boolean isFinanceConfirmed = false;
 
     @Column(name = "submitter_id", nullable = false)
     private Long submitterId;
@@ -49,6 +63,9 @@ public class QuotePaymentEntity {
 
     @Column(length = 1000)
     private String remark;  // for overpayment
+
+    @Column(name = "note", length = 1000)
+    private String note;
 
     @Column(name = "attachment_urls", length = 2000)
     private String attachmentUrls;  // JSON array or comma-separated URLs

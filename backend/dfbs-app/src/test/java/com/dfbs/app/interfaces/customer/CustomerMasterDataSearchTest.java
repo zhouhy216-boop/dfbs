@@ -10,7 +10,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.OffsetDateTime;
-import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -120,7 +119,7 @@ class CustomerMasterDataSearchTest {
                                 """.formatted(customerNo)))
                 .andExpect(status().isCreated());
 
-        UUID id = repo.findByCustomerCodeAndDeletedAtIsNull(customerNo)
+        Long id = repo.findByCustomerCodeAndDeletedAtIsNull(customerNo)
                 .orElseThrow()
                 .getId();
 

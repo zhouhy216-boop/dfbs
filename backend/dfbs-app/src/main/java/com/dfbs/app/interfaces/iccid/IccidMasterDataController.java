@@ -1,7 +1,10 @@
 package com.dfbs.app.interfaces.iccid;
 
 import com.dfbs.app.application.iccid.IccidMasterDataService;
+import com.dfbs.app.application.iccid.dto.IccidListDto;
 import com.dfbs.app.modules.iccid.IccidEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +18,14 @@ public class IccidMasterDataController {
 
     public IccidMasterDataController(IccidMasterDataService service) {
         this.service = service;
+    }
+
+    @GetMapping
+    public Page<IccidListDto> list(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Boolean isBound,
+            Pageable pageable) {
+        return service.searchIccids(keyword, isBound, pageable);
     }
 
     @PostMapping

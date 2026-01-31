@@ -34,6 +34,10 @@ public class QuoteItemController {
         cmd.setUnitPrice(req.unitPrice());
         cmd.setWarehouse(req.warehouse());
         cmd.setRemark(req.remark());
+        cmd.setManualPriceReason(req.manualPriceReason());
+        if (req.partId() != null) {
+            cmd.setPartId(req.partId());
+        }
         
         QuoteItemEntity created = itemService.addItem(quoteId, cmd);
         
@@ -56,6 +60,10 @@ public class QuoteItemController {
         cmd.setUnitPrice(req.unitPrice());
         cmd.setWarehouse(req.warehouse());
         cmd.setRemark(req.remark());
+        cmd.setManualPriceReason(req.manualPriceReason());
+        if (req.partId() != null) {
+            cmd.setPartId(req.partId());
+        }
         
         QuoteItemEntity updated = itemService.updateItem(itemId, cmd);
         

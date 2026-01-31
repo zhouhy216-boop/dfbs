@@ -11,14 +11,21 @@ public record QuoteItemDto(
         Long quoteId,
         Integer lineOrder,
         QuoteExpenseType expenseType,
+        Long feeTypeId,
+        Long partId,
         String description,
+        String originalPartName,
         String spec,
         String unit,
         Integer quantity,
         BigDecimal unitPrice,
+        BigDecimal standardPrice,
+        Boolean isPriceDeviated,
         BigDecimal amount,
         QuoteItemWarehouse warehouse,
         String remark,
+        String priceSourceInfo,
+        String manualPriceReason,
         String alertMessage
 ) {
     public static QuoteItemDto from(QuoteItemService.QuoteItemDto serviceDto) {
@@ -27,14 +34,21 @@ public record QuoteItemDto(
                 serviceDto.getQuoteId(),
                 serviceDto.getLineOrder(),
                 serviceDto.getExpenseType(),
+                serviceDto.getFeeTypeId(),
+                serviceDto.getPartId(),
                 serviceDto.getDescription(),
+                serviceDto.getOriginalPartName(),
                 serviceDto.getSpec(),
                 serviceDto.getUnit(),
                 serviceDto.getQuantity(),
                 serviceDto.getUnitPrice(),
+                serviceDto.getStandardPrice(),
+                serviceDto.getIsPriceDeviated(),
                 serviceDto.getAmount(),
                 serviceDto.getWarehouse(),
                 serviceDto.getRemark(),
+                serviceDto.getPriceSourceInfo(),
+                serviceDto.getManualPriceReason(),
                 serviceDto.getAlertMessage()
         );
     }

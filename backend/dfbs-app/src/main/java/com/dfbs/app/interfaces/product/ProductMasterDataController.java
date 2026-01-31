@@ -2,6 +2,8 @@ package com.dfbs.app.interfaces.product;
 
 import com.dfbs.app.application.product.ProductMasterDataService;
 import com.dfbs.app.modules.product.ProductEntity;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -10,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+@Tag(name = "MasterData (Product)", description = "Product CRUD and search")
 @RestController
 public class ProductMasterDataController {
 
@@ -28,7 +31,7 @@ public class ProductMasterDataController {
         );
     }
 
-    // ===== Search =====
+    @Operation(summary = "Search products", description = "Paginated search by keyword")
     @GetMapping("/api/v1/products")
     public ResponseEntity<Page<ProductDto>> search(
             @RequestParam(required = false) String keyword,

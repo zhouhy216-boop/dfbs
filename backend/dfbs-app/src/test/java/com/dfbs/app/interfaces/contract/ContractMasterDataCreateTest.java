@@ -1,7 +1,8 @@
 package com.dfbs.app.interfaces.contract;
 
-import com.dfbs.app.modules.contract.ContractRepo;
+import com.dfbs.app.modules.customer.CustomerEntity;
 import com.dfbs.app.modules.customer.CustomerRepo;
+import com.dfbs.app.modules.masterdata.ContractRepo;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -30,26 +31,19 @@ class ContractMasterDataCreateTest {
         String customerCode = "CUST-CON-" + System.currentTimeMillis();
         String contractNo = "CON-" + System.currentTimeMillis();
 
-        // create customer first（依赖外键）
-        mvc.perform(post("/api/masterdata/customers")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "customerNo": "%s",
-                                  "name": "For Contract"
-                                }
-                                """.formatted(customerCode)))
-                .andExpect(status().isCreated());
+        CustomerEntity customer = CustomerEntity.create(customerCode, "For Contract");
+        customerRepo.save(customer);
 
-        // create contract
-        mvc.perform(post("/api/masterdata/contracts")
+        mvc.perform(post("/api/v1/masterdata/contracts")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "contractNo": "%s",
-                                  "customerCode": "%s"
+                                  "customerId": %d,
+                                  "attachment": "{}",
+                                  "createdBy": "test"
                                 }
-                                """.formatted(contractNo, customerCode)))
+                                """.formatted(contractNo, customer.getId())))
                 .andExpect(status().isCreated());
     }
 }

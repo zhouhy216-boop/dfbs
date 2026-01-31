@@ -13,5 +13,7 @@ public record UpdateItemRequest(
         Integer quantity,
         BigDecimal unitPrice,
         QuoteItemWarehouse warehouse,
-        String remark
+        String remark,
+        String manualPriceReason,
+        Long partId  // Optional: link to Part master
 ) {}

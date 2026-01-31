@@ -7,5 +7,8 @@ public record UpdateQuoteRequest(
         String recipient,
         String phone,
         String address,
-        Long businessLineId  // Optional
+        Long businessLineId,  // Optional
+        Long machineId,       // Optional: for filtering (e.g. BOM parts)
+        Long customerId,     // Optional: standardize customer
+        String customerName  // Optional: snapshot when setting customerId
 ) {}

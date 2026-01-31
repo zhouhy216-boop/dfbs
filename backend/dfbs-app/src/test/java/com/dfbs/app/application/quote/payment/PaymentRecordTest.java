@@ -162,35 +162,23 @@ class PaymentRecordTest {
         Long quoteId = createConfirmedQuoteWithAmount(BigDecimal.valueOf(1000.00));
         PaymentMethodEntity method = methodRepo.findByIsActiveTrue().get(0);
 
-        // Submit payment that exceeds quote total
+        // Finance submits overpayment (collector cannot submit more than unpaid amount)
         QuotePaymentEntity payment = paymentService.submit(
                 quoteId,
                 BigDecimal.valueOf(1200.00),  // Overpayment
                 method.getId(),
                 LocalDateTime.now(),
-                1L,
-                false,
+                2L,   // Finance user
+                true, // isFinance -> auto-confirm and create balance
                 null
         );
 
-        // Finance confirm with CREATE_BALANCE strategy
-        QuotePaymentEntity confirmed = paymentService.financeConfirm(
-                payment.getId(),
-                "CONFIRM",
-                2L,
-                "确认付款，创建余额调整单",
-                "CREATE_BALANCE"
-        );
-
-        assertThat(confirmed.getStatus()).isEqualTo(PaymentStatus.CONFIRMED);
-        assertThat(confirmed.getRemark()).contains("余额");
+        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.CONFIRMED);
+        assertThat(payment.getRemark()).contains("余额");
 
         // Verify quote payment status is PAID (fully paid)
         QuoteEntity quote = quoteService.findById(quoteId).orElseThrow();
         assertThat(quote.getPaymentStatus()).isEqualTo(QuotePaymentStatus.PAID);
-        
-        // Note: Balance quote creation is verified by checking parentQuoteId in QuoteRepo
-        // For this test, we verify the payment was confirmed and quote status is PAID
     }
 
     @Test

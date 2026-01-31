@@ -35,6 +35,9 @@ public class QuoteItemEntity {
     @Column(name = "description", length = 1000)
     private String description;
 
+    @Column(name = "original_part_name", length = 500)
+    private String originalPartName;
+
     @Column(name = "spec", length = 500)
     private String spec;
 
@@ -47,6 +50,12 @@ public class QuoteItemEntity {
     @Column(name = "unit_price", nullable = false, precision = 19, scale = 2)
     private BigDecimal unitPrice;
 
+    @Column(name = "standard_price", precision = 19, scale = 4)
+    private BigDecimal standardPrice;  // Snapshot of Part.salesPrice
+
+    @Column(name = "is_price_deviated", nullable = false)
+    private Boolean isPriceDeviated = false;  // Flag when unitPrice != standardPrice
+
     @Column(name = "amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 
@@ -56,6 +65,14 @@ public class QuoteItemEntity {
 
     @Column(name = "remark", length = 1000)
     private String remark;
+
+    /** Audit JSON for contract price source, e.g. {"contractId":123,"strategy":"LOWEST_PRICE"}. */
+    @Column(name = "price_source_info", columnDefinition = "TEXT")
+    private String priceSourceInfo;
+
+    /** Required when user overrides suggested/standard price (manual price reason). */
+    @Column(name = "manual_price_reason", columnDefinition = "TEXT")
+    private String manualPriceReason;
 
     // 预留字段
     @Column(name = "attr1", length = 500)

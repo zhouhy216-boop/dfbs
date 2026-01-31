@@ -4,9 +4,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.Optional;
-import java.util.UUID;
 
-public interface CustomerRepo extends JpaRepository<CustomerEntity, UUID>, JpaSpecificationExecutor<CustomerEntity> {
+public interface CustomerRepo extends JpaRepository<CustomerEntity, Long>, JpaSpecificationExecutor<CustomerEntity> {
 
     /**
      * 注意：customer_code 是业务主键（全局唯一，不复用），
@@ -19,5 +18,15 @@ public interface CustomerRepo extends JpaRepository<CustomerEntity, UUID>, JpaSp
      */
     Optional<CustomerEntity> findByCustomerCodeAndDeletedAtIsNull(String customerCode);
 
-    Optional<CustomerEntity> findByIdAndDeletedAtIsNull(UUID id);
+    Optional<CustomerEntity> findByIdAndDeletedAtIsNull(Long id);
+
+    /**
+     * Unique name (active only): exists another ACTIVE, non-deleted customer with this name.
+     */
+    boolean existsByNameAndStatusAndDeletedAtIsNull(String name, String status);
+
+    /**
+     * Unique name (active only), excluding given id (for update).
+     */
+    boolean existsByNameAndStatusAndDeletedAtIsNullAndIdNot(String name, String status, Long id);
 }

@@ -1,6 +1,7 @@
 package com.dfbs.app.modules.iccid;
 
 import jakarta.persistence.*;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -17,6 +18,15 @@ public class IccidEntity {
 
     @Column(name = "machine_sn", length = 64)
     private String machineSn; // 允许为空/解绑
+
+    @Column(name = "plan", length = 128)
+    private String plan;  // e.g. "100MB/Month"
+
+    @Column(name = "platform", length = 128)
+    private String platform;  // e.g. "China Mobile"
+
+    @Column(name = "expiry_date")
+    private LocalDate expiryDate;
 
     @Column(nullable = false, length = 32)
     private String status = "ACTIVE";
@@ -40,6 +50,15 @@ public class IccidEntity {
 
     public String getMachineSn() { return machineSn; }
     public void setMachineSn(String machineSn) { this.machineSn = machineSn; }
+
+    public String getPlan() { return plan; }
+    public void setPlan(String plan) { this.plan = plan; }
+
+    public String getPlatform() { return platform; }
+    public void setPlatform(String platform) { this.platform = platform; }
+
+    public LocalDate getExpiryDate() { return expiryDate; }
+    public void setExpiryDate(LocalDate expiryDate) { this.expiryDate = expiryDate; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

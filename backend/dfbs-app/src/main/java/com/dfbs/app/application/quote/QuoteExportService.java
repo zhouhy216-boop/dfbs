@@ -54,8 +54,9 @@ public class QuoteExportService {
     public ExportResult export(Long quoteId, String format) throws Exception {
         QuoteEntity quote = quoteService.findById(quoteId)
                 .orElseThrow(() -> new IllegalStateException("quote not found: id=" + quoteId));
-        if (quote.getStatus() != QuoteStatus.DRAFT && quote.getStatus() != QuoteStatus.CONFIRMED) {
-            throw new IllegalStateException("Only DRAFT or CONFIRMED quote can be exported");
+        if (quote.getStatus() != QuoteStatus.DRAFT && quote.getStatus() != QuoteStatus.APPROVAL_PENDING
+                && quote.getStatus() != QuoteStatus.RETURNED && quote.getStatus() != QuoteStatus.CONFIRMED) {
+            throw new IllegalStateException("Only DRAFT, APPROVAL_PENDING, RETURNED or CONFIRMED quote can be exported");
         }
 
         List<QuoteItemService.QuoteItemDto> items = itemService.getItems(quoteId);
