@@ -145,7 +145,7 @@ class ExpenseStatsTest {
         WorkOrderEntity wo = new WorkOrderEntity();
         wo.setQuoteId(quote.getId());
         wo.setInitiatorId(user1Id);
-        wo.setStatus(WorkOrderStatus.CREATED);
+        wo.setStatus(WorkOrderStatus.PENDING);
         wo = workOrderRepo.save(wo);
 
         var cmd = new ExpenseService.CreateExpenseCommand();

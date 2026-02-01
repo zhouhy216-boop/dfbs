@@ -143,6 +143,11 @@ export default function MachineModelDetail() {
       dataIndex: 'status',
       width: 120,
       search: false,
+      valueEnum: {
+        DRAFT: { text: '草稿', status: 'Warning' },
+        PUBLISHED: { text: '已发布', status: 'Success' },
+        DEPRECATED: { text: '已作废', status: 'Default' },
+      },
       render: (_, row) => statusTag(row.status),
     },
     { title: '生效日期', dataIndex: 'effectiveDate', width: 120, search: false },

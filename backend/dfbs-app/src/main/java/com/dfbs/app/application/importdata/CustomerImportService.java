@@ -18,7 +18,7 @@ import java.util.*;
  * Conflict: existing customer by code; do not overwrite on first pass.
  */
 @Service
-public class CustomerImportService {
+public class CustomerImportService implements ImportServiceDelegate {
 
     private final CustomerRepo customerRepo;
     private final ObjectMapper objectMapper;
@@ -59,7 +59,7 @@ public class CustomerImportService {
                 failures.add(ImportFailureDto.builder()
                         .rowNum(rowNum)
                         .uniqueKey(code != null ? code : "")
-                        .reason("Name is required")
+                        .reason("名称必填")
                         .build());
                 continue;
             }

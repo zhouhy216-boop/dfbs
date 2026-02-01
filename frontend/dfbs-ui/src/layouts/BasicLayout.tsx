@@ -5,7 +5,6 @@ import {
   DashboardOutlined,
   UserOutlined,
   FileTextOutlined,
-  CarOutlined,
   DollarOutlined,
   ToolOutlined,
   DatabaseOutlined,
@@ -14,6 +13,11 @@ import {
   MobileOutlined,
   CreditCardOutlined,
   UnorderedListOutlined,
+  CloudUploadOutlined,
+  BankOutlined,
+  InteractionOutlined,
+  WarningOutlined,
+  TruckOutlined,
 } from '@ant-design/icons';
 import { getStoredToken } from '@/utils/request';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -22,9 +26,29 @@ import { useAuthStore } from '@/stores/useAuthStore';
 const MENU_ROUTES = [
   { path: '/dashboard', name: 'Dashboard', icon: <DashboardOutlined /> },
   { path: '/quotes', name: '报价单', icon: <FileTextOutlined /> },
-  { path: '/shipments', name: '发货', icon: <CarOutlined /> },
-  { path: '/after-sales', name: '售后', icon: <ToolOutlined /> },
+  {
+    path: '/logistics',
+    name: '物流管理',
+    icon: <TruckOutlined />,
+    key: 'logistics-group',
+    routes: [
+      { path: '/shipments', name: '发货列表' },
+      { path: '/after-sales', name: '运输异常', icon: <WarningOutlined /> },
+    ],
+  },
+  {
+    path: '/after-sales-service',
+    name: '售后服务',
+    icon: <ToolOutlined />,
+    key: 'after-sales-service-group',
+    routes: [
+      { path: '/work-orders', name: '工单管理' },
+    ],
+  },
   { path: '/finance', name: '财务', icon: <DollarOutlined /> },
+  { path: '/warehouse/inventory', name: '库存管理', icon: <BankOutlined /> },
+  { path: '/warehouse/replenish', name: '补货审批', icon: <InteractionOutlined /> },
+  { path: '/import-center', name: '数据导入', icon: <CloudUploadOutlined /> },
   {
     path: '/master-data',
     name: '主数据',
@@ -48,6 +72,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const hydrateFromStorage = useAuthStore((s) => s.hydrateFromStorage);
   const stored = getStoredToken();
   const isLogin = location.pathname === '/login';
+  const isPublicRepair = location.pathname === '/public/repair';
   const isAuthenticated = Boolean(token || stored);
 
   useEffect(() => {
@@ -55,13 +80,13 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [hydrateFromStorage]);
 
   useEffect(() => {
-    if (isLogin) return;
+    if (isLogin || isPublicRepair) return;
     if (!isAuthenticated) {
       navigate('/login', { replace: true });
     }
-  }, [isAuthenticated, isLogin, navigate]);
+  }, [isAuthenticated, isLogin, isPublicRepair, navigate]);
 
-  if (isLogin) return <>{children}</>;
+  if (isLogin || isPublicRepair) return <>{children}</>;
   if (!isAuthenticated) return null;
   return <>{children}</>;
 }

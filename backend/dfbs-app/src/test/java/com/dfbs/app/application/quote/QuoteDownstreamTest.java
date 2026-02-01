@@ -127,7 +127,7 @@ class QuoteDownstreamTest {
         assertThat(workOrder).isNotNull();
         assertThat(workOrder.getId()).isNotNull();
         assertThat(workOrder.getQuoteId()).isEqualTo(quoteId);
-        assertThat(workOrder.getStatus()).isEqualTo(WorkOrderStatus.CREATED);
+        assertThat(workOrder.getStatus()).isEqualTo(WorkOrderStatus.PENDING);
 
         QuoteEntity quote = quoteService.findById(quoteId).orElseThrow();
         assertThat(quote.getDownstreamType()).isEqualTo(DownstreamType.WORK_ORDER);

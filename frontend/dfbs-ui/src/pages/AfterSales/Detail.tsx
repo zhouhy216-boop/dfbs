@@ -110,7 +110,7 @@ export default function AfterSalesDetail() {
 
   return (
     <div style={{ padding: 24 }}>
-      <Card title={`售后单 #${detail.id}`}>
+      <Card title={`运输异常 #${detail.id}`}>
         <Steps current={currentStepIndex >= 0 ? currentStepIndex : 0} size="small" style={{ marginBottom: 24 }}>
           {STATUS_STEPS.map((s) => (
             <Steps.Step key={s} title={s} />

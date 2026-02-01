@@ -4,18 +4,25 @@ import com.dfbs.app.modules.quote.enums.Currency;
 import com.dfbs.app.modules.quote.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.Data;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "quote_payment")
+@EntityListeners(AuditingEntityListener.class)
 @Data
 public class QuotePaymentEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @CreatedDate
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
     @Column(name = "quote_id", nullable = false)
     private Long quoteId;

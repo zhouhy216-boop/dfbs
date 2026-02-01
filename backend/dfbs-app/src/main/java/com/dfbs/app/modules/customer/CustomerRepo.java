@@ -3,6 +3,7 @@ package com.dfbs.app.modules.customer;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface CustomerRepo extends JpaRepository<CustomerEntity, Long>, JpaSpecificationExecutor<CustomerEntity> {
@@ -29,4 +30,7 @@ public interface CustomerRepo extends JpaRepository<CustomerEntity, Long>, JpaSp
      * Unique name (active only), excluding given id (for update).
      */
     boolean existsByNameAndStatusAndDeletedAtIsNullAndIdNot(String name, String status, Long id);
+
+    /** Find customers by name (for import: resolve customerName to id). */
+    List<CustomerEntity> findByNameAndDeletedAtIsNull(String name);
 }

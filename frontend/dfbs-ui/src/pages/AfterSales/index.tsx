@@ -18,14 +18,17 @@ interface AfterSalesRow {
   createdAt?: string;
 }
 
-const STATUS_OPTIONS = [
-  { label: 'DRAFT', value: 'DRAFT' },
-  { label: 'SUBMITTED', value: 'SUBMITTED' },
-  { label: 'RECEIVED', value: 'RECEIVED' },
-  { label: 'PROCESSING', value: 'PROCESSING' },
-  { label: 'SENT_BACK', value: 'SENT_BACK' },
-  { label: 'COMPLETED', value: 'COMPLETED' },
-];
+const STATUS_VALUE_ENUM = {
+  PENDING: { text: '待处理', status: 'Warning' as const },
+  APPROVED: { text: '已批准', status: 'Processing' as const },
+  REJECTED: { text: '已驳回', status: 'Error' as const },
+  PROCESSING: { text: '处理中', status: 'Processing' as const },
+  COMPLETED: { text: '已完成', status: 'Success' as const },
+  DRAFT: { text: '草稿', status: 'Default' as const },
+  SUBMITTED: { text: '已提交', status: 'Warning' as const },
+  RECEIVED: { text: '已收货', status: 'Processing' as const },
+  SENT_BACK: { text: '已寄回', status: 'Processing' as const },
+};
 
 export default function AfterSales() {
   const navigate = useNavigate();
@@ -34,7 +37,7 @@ export default function AfterSales() {
   const columns: ProColumns<AfterSalesRow>[] = [
     { title: 'ID', dataIndex: 'id', width: 80, search: false },
     { title: '类型', dataIndex: 'type', width: 100, valueEnum: { EXCHANGE: { text: '换货' }, REPAIR: { text: '维修' } } },
-    { title: '状态', dataIndex: 'status', width: 120, valueType: 'select', fieldProps: { options: STATUS_OPTIONS } },
+    { title: '状态', dataIndex: 'status', width: 120, valueEnum: STATUS_VALUE_ENUM },
     { title: '发货单ID', dataIndex: 'sourceShipmentId', width: 100, search: false },
     { title: '机器编号', dataIndex: 'machineNo', width: 140 },
     { title: '原因', dataIndex: 'reason', ellipsis: true, search: false },
@@ -75,7 +78,7 @@ export default function AfterSales() {
         rowKey="id"
         search={{ labelWidth: 'auto' }}
         pagination={{ pageSize: 10 }}
-        headerTitle="售后单列表"
+        headerTitle="运输异常管理"
       />
     </div>
   );

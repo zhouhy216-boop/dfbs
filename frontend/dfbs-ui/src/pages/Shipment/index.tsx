@@ -55,7 +55,22 @@ export default function Shipment() {
   const columns: ProColumns<ShipmentListRow>[] = [
     { title: '发货单号', dataIndex: 'shipmentNo', width: 160 },
     { title: '客户', dataIndex: 'customerName', ellipsis: true },
-    { title: '状态', dataIndex: 'status', width: 120 },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 120,
+      valueEnum: {
+        PENDING: { text: '待发货', status: 'Warning' },
+        CREATED: { text: '新建', status: 'Default' },
+        PENDING_SHIP: { text: '待发货', status: 'Warning' },
+        PARTIAL_SHIPPED: { text: '部分发货', status: 'Processing' },
+        SHIPPED: { text: '已发货', status: 'Success' },
+        DELIVERED: { text: '已送达', status: 'Success' },
+        COMPLETED: { text: '已完成', status: 'Success' },
+        EXCEPTION: { text: '异常', status: 'Error' },
+        CANCELLED: { text: '已取消', status: 'Error' },
+      },
+    },
     { title: '创建时间', dataIndex: 'createdAt', valueType: 'dateTime', width: 180, search: false },
     {
       title: '操作',
