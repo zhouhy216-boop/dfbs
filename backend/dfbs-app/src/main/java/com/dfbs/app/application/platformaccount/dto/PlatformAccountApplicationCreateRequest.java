@@ -15,11 +15,13 @@ public record PlatformAccountApplicationCreateRequest(
         Long customerId,
         /** Free-text customer name when customerId is null. */
         @Size(max = 256) String customerName,
-        @NotBlank @Size(max = 128) String orgCodeShort,
+        /** Admin-only; null at creation. */
+        @Size(max = 128) String orgCodeShort,
         @NotBlank @Size(max = 256) String orgFullName,
-        @Size(max = 128) String contactPerson,
-        @Size(max = 64) String phone,
-        @Size(max = 256) String email,
+        @NotBlank @Size(max = 128) String contactPerson,
+        @NotBlank @Size(max = 64) String phone,
+        @NotBlank @Size(max = 256) String email,
+        /** Admin-only; null at creation. */
         @Size(max = 128) String region,
         @Size(max = 128) String salesPerson,
         @Size(max = 128) String contractNo,

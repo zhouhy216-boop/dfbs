@@ -20,6 +20,7 @@ public record PlatformAccountPlannerSubmitRequest(
         @Size(max = 128) String contractNo,
         BigDecimal price,
         Integer quantity,
-        @Size(max = 2000) String reason
+        @Size(max = 2000) String reason,
+        Boolean isCcPlanner
 ) {
 }

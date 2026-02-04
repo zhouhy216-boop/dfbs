@@ -43,7 +43,8 @@ public class PlatformAccountApplicationEntity {
     @Column(name = "customer_name", length = 256)
     private String customerName;
 
-    @Column(name = "org_code_short", nullable = false, length = 128)
+    /** Set by Admin at approval; null at creation. */
+    @Column(name = "org_code_short", length = 128)
     private String orgCodeShort;
 
     @Column(name = "org_full_name", nullable = false, length = 256)
@@ -58,6 +59,7 @@ public class PlatformAccountApplicationEntity {
     @Column(name = "email", length = 256)
     private String email;
 
+    /** Set by Admin at approval; null at creation. */
     @Column(name = "region", length = 128)
     private String region;
 

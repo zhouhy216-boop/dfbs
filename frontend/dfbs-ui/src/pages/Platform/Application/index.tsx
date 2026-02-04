@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ProTable, ModalForm } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
-import { Alert, Button, Checkbox, Modal, Form, Input, InputNumber, Radio, Select, Tag, message } from 'antd';
+import { Alert, Button, Modal, Form, Input, InputNumber, Select, Tag, message } from 'antd';
 import request from '@/utils/request';
 import SmartReferenceSelect from '@/components/SmartReferenceSelect';
 
@@ -64,7 +64,7 @@ function showError(e: unknown) {
   message.error(err?.response?.data?.message ?? err?.message ?? '操作失败');
 }
 
-/** Create modal: allows free text (new customer) or select existing. */
+/** Create modal: allows free text (new customer) or select existing. Auto-fills orgFullName from customer. */
 function CustomerFieldCreate() {
   const form = Form.useFormInstance();
   const customerName = Form.useWatch('customerName', form);
@@ -79,6 +79,7 @@ function CustomerFieldCreate() {
           onChange={(ref) => {
             form.setFieldValue('customerId', ref.id ?? null);
             form.setFieldValue('customerName', ref.name);
+            form.setFieldValue('orgFullName', ref.name ?? '');
           }}
         />
       </Form.Item>
@@ -134,17 +135,16 @@ export default function PlatformApplication() {
                 platform: row.platform,
                 customerId: row.customerId ?? undefined,
                 customerName: row.customerName ?? '',
-                orgCodeShort: row.orgCodeShort,
                 orgFullName: row.orgFullName,
                 contactPerson: row.contactPerson,
                 phone: row.phone,
                 email: row.email,
-                region: row.region,
                 salesPerson: row.salesPerson,
                 contractNo: row.contractNo,
                 price: row.price,
                 quantity: row.quantity,
                 reason: row.reason,
+                ccPlanner: undefined,
               });
               setPlannerCustomerExists(null);
               setPlannerModalOpen(true);
@@ -154,7 +154,7 @@ export default function PlatformApplication() {
           </a>
         ),
         row.status === 'PENDING_ADMIN' && (
-          <a key="admin" onClick={() => { setCurrentRow(row); adminForm.setFieldsValue(row); setAdminModalOpen(true); }}>
+          <a key="admin" onClick={() => { setCurrentRow(row); adminForm.setFieldsValue({ orgCodeShort: row.orgCodeShort ?? '', region: row.region ?? undefined }); setAdminModalOpen(true); }}>
             管理员审核
           </a>
         ),
@@ -163,24 +163,22 @@ export default function PlatformApplication() {
   ];
 
   const handleCreate = async (values: Record<string, unknown>) => {
+    const sourceType = (values.sourceType ?? createSourceType) as 'FACTORY' | 'SERVICE';
     try {
       await request.post('/v1/platform-account-applications/create', {
         platform: values.platform,
-        sourceType: values.sourceType ?? 'FACTORY',
+        sourceType,
         customerId: values.customerId ?? undefined,
         customerName: values.customerName ? String(values.customerName).trim() : undefined,
-        orgCodeShort: values.orgCodeShort,
         orgFullName: values.orgFullName,
         contactPerson: values.contactPerson ?? undefined,
         phone: values.phone ?? undefined,
         email: values.email ?? undefined,
-        region: values.region ?? undefined,
-        salesPerson: values.salesPerson ?? undefined,
-        contractNo: values.contractNo ?? undefined,
-        price: values.price ?? undefined,
-        quantity: values.quantity ?? undefined,
-        reason: values.reason ?? undefined,
-        isCcPlanner: values.isCcPlanner ?? false,
+        contractNo: sourceType === 'FACTORY' ? (values.contractNo ?? undefined) : undefined,
+        price: sourceType === 'SERVICE' ? values.price ?? undefined : undefined,
+        quantity: sourceType === 'SERVICE' ? values.quantity ?? undefined : undefined,
+        reason: sourceType === 'SERVICE' ? values.reason ?? undefined : undefined,
+        isCcPlanner: false,
         skipPlanner: false,
       });
       message.success('申请已提交');
@@ -201,17 +199,16 @@ export default function PlatformApplication() {
         platform: values.platform ?? undefined,
         customerId: values.customerId ?? undefined,
         customerName: values.customerName ? String(values.customerName).trim() : undefined,
-        orgCodeShort: values.orgCodeShort ?? undefined,
         orgFullName: values.orgFullName ?? undefined,
         contactPerson: values.contactPerson ?? undefined,
         phone: values.phone ?? undefined,
         email: values.email ?? undefined,
-        region: values.region ?? undefined,
         salesPerson: values.salesPerson ?? undefined,
         contractNo: values.contractNo ?? undefined,
         price: values.price ?? undefined,
         quantity: values.quantity ?? undefined,
         reason: values.reason ?? undefined,
+        isCcPlanner: !!values.ccPlanner,
       });
       message.success('已提交至管理员审核');
       setPlannerModalOpen(false);
@@ -227,22 +224,26 @@ export default function PlatformApplication() {
   const handleApprove = async () => {
     if (!currentRow) return;
     const values = await adminForm.validateFields();
+    if (!values.orgCodeShort?.trim() || !values.region) {
+      message.error('请填写机构代码/简称并选择区域');
+      return;
+    }
     try {
       await request.post(`/v1/platform-account-applications/${currentRow.id}/approve`, {
-        platform: values.platform,
-        customerId: values.customerId ?? undefined,
-        orgCodeShort: values.orgCodeShort,
-        orgFullName: values.orgFullName,
+        platform: currentRow.platform,
+        customerId: currentRow.customerId ?? undefined,
+        orgCodeShort: values.orgCodeShort?.trim(),
+        orgFullName: currentRow.orgFullName,
         region: values.region,
-        contactPerson: values.contactPerson ?? undefined,
-        phone: values.phone ?? undefined,
-        email: values.email ?? undefined,
-        salesPerson: values.salesPerson ?? undefined,
-        contractNo: values.contractNo ?? undefined,
-        price: values.price ?? undefined,
-        quantity: values.quantity ?? undefined,
-        reason: values.reason ?? undefined,
-        isCcPlanner: values.isCcPlanner ?? false,
+        contactPerson: currentRow.contactPerson ?? undefined,
+        phone: currentRow.phone ?? undefined,
+        email: currentRow.email ?? undefined,
+        salesPerson: currentRow.salesPerson ?? undefined,
+        contractNo: currentRow.contractNo ?? undefined,
+        price: currentRow.price ?? undefined,
+        quantity: currentRow.quantity ?? undefined,
+        reason: currentRow.reason ?? undefined,
+        isCcPlanner: currentRow.isCcPlanner ?? false,
         action: 'BIND_ONLY',
       });
       message.success('已通过');
@@ -305,14 +306,18 @@ export default function PlatformApplication() {
         pagination={{ pageSize: 20 }}
         headerTitle="平台开户申请"
         toolBarRender={() => [
-          <Button key="create" type="primary" onClick={() => setCreateOpen(true)}>
-            发起申请
+          <Button key="factory" type="primary" onClick={() => { setCreateSourceType('FACTORY'); setCreateOpen(true); }}>
+            工厂申请
+          </Button>,
+          <Button key="service" onClick={() => { setCreateSourceType('SERVICE'); setCreateOpen(true); }}>
+            服务申请
           </Button>,
         ]}
       />
 
       <ModalForm
-        title="发起申请"
+        key={`create-${createSourceType}`}
+        title={createSourceType === 'FACTORY' ? '工厂申请' : '服务申请'}
         open={createOpen}
         onOpenChange={(open) => { setCreateOpen(open); if (!open) setCreateSourceType('FACTORY'); }}
         onFinish={handleCreate}
@@ -322,55 +327,38 @@ export default function PlatformApplication() {
         <Form.Item name="platform" label="平台" rules={[{ required: true }]}>
           <Select options={PLATFORM_OPTIONS} placeholder="选择平台" />
         </Form.Item>
-        <Form.Item name="sourceType" label="申请渠道" initialValue="FACTORY" rules={[{ required: true }]}>
-          <Radio.Group
-            options={SOURCE_TYPE_OPTIONS}
-            onChange={(e) => setCreateSourceType(e.target.value)}
-          />
-        </Form.Item>
+        <Form.Item name="sourceType" hidden initialValue={createSourceType}><Input type="hidden" /></Form.Item>
         <CustomerFieldCreate />
-        <Form.Item name="orgCodeShort" label="机构代码/简称" rules={[{ required: true, message: '请输入机构代码/简称' }]}>
-          <Input placeholder="机构代码/简称" />
-        </Form.Item>
         <Form.Item name="orgFullName" label="机构全称" rules={[{ required: true, message: '请输入机构全称' }]}>
-          <Input placeholder="机构全称" />
+          <Input placeholder="机构全称（默认同客户名称，可修改）" />
         </Form.Item>
-        <Form.Item name="contactPerson" label="联系人">
+        <Form.Item name="contactPerson" label="联系人" rules={[{ required: true, message: '此项必填' }]}>
           <Input placeholder="联系人" />
         </Form.Item>
-        <Form.Item name="phone" label="联系电话">
+        <Form.Item name="phone" label="联系电话" rules={[{ required: true, message: '此项必填' }]}>
           <Input placeholder="联系电话" />
         </Form.Item>
-        <Form.Item name="email" label="邮箱">
+        <Form.Item name="email" label="邮箱" rules={[{ required: true, message: '此项必填' }]}>
           <Input placeholder="邮箱" />
         </Form.Item>
-        <Form.Item name="region" label="区域">
-          <Input placeholder="区域" />
-        </Form.Item>
-        <Form.Item name="salesPerson" label="销售负责人">
-          <Input placeholder="销售负责人" />
-        </Form.Item>
         {createSourceType === 'FACTORY' && (
-          <Form.Item name="contractNo" label="合同号" rules={[{ required: true, message: '工厂渠道必填合同号' }]}>
+          <Form.Item name="contractNo" label="合同号" rules={[{ required: true, message: '请输入合同号' }]}>
             <Input placeholder="合同号" />
           </Form.Item>
         )}
         {createSourceType === 'SERVICE' && (
           <>
-            <Form.Item name="price" label="价格" rules={[{ required: true, message: '服务渠道必填' }]}>
+            <Form.Item name="price" label="价格" rules={[{ required: true, message: '请填写价格' }]}>
               <InputNumber min={0} style={{ width: '100%' }} />
             </Form.Item>
-            <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '服务渠道必填' }]}>
+            <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '请填写数量' }]}>
               <InputNumber min={0} style={{ width: '100%' }} />
             </Form.Item>
-            <Form.Item name="reason" label="原因" rules={[{ required: true, message: '服务渠道必填' }]}>
+            <Form.Item name="reason" label="原因" rules={[{ required: true, message: '请填写原因' }]}>
               <Input.TextArea rows={2} placeholder="原因" />
             </Form.Item>
           </>
         )}
-        <Form.Item name="isCcPlanner" label="抄送规划">
-          <Select options={[{ label: '否', value: false }, { label: '是', value: true }]} placeholder="选填" allowClear />
-        </Form.Item>
       </ModalForm>
 
       <Modal
@@ -414,9 +402,6 @@ export default function PlatformApplication() {
               }}
             />
           </Form.Item>
-          <Form.Item name="orgCodeShort" label="机构代码/简称">
-            <Input placeholder="选填" />
-          </Form.Item>
           <Form.Item name="orgFullName" label="机构全称" rules={[{ required: true, message: '必填' }]}>
             <Input placeholder="机构全称" />
           </Form.Item>
@@ -429,24 +414,41 @@ export default function PlatformApplication() {
           <Form.Item name="email" label="邮箱">
             <Input placeholder="邮箱" />
           </Form.Item>
-          <Form.Item name="region" label="区域">
-            <Input placeholder="区域" />
-          </Form.Item>
           <Form.Item name="salesPerson" label="销售负责人">
             <Input placeholder="销售负责人" />
           </Form.Item>
-          <Form.Item name="contractNo" label="合同号">
-            <Input placeholder="合同号" />
-          </Form.Item>
-          <Form.Item name="price" label="价格">
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item name="quantity" label="数量">
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item name="reason" label="原因">
-            <Input.TextArea rows={2} placeholder="原因" />
-          </Form.Item>
+          {currentRow?.sourceType === 'SERVICE' ? (
+            <>
+              <Form.Item name="price" label="价格">
+                <InputNumber min={0} style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item name="quantity" label="数量">
+                <InputNumber min={0} style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item name="reason" label="原因">
+                <Input.TextArea rows={2} placeholder="原因" />
+              </Form.Item>
+            </>
+          ) : (
+            <>
+              <Form.Item name="contractNo" label="合同号">
+                <Input placeholder="合同号" />
+              </Form.Item>
+              {currentRow?.sourceType === 'FACTORY' && (
+                <Form.Item name="ccPlanner" label="抄送规划">
+                  <Select
+                    placeholder="选填"
+                    allowClear
+                    options={[
+                      { label: '张三', value: '张三' },
+                      { label: '李四', value: '李四' },
+                      { label: '王五', value: '王五' },
+                    ]}
+                  />
+                </Form.Item>
+              )}
+            </>
+          )}
         </Form>
       </Modal>
 
@@ -460,49 +462,26 @@ export default function PlatformApplication() {
       >
         {currentRow && (
           <>
-            <Form form={adminForm} layout="vertical" initialValues={currentRow}>
-              <Form.Item name="platform" label="平台">
-                <Select options={PLATFORM_OPTIONS} disabled />
+            <div style={{ marginBottom: 16, padding: 12, background: '#fafafa', borderRadius: 8, lineHeight: 1.8 }}>
+              <p><strong>申请单号</strong>: {currentRow.applicationNo}</p>
+              <p><strong>平台</strong>: {PLATFORM_OPTIONS.find((o) => o.value === currentRow.platform)?.label ?? currentRow.platform}</p>
+              <p><strong>渠道</strong>: {currentRow.sourceType === 'SERVICE' ? '服务渠道' : '工厂渠道'}</p>
+              <p><strong>客户</strong>: {currentRow.customerName ?? (currentRow.customerId != null ? `#${currentRow.customerId}` : '—')}</p>
+              <p><strong>机构全称</strong>: {currentRow.orgFullName ?? '—'}</p>
+              <p><strong>联系人</strong>: {currentRow.contactPerson ?? '—'}</p>
+              <p><strong>联系电话</strong>: {currentRow.phone ?? '—'}</p>
+              <p><strong>邮箱</strong>: {currentRow.email ?? '—'}</p>
+              {currentRow.contractNo != null && <p><strong>合同号</strong>: {currentRow.contractNo}</p>}
+              {currentRow.price != null && <p><strong>价格</strong>: {currentRow.price}</p>}
+              {currentRow.quantity != null && <p><strong>数量</strong>: {currentRow.quantity}</p>}
+              {currentRow.reason != null && <p><strong>原因</strong>: {currentRow.reason}</p>}
+            </div>
+            <Form form={adminForm} layout="vertical" initialValues={{ orgCodeShort: currentRow.orgCodeShort, region: currentRow.region }}>
+              <Form.Item name="orgCodeShort" label="机构代码/简称" rules={[{ required: true, message: '请填写机构代码/简称' }]}>
+                <Input placeholder="机构代码/简称" />
               </Form.Item>
-              <Form.Item label="客户">
-                <span>{currentRow.customerName ?? (currentRow.customerId != null ? `#${currentRow.customerId}` : '—')}</span>
-              </Form.Item>
-              <Form.Item name="customerId" hidden><Input type="hidden" /></Form.Item>
-              <Form.Item name="orgCodeShort" label="机构代码/简称" rules={[{ required: true, message: '必填' }]}>
-                <Input />
-              </Form.Item>
-              <Form.Item name="orgFullName" label="机构全称" rules={[{ required: true }]}>
-                <Input />
-              </Form.Item>
-              <Form.Item name="contactPerson" label="联系人">
-                <Input />
-              </Form.Item>
-              <Form.Item name="phone" label="联系电话">
-                <Input />
-              </Form.Item>
-              <Form.Item name="email" label="邮箱">
-                <Input />
-              </Form.Item>
-              <Form.Item name="region" label="区域" rules={[{ required: true, message: '必填' }]}>
-                <Select options={REGION_OPTIONS} placeholder="请选择区域" allowClear />
-              </Form.Item>
-              <Form.Item name="salesPerson" label="销售负责人">
-                <Input />
-              </Form.Item>
-              <Form.Item name="contractNo" label="合同号">
-                <Input />
-              </Form.Item>
-              <Form.Item name="price" label="价格">
-                <InputNumber min={0} style={{ width: '100%' }} />
-              </Form.Item>
-              <Form.Item name="quantity" label="数量">
-                <InputNumber min={0} style={{ width: '100%' }} />
-              </Form.Item>
-              <Form.Item name="reason" label="原因">
-                <Input.TextArea rows={2} />
-              </Form.Item>
-              <Form.Item name="isCcPlanner" valuePropName="checked" initialValue={false}>
-                <Checkbox>抄送生产企划</Checkbox>
+              <Form.Item name="region" label="区域" rules={[{ required: true, message: '请选择区域' }]}>
+                <Select options={REGION_OPTIONS} placeholder="华东/华北/华南/西部/海外" allowClear />
               </Form.Item>
               <Form.Item>
                 <Button type="primary" onClick={handleApprove} style={{ marginRight: 8 }}>通过</Button>

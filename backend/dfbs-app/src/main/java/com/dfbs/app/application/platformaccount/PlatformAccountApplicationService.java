@@ -13,6 +13,7 @@ import com.dfbs.app.modules.platformorg.PlatformOrgCustomerEntity;
 import com.dfbs.app.modules.platformorg.PlatformOrgEntity;
 import com.dfbs.app.modules.platformorg.PlatformOrgPlatform;
 import com.dfbs.app.modules.platformorg.PlatformOrgRepo;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -63,7 +64,7 @@ public class PlatformAccountApplicationService {
             entity.setCustomerId(null);
             entity.setCustomerName(trimToNull(request.customerName()));
         }
-        entity.setOrgCodeShort(trimBlank(request.orgCodeShort()));
+        entity.setOrgCodeShort(trimToNull(request.orgCodeShort()));
         entity.setOrgFullName(trimBlank(request.orgFullName()));
         entity.setContactPerson(trimToNull(request.contactPerson()));
         entity.setPhone(trimToNull(request.phone()));
@@ -76,8 +77,13 @@ public class PlatformAccountApplicationService {
         entity.setReason(trimToNull(request.reason()));
         entity.setIsCcPlanner(Boolean.TRUE.equals(request.isCcPlanner()));
         entity.setApplicantId(currentUserIdResolver.getCurrentUserId());
-        entity.setStatus(Boolean.TRUE.equals(request.skipPlanner()) ? PlatformAccountApplicationStatus.PENDING_ADMIN
-                : PlatformAccountApplicationStatus.PENDING_PLANNER);
+        ApplicationSourceType sourceType = request.sourceType() != null ? request.sourceType() : ApplicationSourceType.FACTORY;
+        if (sourceType == ApplicationSourceType.SERVICE) {
+            entity.setStatus(PlatformAccountApplicationStatus.PENDING_ADMIN);
+        } else {
+            entity.setStatus(Boolean.TRUE.equals(request.skipPlanner()) ? PlatformAccountApplicationStatus.PENDING_ADMIN
+                    : PlatformAccountApplicationStatus.PENDING_PLANNER);
+        }
         return PlatformAccountApplicationResponse.fromEntity(repo.save(entity));
     }
 
@@ -106,6 +112,7 @@ public class PlatformAccountApplicationService {
         if (request.price() != null) entity.setPrice(request.price());
         if (request.quantity() != null) entity.setQuantity(request.quantity());
         if (request.reason() != null) entity.setReason(trimToNull(request.reason()));
+        if (request.isCcPlanner() != null) entity.setIsCcPlanner(request.isCcPlanner());
         entity.setPlannerId(currentUserIdResolver.getCurrentUserId());
         entity.setStatus(PlatformAccountApplicationStatus.PENDING_ADMIN);
         return PlatformAccountApplicationResponse.fromEntity(repo.save(entity));
@@ -191,9 +198,7 @@ public class PlatformAccountApplicationService {
         if (!StringUtils.hasText(request.orgFullName())) {
             throw new IllegalArgumentException("机构全称不能为空");
         }
-        if (!StringUtils.hasText(request.orgCodeShort())) {
-            throw new IllegalArgumentException("机构代码/简称不能为空");
-        }
+        // orgCodeShort is Admin-only; not validated at creation
         if (request.customerId() == null && !StringUtils.hasText(request.customerName())) {
             throw new IllegalArgumentException("请选择或输入客户");
         }
@@ -234,6 +239,8 @@ public class PlatformAccountApplicationService {
         if (!StringUtils.hasText(entity.getOrgCodeShort())) {
             throw new IllegalStateException("审批前必须提供机构代码/简称");
         }
+        String code = entity.getOrgCodeShort().trim();
+        entity.setOrgCodeShort(code);
         Long customerId = entity.getCustomerId();
         if (customerId == null && StringUtils.hasText(entity.getCustomerName())) {
             customerId = customerMasterDataService.findFirstByName(entity.getCustomerName())
@@ -245,36 +252,44 @@ public class PlatformAccountApplicationService {
             throw new IllegalStateException("审批前必须确认客户");
         }
         final Long finalCustomerId = customerId;
-        Optional<PlatformOrgEntity> existingOpt = platformOrgRepo.findByPlatformAndOrgCodeShort(entity.getPlatform(), entity.getOrgCodeShort());
+        Optional<PlatformOrgEntity> existingOpt = platformOrgRepo.findByPlatformAndOrgCodeShort(entity.getPlatform(), code);
         if (existingOpt.isPresent()) {
-            PlatformOrgEntity existing = existingOpt.get();
-            if (existing.getCustomerLinks() != null) {
-                boolean already = existing.getCustomerLinks().stream()
-                        .anyMatch(l -> finalCustomerId.equals(l.getCustomerId()));
-                if (!already) {
-                    PlatformOrgCustomerEntity link = new PlatformOrgCustomerEntity();
-                    link.setOrgId(existing.getId());
-                    link.setCustomerId(finalCustomerId);
-                    link.setOrg(existing);
-                    existing.getCustomerLinks().add(link);
-                    platformOrgRepo.save(existing);
-                }
-            }
+            bindCustomerToOrg(existingOpt.get(), finalCustomerId);
         } else {
-            PlatformOrgRequest orgRequest = new PlatformOrgRequest(
-                    entity.getPlatform(),
-                    entity.getOrgCodeShort(),
-                    entity.getOrgFullName(),
-                    List.of(finalCustomerId),
-                    entity.getContactPerson(),
-                    entity.getPhone(),
-                    entity.getEmail(),
-                    entity.getSalesPerson(),
-                    entity.getRegion(),
-                    null,
-                    Boolean.TRUE
-            );
-            platformOrgService.create(orgRequest);
+            try {
+                PlatformOrgRequest orgRequest = new PlatformOrgRequest(
+                        entity.getPlatform(),
+                        code,
+                        entity.getOrgFullName(),
+                        List.of(finalCustomerId),
+                        entity.getContactPerson(),
+                        entity.getPhone(),
+                        entity.getEmail(),
+                        entity.getSalesPerson(),
+                        entity.getRegion(),
+                        null,
+                        Boolean.TRUE
+                );
+                platformOrgService.create(orgRequest);
+            } catch (DataIntegrityViolationException e) {
+                platformOrgRepo.findByPlatformAndOrgCodeShort(entity.getPlatform(), code)
+                        .ifPresent(existing -> bindCustomerToOrg(existing, finalCustomerId));
+            }
+        }
+    }
+
+    private void bindCustomerToOrg(PlatformOrgEntity existing, Long customerId) {
+        if (existing.getCustomerLinks() != null) {
+            boolean already = existing.getCustomerLinks().stream()
+                    .anyMatch(l -> customerId.equals(l.getCustomerId()));
+            if (!already) {
+                PlatformOrgCustomerEntity link = new PlatformOrgCustomerEntity();
+                link.setOrgId(existing.getId());
+                link.setCustomerId(customerId);
+                link.setOrg(existing);
+                existing.getCustomerLinks().add(link);
+                platformOrgRepo.save(existing);
+            }
         }
     }
 
