@@ -12,6 +12,7 @@ import jakarta.persistence.criteria.JoinType;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.Optional;
 
 @Service
 public class CustomerMasterDataService {
@@ -32,6 +33,12 @@ public class CustomerMasterDataService {
 
         CustomerEntity entity = CustomerEntity.create(customerNo, name);
         return repo.save(entity);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<CustomerEntity> findFirstByName(String name) {
+        if (name == null || name.isBlank()) return Optional.empty();
+        return repo.findByNameAndDeletedAtIsNull(name.trim()).stream().findFirst();
     }
 
     @Transactional(readOnly = true)
@@ -77,6 +84,7 @@ public class CustomerMasterDataService {
     public Page<CustomerEntity> search(String keyword, Pageable pageable) {
         Specification<CustomerEntity> spec = (root, query, cb) -> cb.isNull(root.get("deletedAt"));
         spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), "ACTIVE"));
+        spec = spec.and((root, query, cb) -> cb.equal(root.get("isTemp"), false));
 
         if (keyword != null && !keyword.trim().isEmpty()) {
             String kw = "%" + keyword.trim().toLowerCase() + "%";

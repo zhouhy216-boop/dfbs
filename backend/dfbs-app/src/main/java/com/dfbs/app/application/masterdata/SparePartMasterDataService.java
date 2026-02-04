@@ -78,6 +78,7 @@ public class SparePartMasterDataService {
                 ));
             }
             if (status != null) p = cb.and(p, cb.equal(root.get("status"), status));
+            p = cb.and(p, cb.equal(root.get("isTemp"), false));
             return p;
         };
         return sparePartRepo.findAll(spec, pageable);

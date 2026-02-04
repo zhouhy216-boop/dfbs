@@ -84,6 +84,7 @@ public class SimCardMasterDataService {
                 p = cb.and(p, cb.like(cb.lower(root.get("cardNo")), k));
             }
             if (status != null) p = cb.and(p, cb.equal(root.get("status"), status));
+            p = cb.and(p, cb.equal(root.get("isTemp"), false));
             return p;
         };
         return simCardRepo.findAll(spec, pageable);

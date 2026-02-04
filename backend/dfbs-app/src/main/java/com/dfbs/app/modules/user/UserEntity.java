@@ -12,6 +12,12 @@ public class UserEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true, length = 64)
+    private String username;
+
+    @Column(length = 128)
+    private String nickname;
+
     /** Only users with this = true can initiate permission requests. */
     @Column(name = "can_request_permission", nullable = false)
     private Boolean canRequestPermission = false;

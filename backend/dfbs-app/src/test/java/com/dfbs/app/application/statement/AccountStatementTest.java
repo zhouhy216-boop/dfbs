@@ -82,6 +82,7 @@ class AccountStatementTest {
     @BeforeEach
     void setUp() {
         UserEntity creator = new UserEntity();
+        creator.setUsername("stmt-creator");
         creator.setCanRequestPermission(false);
         creator.setAllowNormalNotification(true);
         creator.setCanManageStatements(true);
@@ -89,6 +90,7 @@ class AccountStatementTest {
         creatorId = creator.getId();
 
         UserEntity collector = new UserEntity();
+        collector.setUsername("stmt-collector");
         collector.setCanRequestPermission(false);
         collector.setAllowNormalNotification(true);
         collector.setCanManageStatements(false);

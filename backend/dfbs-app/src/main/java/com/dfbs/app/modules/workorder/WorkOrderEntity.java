@@ -26,6 +26,9 @@ public class WorkOrderEntity extends BaseAuditEntity {
     @Column(nullable = false, length = 32)
     private WorkOrderStatus status;
 
+    @Column(name = "customer_id")
+    private Long customerId;
+
     @Column(name = "customer_name", nullable = false, length = 256)
     private String customerName;
 

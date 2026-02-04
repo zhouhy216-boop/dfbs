@@ -65,6 +65,7 @@ class PriceBookTest {
         customerId = customer.getId();
 
         UserEntity finance = new UserEntity();
+        finance.setUsername("pricebook-finance");
         finance.setCanRequestPermission(false);
         finance.setAuthorities("[\"ROLE_USER\",\"ROLE_FINANCE\"]");
         finance.setAllowNormalNotification(true);

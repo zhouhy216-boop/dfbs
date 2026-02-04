@@ -50,6 +50,7 @@ class ExpenseClaimTest {
     @BeforeEach
     void ensureUsers() {
         UserEntity u1 = new UserEntity();
+        u1.setUsername("claim-u1");
         u1.setCanRequestPermission(false);
         u1.setAuthorities("[]");
         u1.setAllowNormalNotification(true);
@@ -58,6 +59,7 @@ class ExpenseClaimTest {
         user1Id = u1.getId();
 
         UserEntity u2 = new UserEntity();
+        u2.setUsername("claim-u2");
         u2.setCanRequestPermission(false);
         u2.setAuthorities("[]");
         u2.setAllowNormalNotification(true);

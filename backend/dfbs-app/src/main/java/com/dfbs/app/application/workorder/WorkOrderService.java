@@ -13,16 +13,24 @@ import com.dfbs.app.modules.warehouse.OutboundRefType;
 import com.dfbs.app.modules.warehouse.WarehouseType;
 import com.dfbs.app.modules.warehouse.WhWarehouseEntity;
 import com.dfbs.app.modules.warehouse.WhWarehouseRepo;
+import com.dfbs.app.application.customer.CustomerMasterDataService;
+import com.dfbs.app.application.workorder.dto.WorkOrderAcceptReq;
 import com.dfbs.app.application.workorder.dto.WorkOrderCreateReq;
 import com.dfbs.app.application.workorder.dto.WorkOrderDetailDto;
+import com.dfbs.app.application.workorder.dto.WorkOrderListDto;
 import com.dfbs.app.application.workorder.dto.WorkOrderPartReq;
 import com.dfbs.app.application.workorder.dto.WorkOrderRecordReq;
+import com.dfbs.app.application.smartselect.TempDataService;
+import com.dfbs.app.application.smartselect.dto.GetOrCreateTempRequest;
+import com.dfbs.app.application.smartselect.dto.GetOrCreateTempResult;
+import com.dfbs.app.modules.customer.CustomerEntity;
 import com.dfbs.app.modules.workorder.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 
 @Service
 public class WorkOrderService {
@@ -35,11 +43,15 @@ public class WorkOrderService {
     private final WhCoreService whCoreService;
     private final WhWarehouseRepo whWarehouseRepo;
     private final CurrentUserIdResolver userIdResolver;
+    private final CustomerMasterDataService customerMasterDataService;
+    private final TempDataService tempDataService;
 
     public WorkOrderService(QuoteRepo quoteRepo, WorkOrderRepo workOrderRepo,
                             WorkOrderRecordRepo workOrderRecordRepo, WorkOrderPartRepo workOrderPartRepo,
                             NotificationService notificationService, WhCoreService whCoreService,
-                            WhWarehouseRepo whWarehouseRepo, CurrentUserIdResolver userIdResolver) {
+                            WhWarehouseRepo whWarehouseRepo, CurrentUserIdResolver userIdResolver,
+                            CustomerMasterDataService customerMasterDataService,
+                            TempDataService tempDataService) {
         this.quoteRepo = quoteRepo;
         this.workOrderRepo = workOrderRepo;
         this.workOrderRecordRepo = workOrderRecordRepo;
@@ -48,6 +60,8 @@ public class WorkOrderService {
         this.whCoreService = whCoreService;
         this.whWarehouseRepo = whWarehouseRepo;
         this.userIdResolver = userIdResolver;
+        this.customerMasterDataService = customerMasterDataService;
+        this.tempDataService = tempDataService;
     }
 
     /**
@@ -114,7 +128,29 @@ public class WorkOrderService {
     // ---------- Public / dispatch / accept / records / parts ----------
 
     /**
+     * Resolve customer: by ID, or by exact name (link existing), or create temp via TempDataService.
+     */
+    private Long resolveCustomerId(Long customerId, String customerName) {
+        if (customerId != null) {
+            return customerId;
+        }
+        if (customerName == null || customerName.isBlank()) {
+            return null;
+        }
+        String name = customerName.trim();
+        return customerMasterDataService.findFirstByName(name)
+                .map(CustomerEntity::getId)
+                .orElseGet(() -> {
+                    GetOrCreateTempResult r = tempDataService.getOrCreateTemp(
+                            new GetOrCreateTempRequest("CUSTOMER", name, Map.of()));
+                    return r.getId();
+                });
+    }
+
+    /**
      * Create a work order from public request (no quote). Generate orderNo = "WO-" + timestamp.
+     * Public repair: do NOT create temp records here. Only store raw customerName; customerId stays NULL.
+     * Temp/link is created only when dispatcher accepts (acceptByDispatcher).
      */
     @Transactional
     public WorkOrderEntity createPublic(WorkOrderCreateReq req) {
@@ -123,7 +159,13 @@ public class WorkOrderService {
         wo.setOrderNo(orderNo);
         wo.setType(WorkOrderType.REPAIR);
         wo.setStatus(WorkOrderStatus.PENDING);
-        wo.setCustomerName(requireNonBlank(req.getCustomerName(), "customerName"));
+        if (req.getCustomerId() != null) {
+            CustomerEntity customer = customerMasterDataService.getById(req.getCustomerId());
+            wo.setCustomerId(req.getCustomerId());
+            wo.setCustomerName(customer.getName() != null ? customer.getName() : (req.getCustomerName() != null ? req.getCustomerName() : ""));
+        } else {
+            wo.setCustomerName(requireNonBlank(req.getCustomerName(), "customerName"));
+        }
         wo.setContactPerson(requireNonBlank(req.getContactPerson(), "contactPerson"));
         wo.setContactPhone(requireNonBlank(req.getContactPhone(), "contactPhone"));
         wo.setServiceAddress(requireNonBlank(req.getServiceAddress(), "serviceAddress"));
@@ -135,12 +177,14 @@ public class WorkOrderService {
     }
 
     /**
-     * Create a work order internally (e.g. from phone call). Same as public create but set initiatorId to current user.
+     * Create a work order internally (e.g. from phone call). Same as public create but set initiatorId and skip acceptance step.
+     * Status is set to ACCEPTED_BY_DISPATCHER so the dispatcher does not need to "accept" their own ticket.
      */
     @Transactional
     public WorkOrderEntity createInternal(WorkOrderCreateReq req) {
         WorkOrderEntity wo = createPublic(req);
         wo.setInitiatorId(userIdResolver.getCurrentUserId());
+        wo.setStatus(WorkOrderStatus.ACCEPTED_BY_DISPATCHER);
         return workOrderRepo.save(wo);
     }
 
@@ -161,14 +205,55 @@ public class WorkOrderService {
     }
 
     /**
-     * Dispatch work order to a service manager. Status must be PENDING.
+     * Dispatcher accepts a PENDING work order and links customer. Status becomes ACCEPTED_BY_DISPATCHER.
+     * Customer: use customerId if provided; else resolve customerName (exact match or create temp).
+     */
+    @Transactional
+    public WorkOrderEntity acceptByDispatcher(WorkOrderAcceptReq req) {
+        if (req.getId() == null) {
+            throw new IllegalArgumentException("Work order id is required");
+        }
+        Long customerId = resolveCustomerId(req.getCustomerId(), req.getCustomerName());
+        if (customerId == null) {
+            throw new IllegalArgumentException("customerId or customerName is required");
+        }
+        WorkOrderEntity wo = workOrderRepo.findById(req.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Work order not found: id=" + req.getId()));
+        if (wo.getStatus() != WorkOrderStatus.PENDING) {
+            throw new IllegalStateException("Only PENDING work orders can be accepted by dispatcher; current=" + wo.getStatus());
+        }
+        CustomerEntity customer = customerMasterDataService.getById(customerId);
+        wo.setCustomerId(customerId);
+        wo.setCustomerName(customer.getName() != null ? customer.getName() : wo.getCustomerName());
+        if (req.getContactPerson() != null) {
+            wo.setContactPerson(req.getContactPerson());
+        }
+        if (req.getContactPhone() != null) {
+            wo.setContactPhone(req.getContactPhone());
+        }
+        if (req.getServiceAddress() != null) {
+            wo.setServiceAddress(req.getServiceAddress());
+        }
+        if (req.getIssueDescription() != null) {
+            wo.setIssueDescription(req.getIssueDescription());
+        }
+        if (req.getAppointmentTime() != null) {
+            wo.setAppointmentTime(req.getAppointmentTime());
+        }
+        wo.setStatus(WorkOrderStatus.ACCEPTED_BY_DISPATCHER);
+        setAudit(wo);
+        return workOrderRepo.save(wo);
+    }
+
+    /**
+     * Dispatch work order to a service manager. Status must be ACCEPTED_BY_DISPATCHER.
      */
     @Transactional
     public WorkOrderEntity dispatch(Long id, Long serviceManagerId) {
         WorkOrderEntity wo = workOrderRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Work order not found: id=" + id));
-        if (wo.getStatus() != WorkOrderStatus.PENDING) {
-            throw new IllegalStateException("Only PENDING work orders can be dispatched; current=" + wo.getStatus());
+        if (wo.getStatus() != WorkOrderStatus.ACCEPTED_BY_DISPATCHER) {
+            throw new IllegalStateException("Only work orders in ACCEPTED_BY_DISPATCHER can be dispatched; current=" + wo.getStatus());
         }
         wo.setServiceManagerId(serviceManagerId);
         wo.setDispatcherId(userIdResolver.getCurrentUserId());
@@ -273,28 +358,61 @@ public class WorkOrderService {
     }
 
     /**
-     * Pool: work orders waiting for dispatch (PENDING).
+     * Pool: work orders waiting for dispatcher (PENDING = need Accept; ACCEPTED_BY_DISPATCHER = need Dispatch).
+     * Returns list DTOs with customerName resolved from master when customerId is set.
      */
-    public java.util.List<WorkOrderEntity> getPool() {
-        return workOrderRepo.findByStatus(WorkOrderStatus.PENDING);
+    public java.util.List<WorkOrderListDto> getPool() {
+        var list = workOrderRepo.findByStatusIn(java.util.List.of(WorkOrderStatus.PENDING, WorkOrderStatus.ACCEPTED_BY_DISPATCHER));
+        return list.stream().map(this::toListDto).toList();
     }
 
     /**
      * My orders: work orders assigned to the given service manager.
+     * Returns list DTOs with customerName resolved from master when customerId is set.
      */
-    public java.util.List<WorkOrderEntity> getMyOrders(Long serviceManagerId) {
-        return workOrderRepo.findByServiceManagerId(serviceManagerId);
+    public java.util.List<WorkOrderListDto> getMyOrders(Long serviceManagerId) {
+        var list = workOrderRepo.findByServiceManagerId(serviceManagerId);
+        return list.stream().map(this::toListDto).toList();
+    }
+
+    private String resolveCustomerName(WorkOrderEntity wo) {
+        if (wo.getCustomerId() == null) {
+            return wo.getCustomerName();
+        }
+        try {
+            CustomerEntity c = customerMasterDataService.getById(wo.getCustomerId());
+            return c != null && c.getName() != null ? c.getName() : wo.getCustomerName();
+        } catch (Exception e) {
+            return wo.getCustomerName();
+        }
+    }
+
+    private WorkOrderListDto toListDto(WorkOrderEntity wo) {
+        WorkOrderListDto dto = new WorkOrderListDto();
+        dto.setId(wo.getId());
+        dto.setOrderNo(wo.getOrderNo());
+        dto.setType(wo.getType());
+        dto.setStatus(wo.getStatus());
+        dto.setCustomerId(wo.getCustomerId());
+        dto.setCustomerName(resolveCustomerName(wo));
+        dto.setContactPerson(wo.getContactPerson());
+        dto.setContactPhone(wo.getContactPhone());
+        dto.setServiceAddress(wo.getServiceAddress());
+        dto.setServiceManagerId(wo.getServiceManagerId());
+        dto.setCreatedAt(wo.getCreatedAt());
+        return dto;
     }
 
     /**
-     * Get full detail: work order + records + parts.
+     * Get full detail: work order + records + parts. customerNameDisplay is resolved from master when customerId is set.
      */
     public WorkOrderDetailDto getDetail(Long id) {
         WorkOrderEntity wo = workOrderRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Work order not found: id=" + id));
         var records = workOrderRecordRepo.findByWorkOrderIdOrderByCreatedAtAsc(id);
         var parts = workOrderPartRepo.findByWorkOrderId(id);
-        return new WorkOrderDetailDto(wo, records, parts);
+        String customerNameDisplay = resolveCustomerName(wo);
+        return new WorkOrderDetailDto(wo, records, parts, customerNameDisplay);
     }
 
     /**

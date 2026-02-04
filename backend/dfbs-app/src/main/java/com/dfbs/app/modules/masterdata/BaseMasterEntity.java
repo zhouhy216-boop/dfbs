@@ -7,7 +7,7 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 /**
- * Base entity for master data: id, audit fields (createdAt, createdBy, updatedAt, updatedBy).
+ * Base entity for master data: id, audit fields, is_temp (Smart Select temp pool), last_used_at (MRU).
  * Subclasses add status and business fields.
  */
 @MappedSuperclass
@@ -18,6 +18,14 @@ public abstract class BaseMasterEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /** Temp record (pending confirmation); excluded from standard search (Rule 2.4). */
+    @Column(name = "is_temp", nullable = false)
+    private Boolean isTemp = false;
+
+    /** Last used at (for Global MRU sorting in Smart Select). */
+    @Column(name = "last_used_at")
+    private LocalDateTime lastUsedAt;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;

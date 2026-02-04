@@ -54,6 +54,7 @@ class ContractPriceControllerTest {
     @Test
     void permission_nonAdmin_createContract_fails() {
         UserEntity plain = new UserEntity();
+        plain.setUsername("plain");
         plain.setCanRequestPermission(false);
         plain.setAuthorities("[\"ROLE_USER\"]");
         plain.setAllowNormalNotification(true);

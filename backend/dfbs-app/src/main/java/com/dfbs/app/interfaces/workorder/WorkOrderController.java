@@ -1,9 +1,11 @@
 package com.dfbs.app.interfaces.workorder;
 
 import com.dfbs.app.application.workorder.WorkOrderService;
+import com.dfbs.app.application.workorder.dto.WorkOrderAcceptReq;
 import com.dfbs.app.application.workorder.dto.WorkOrderCreateReq;
 import com.dfbs.app.application.workorder.dto.WorkOrderDetailDto;
 import com.dfbs.app.application.workorder.dto.WorkOrderDispatchReq;
+import com.dfbs.app.application.workorder.dto.WorkOrderListDto;
 import com.dfbs.app.application.workorder.dto.WorkOrderPartReq;
 import com.dfbs.app.application.workorder.dto.WorkOrderRecordReq;
 import com.dfbs.app.config.CurrentUserIdResolver;
@@ -44,6 +46,11 @@ public class WorkOrderController {
         return workOrderService.reject(body.id(), body.reason());
     }
 
+    @PostMapping("/accept-by-dispatcher")
+    public WorkOrderEntity acceptByDispatcher(@RequestBody WorkOrderAcceptReq req) {
+        return workOrderService.acceptByDispatcher(req);
+    }
+
     @PostMapping("/dispatch")
     public WorkOrderEntity dispatch(@RequestBody WorkOrderDispatchReq req) {
         return workOrderService.dispatch(req.getWorkOrderId(), req.getServiceManagerId());
@@ -81,12 +88,12 @@ public class WorkOrderController {
     }
 
     @GetMapping("/pool")
-    public List<WorkOrderEntity> pool() {
+    public List<WorkOrderListDto> pool() {
         return workOrderService.getPool();
     }
 
     @GetMapping("/my-orders")
-    public List<WorkOrderEntity> myOrders() {
+    public List<WorkOrderListDto> myOrders() {
         Long currentUserId = userIdResolver.getCurrentUserId();
         return workOrderService.getMyOrders(currentUserId);
     }

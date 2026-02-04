@@ -1,6 +1,6 @@
 # DFBS 项目文件清单（自动生成）
 
-生成时间：2026-01-31 10:08:13
+生成时间：2026-02-04 13:52:35
 
 ## 常用索引（自动生成，按分组）
 > 这一段用于让 ChatGPT / 自己快速定位关键文件，不需要手工维护。
@@ -51,6 +51,7 @@
 - backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/CreateItemRequest.java
 - backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/CreateQuoteRequest.java
 - backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/QuoteItemDto.java
+- backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/QuoteListDto.java
 - backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/QuoteResponseDto.java
 - backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/UpdateItemRequest.java
 - backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/UpdateQuoteRequest.java
@@ -136,9 +137,31 @@
 - backend/dfbs-app/src/main/resources/db/migration/V0035__contract_pricing_mvp.sql
 - backend/dfbs-app/src/main/resources/db/migration/V0036__carrier_freight_bill_mvp.sql
 - backend/dfbs-app/src/main/resources/db/migration/V0037__correction_mvp.sql
+- backend/dfbs-app/src/main/resources/db/migration/V0038__after_sales_mvp.sql
+- backend/dfbs-app/src/main/resources/db/migration/V0039__masterdata_six_pack.sql
+- backend/dfbs-app/src/main/resources/db/migration/V0040__bom_conflicts_and_spare_part_aliases.sql
+- backend/dfbs-app/src/main/resources/db/migration/V0041__quote_payment_created_at.sql
+- backend/dfbs-app/src/main/resources/db/migration/V0042__warehouse_mvp.sql
+- backend/dfbs-app/src/main/resources/db/migration/V0043__work_order_service_flow.sql
+- backend/dfbs-app/src/main/resources/db/migration/V0044__work_order_cancellation_reason.sql
+- backend/dfbs-app/src/main/resources/db/migration/V0045__work_order_refinement.sql
+- backend/dfbs-app/src/main/resources/db/migration/V0046__app_user_username.sql
+- backend/dfbs-app/src/main/resources/db/migration/V0047__app_user_seed_admin.sql
+- backend/dfbs-app/src/main/resources/db/migration/V0048__smart_select_infrastructure.sql
+- backend/dfbs-app/src/main/resources/db/migration/V0049__platform_org_master.sql
+- backend/dfbs-app/src/main/resources/db/migration/V0050__platform_account_applications.sql
+- backend/dfbs-app/src/main/resources/db/migration/V0051__refactor_platform_org.sql
 
 ### 后端工程骨架（分层目录）
 - backend/pom.xml
+- backend/dfbs-platform/.gitkeep
+- backend/dfbs-platform/README.md
+- backend/dfbs-modules/.gitkeep
+- backend/dfbs-modules/README.md
+- backend/dfbs-application/.gitkeep
+- backend/dfbs-application/README.md
+- backend/dfbs-interfaces/.gitkeep
+- backend/dfbs-interfaces/README.md
 
 ## 全量文件列表（自动生成）
 
@@ -166,13 +189,16 @@ README.md
 backend/dfbs-app/.gitattributes
 backend/dfbs-app/.gitignore
 backend/dfbs-app/.mvn/wrapper/maven-wrapper.properties
+backend/dfbs-app/HELP.md
 backend/dfbs-app/README.md
 backend/dfbs-app/dep.txt
 backend/dfbs-app/mvnw
 backend/dfbs-app/mvnw.cmd
 backend/dfbs-app/pom.xml
+backend/dfbs-app/scripts/wipe-schema.sql
 backend/dfbs-app/src/main/java/com/dfbs/app/DfbsAppApplication.java
 backend/dfbs-app/src/main/java/com/dfbs/app/HealthController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/aftersales/AfterSalesService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/attachment/AttachmentPoint.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/attachment/AttachmentRuleService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/attachment/AttachmentTargetType.java
@@ -181,7 +207,6 @@ backend/dfbs-app/src/main/java/com/dfbs/app/application/attachment/AttachmentUpl
 backend/dfbs-app/src/main/java/com/dfbs/app/application/bom/BomImportExcelRow.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/bom/BomService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/carrier/CarrierService.java
-backend/dfbs-app/src/main/java/com/dfbs/app/application/contract/ContractMasterDataService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/contractprice/ContractPriceService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/contractprice/PriceSuggestionDto.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/correction/CorrectionExecutor.java
@@ -216,6 +241,25 @@ backend/dfbs-app/src/main/java/com/dfbs/app/application/freightbill/FreightBillS
 backend/dfbs-app/src/main/java/com/dfbs/app/application/freightbill/ItemUpdateDto.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/iccid/IccidMasterDataService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/iccid/dto/IccidListDto.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/importdata/ContractImportRow.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/importdata/ContractImportService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/importdata/CustomerImportRow.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/importdata/CustomerImportService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/importdata/ImportServiceDelegate.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/importdata/MachineImportRow.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/importdata/MachineImportService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/importdata/MachineModelImportRow.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/importdata/MachineModelImportService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/importdata/ModelPartListImportRow.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/importdata/ModelPartListImportService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/importdata/SimCardImportRow.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/importdata/SimCardImportService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/importdata/SparePartImportRow.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/importdata/SparePartImportService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/importdata/dto/ImportActionReq.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/importdata/dto/ImportConflictDto.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/importdata/dto/ImportFailureDto.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/importdata/dto/ImportResultDto.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/inventory/InventoryService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/inventory/OutboundService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/inventory/SpecialOutboundService.java
@@ -226,16 +270,36 @@ backend/dfbs-app/src/main/java/com/dfbs/app/application/invoice/InvoiceApplicati
 backend/dfbs-app/src/main/java/com/dfbs/app/application/invoice/dto/InvoiceApplicationCreateRequest.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/invoice/dto/InvoiceGroupRequest.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/invoice/dto/QuoteItemSelection.java
-backend/dfbs-app/src/main/java/com/dfbs/app/application/machine/MachineMasterDataService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/machine/dto/MachineListDto.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/masterdata/ContractMasterDataService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/masterdata/MachineMasterDataService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/masterdata/MachineModelMasterDataService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/masterdata/ModelPartListBomService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/masterdata/ModelPartListMasterDataService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/masterdata/PartBomService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/masterdata/PartImportExcelRow.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/masterdata/PartImportResult.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/masterdata/SimCardMasterDataService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/masterdata/SparePartMasterDataService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/masterdata/dto/BomItemDto.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/masterdata/dto/CreateDraftRequest.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/masterdata/dto/CreateDraftResponse.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/notification/NotificationService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/payment/PaymentService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/permission/ApproveRequestDto.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/permission/PermissionRequestDto.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/permission/PermissionRequestService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/platformaccount/PlatformAccountApplicationService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/platformaccount/dto/OrgMatchCheckResult.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/platformaccount/dto/PlatformAccountApplicationCreateRequest.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/platformaccount/dto/PlatformAccountApplicationResponse.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/platformaccount/dto/PlatformAccountApproveRequest.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/platformaccount/dto/PlatformAccountPlannerSubmitRequest.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/platformaccount/dto/PlatformAccountRejectRequest.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/platformorg/PlatformOrgService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/platformorg/PlatformOrgValidator.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/platformorg/dto/PlatformOrgRequest.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/platformorg/dto/PlatformOrgResponse.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/product/ProductMasterDataService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/quote/QuoteExportService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/quote/QuoteItemService.java
@@ -267,25 +331,50 @@ backend/dfbs-app/src/main/java/com/dfbs/app/application/shipment/ReasonRequest.j
 backend/dfbs-app/src/main/java/com/dfbs/app/application/shipment/ShipActionRequest.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/shipment/ShipmentCreateRequest.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/shipment/ShipmentFilterRequest.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/shipment/ShipmentListDto.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/shipment/ShipmentService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/shipment/ShipmentTypeService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/shipment/SimpleShipmentCreateRequest.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/smartselect/ConfirmationService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/smartselect/SmartSelectService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/smartselect/TempDataService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/smartselect/dto/GetOrCreateTempRequest.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/smartselect/dto/GetOrCreateTempResult.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/smartselect/dto/SmartSelectItemDto.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/smartselect/dto/TempPoolConfirmRequest.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/smartselect/dto/TempPoolItemDto.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/statement/AccountStatementService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/statement/StatementReconcileService.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/triprequest/TripRequestService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/warehouse/WarehouseDataInitializer.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/warehouse/WhCoreService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/warehouse/WhReplenishService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/warehouse/dto/WhApproveReq.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/warehouse/dto/WhInboundReq.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/warehouse/dto/WhOutboundReq.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/warehouse/dto/WhReplenishReq.java
 backend/dfbs-app/src/main/java/com/dfbs/app/application/workorder/WorkOrderService.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/workorder/dto/WorkOrderAcceptReq.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/workorder/dto/WorkOrderCreateReq.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/workorder/dto/WorkOrderDetailDto.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/workorder/dto/WorkOrderDispatchReq.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/workorder/dto/WorkOrderListDto.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/workorder/dto/WorkOrderPartReq.java
+backend/dfbs-app/src/main/java/com/dfbs/app/application/workorder/dto/WorkOrderRecordReq.java
 backend/dfbs-app/src/main/java/com/dfbs/app/config/CompanyInfoProperties.java
 backend/dfbs-app/src/main/java/com/dfbs/app/config/CurrentUserIdResolver.java
 backend/dfbs-app/src/main/java/com/dfbs/app/config/CurrentUserProvider.java
 backend/dfbs-app/src/main/java/com/dfbs/app/config/JpaAuditingConfig.java
+backend/dfbs-app/src/main/java/com/dfbs/app/config/SecurityConfig.java
 backend/dfbs-app/src/main/java/com/dfbs/app/config/UserInfoProvider.java
 backend/dfbs-app/src/main/java/com/dfbs/app/infra/config/GlobalExceptionHandler.java
 backend/dfbs-app/src/main/java/com/dfbs/app/infra/config/OpenApiConfig.java
 backend/dfbs-app/src/main/java/com/dfbs/app/infra/dto/ErrorResult.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/aftersales/AfterSalesController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/attachment/AttachmentController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/auth/AuthController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/bom/BomController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/carrier/CarrierController.java
-backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/contract/ContractDto.java
-backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/contract/ContractMasterDataController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/contractprice/ContractPriceController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/correction/CorrectionController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/customer/CustomerDto.java
@@ -301,17 +390,26 @@ backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/expense/ExpenseStatsContr
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/expense/UpdateExpenseRequest.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/freightbill/FreightBillController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/iccid/IccidMasterDataController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/importdata/ImportController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/inventory/InventoryController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/inventory/OutboundController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/inventory/TransferController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/invoice/InvoiceApplicationController.java
-backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/machine/MachineMasterDataController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/masterdata/ContractController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/masterdata/DisableRequest.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/masterdata/MachineController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/masterdata/MachineModelController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/masterdata/ModelPartListController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/masterdata/PartController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/masterdata/SimCardController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/masterdata/SparePartController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/notification/NotificationController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/payment/BindPaymentsRequest.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/payment/CreatePaymentRequest.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/payment/PaymentController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/permission/PermissionRequestController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/platformaccount/PlatformAccountApplicationController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/platformorg/PlatformOrgController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/product/ProductDto.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/product/ProductMasterDataController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/QuoteController.java
@@ -323,6 +421,7 @@ backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dictionary/Dictiona
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/CreateItemRequest.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/CreateQuoteRequest.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/QuoteItemDto.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/QuoteListDto.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/QuoteResponseDto.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/UpdateItemRequest.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/dto/UpdateQuoteRequest.java
@@ -334,6 +433,8 @@ backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/repair/RepairRecordContro
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/settings/BusinessLineController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/settings/WarehouseConfigController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/shipment/ShipmentController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/smartselect/ConfirmationController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/smartselect/SmartSelectController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/statement/AccountStatementController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/statement/StatementReconcileController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/triprequest/CancelRequestRequest.java
@@ -341,7 +442,14 @@ backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/triprequest/CreateTripReq
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/triprequest/TripRequestController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/triprequest/TripRequestDto.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/triprequest/UpdateTripRequestRequest.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/warehouse/WhReplenishController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/warehouse/WhStockController.java
 backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/workorder/WorkOrderController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/workorder/WorkOrderPublicController.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/aftersales/AfterSalesEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/aftersales/AfterSalesRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/aftersales/AfterSalesStatus.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/aftersales/AfterSalesType.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/bom/BomItemEntity.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/bom/BomItemRepo.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/bom/BomVersionEntity.java
@@ -350,8 +458,6 @@ backend/dfbs-app/src/main/java/com/dfbs/app/modules/carrier/CarrierEntity.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/carrier/CarrierRepo.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/carrier/CarrierRuleEntity.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/carrier/CarrierRuleRepo.java
-backend/dfbs-app/src/main/java/com/dfbs/app/modules/contract/ContractEntity.java
-backend/dfbs-app/src/main/java/com/dfbs/app/modules/contract/ContractRepo.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/contractprice/ContractPriceHeaderEntity.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/contractprice/ContractPriceHeaderRepo.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/contractprice/ContractPriceItemEntity.java
@@ -414,12 +520,34 @@ backend/dfbs-app/src/main/java/com/dfbs/app/modules/invoice/InvoiceItemRefRepo.j
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/invoice/InvoiceRecordEntity.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/invoice/InvoiceRecordRepo.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/invoice/InvoiceType.java
-backend/dfbs-app/src/main/java/com/dfbs/app/modules/machine/MachineEntity.java
-backend/dfbs-app/src/main/java/com/dfbs/app/modules/machine/MachineRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/BaseMasterEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/BomConflictEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/BomConflictRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/BomConflictStatus.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/BomConflictType.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/BomStatus.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/ContractEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/ContractRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/MachineEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/MachineModelEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/MachineModelRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/MachineOwnershipLogEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/MachineOwnershipLogRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/MachineRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/MasterDataStatus.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/ModelPartListEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/ModelPartListRepo.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/PartEntity.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/PartRepo.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/ProductBomEntity.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/ProductBomRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/ResolutionType.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/SimBindingLogEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/SimBindingLogRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/SimCardEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/SimCardRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/SparePartEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/masterdata/SparePartRepo.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/notification/NotificationEntity.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/notification/NotificationPriority.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/notification/NotificationRepo.java
@@ -432,6 +560,15 @@ backend/dfbs-app/src/main/java/com/dfbs/app/modules/payment/PaymentStatus.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/permission/PermissionRequestEntity.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/permission/PermissionRequestRepo.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/permission/RequestStatus.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/platformaccount/PlatformAccountApplicationEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/platformaccount/PlatformAccountApplicationRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/platformaccount/PlatformAccountApplicationStatus.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/platformorg/PlatformOrgCustomerEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/platformorg/PlatformOrgCustomerId.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/platformorg/PlatformOrgCustomerRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/platformorg/PlatformOrgEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/platformorg/PlatformOrgPlatform.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/platformorg/PlatformOrgRepo.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/product/ProductEntity.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/product/ProductRepo.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/quote/QuoteEntity.java
@@ -500,9 +637,29 @@ backend/dfbs-app/src/main/java/com/dfbs/app/modules/triprequest/TripRequestRepo.
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/triprequest/TripRequestStatus.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/user/UserEntity.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/user/UserRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/warehouse/BaseAuditEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/warehouse/OutboundRefType.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/warehouse/ReplenishStatus.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/warehouse/StockRecordType.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/warehouse/WarehouseType.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/warehouse/WhInventoryEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/warehouse/WhInventoryRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/warehouse/WhReplenishRequestEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/warehouse/WhReplenishRequestRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/warehouse/WhStockRecordEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/warehouse/WhStockRecordRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/warehouse/WhWarehouseEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/warehouse/WhWarehouseRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/workorder/BaseAuditEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/workorder/PartUsageStatus.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/workorder/WorkOrderEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/workorder/WorkOrderPartEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/workorder/WorkOrderPartRepo.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/workorder/WorkOrderRecordEntity.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/workorder/WorkOrderRecordRepo.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/workorder/WorkOrderRepo.java
 backend/dfbs-app/src/main/java/com/dfbs/app/modules/workorder/WorkOrderStatus.java
+backend/dfbs-app/src/main/java/com/dfbs/app/modules/workorder/WorkOrderType.java
 backend/dfbs-app/src/main/resources/application.properties.bak
 backend/dfbs-app/src/main/resources/application.yml
 backend/dfbs-app/src/main/resources/db/migration/V0001__init.sql
@@ -542,6 +699,20 @@ backend/dfbs-app/src/main/resources/db/migration/V0034__payment_allocation_mvp.s
 backend/dfbs-app/src/main/resources/db/migration/V0035__contract_pricing_mvp.sql
 backend/dfbs-app/src/main/resources/db/migration/V0036__carrier_freight_bill_mvp.sql
 backend/dfbs-app/src/main/resources/db/migration/V0037__correction_mvp.sql
+backend/dfbs-app/src/main/resources/db/migration/V0038__after_sales_mvp.sql
+backend/dfbs-app/src/main/resources/db/migration/V0039__masterdata_six_pack.sql
+backend/dfbs-app/src/main/resources/db/migration/V0040__bom_conflicts_and_spare_part_aliases.sql
+backend/dfbs-app/src/main/resources/db/migration/V0041__quote_payment_created_at.sql
+backend/dfbs-app/src/main/resources/db/migration/V0042__warehouse_mvp.sql
+backend/dfbs-app/src/main/resources/db/migration/V0043__work_order_service_flow.sql
+backend/dfbs-app/src/main/resources/db/migration/V0044__work_order_cancellation_reason.sql
+backend/dfbs-app/src/main/resources/db/migration/V0045__work_order_refinement.sql
+backend/dfbs-app/src/main/resources/db/migration/V0046__app_user_username.sql
+backend/dfbs-app/src/main/resources/db/migration/V0047__app_user_seed_admin.sql
+backend/dfbs-app/src/main/resources/db/migration/V0048__smart_select_infrastructure.sql
+backend/dfbs-app/src/main/resources/db/migration/V0049__platform_org_master.sql
+backend/dfbs-app/src/main/resources/db/migration/V0050__platform_account_applications.sql
+backend/dfbs-app/src/main/resources/db/migration/V0051__refactor_platform_org.sql
 backend/dfbs-app/src/main/resources/templates/excel/quote_template_v3.xlsx
 backend/dfbs-app/src/test/java/com/dfbs/app/ArchitectureRulesTest.java
 backend/dfbs-app/src/test/java/com/dfbs/app/DfbsAppApplicationTests.java
@@ -598,6 +769,7 @@ backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/product/ProductMasterData
 backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/product/ProductMasterDataSearchTest.java
 backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/quote/QuoteVersionActivateTest.java
 backend/dfbs-app/src/test/java/com/dfbs/app/interfaces/statement/AccountStatementControllerTest.java
+backend/dfbs-app/src/test/java/com/dfbs/app/scripts/WipeSchemaMain.java
 backend/dfbs-app/src/test/resources/application.properties
 backend/dfbs-application/.gitkeep
 backend/dfbs-application/README.md
@@ -617,6 +789,51 @@ docs/DECISIONS.md
 docs/baseline/final_01_mvp_scope_v2_1_final_full.md
 docs/baseline/final_02_module_map_v2_1_final_full.mmd
 docs/baseline/final_03_project_structure_v2_1_final_full.txt
+frontend/dfbs-ui/README.md
+frontend/dfbs-ui/index.html
+frontend/dfbs-ui/package-lock.json
+frontend/dfbs-ui/package.json
+frontend/dfbs-ui/src/App.tsx
+frontend/dfbs-ui/src/components/Access.tsx
+frontend/dfbs-ui/src/components/AttachmentList.tsx
+frontend/dfbs-ui/src/components/SmartReferenceSelect/index.tsx
+frontend/dfbs-ui/src/index.css
+frontend/dfbs-ui/src/layouts/BasicLayout.tsx
+frontend/dfbs-ui/src/main.tsx
+frontend/dfbs-ui/src/pages/Admin/ConfirmationCenter/index.tsx
+frontend/dfbs-ui/src/pages/AfterSales/Detail.tsx
+frontend/dfbs-ui/src/pages/AfterSales/index.tsx
+frontend/dfbs-ui/src/pages/Customer/index.tsx
+frontend/dfbs-ui/src/pages/Dashboard/index.tsx
+frontend/dfbs-ui/src/pages/Finance/index.tsx
+frontend/dfbs-ui/src/pages/ImportCenter/index.tsx
+frontend/dfbs-ui/src/pages/Login/index.tsx
+frontend/dfbs-ui/src/pages/MasterData/Contract/index.tsx
+frontend/dfbs-ui/src/pages/MasterData/Machine/Detail.tsx
+frontend/dfbs-ui/src/pages/MasterData/Machine/index.tsx
+frontend/dfbs-ui/src/pages/MasterData/MachineModel/Detail.tsx
+frontend/dfbs-ui/src/pages/MasterData/MachineModel/components/ConflictDrawer.tsx
+frontend/dfbs-ui/src/pages/MasterData/MachineModel/index.tsx
+frontend/dfbs-ui/src/pages/MasterData/ModelPartList/index.tsx
+frontend/dfbs-ui/src/pages/MasterData/SimCard/Detail.tsx
+frontend/dfbs-ui/src/pages/MasterData/SimCard/index.tsx
+frontend/dfbs-ui/src/pages/MasterData/SparePart/index.tsx
+frontend/dfbs-ui/src/pages/Platform/Application/index.tsx
+frontend/dfbs-ui/src/pages/Platform/Org/index.tsx
+frontend/dfbs-ui/src/pages/Quote/index.tsx
+frontend/dfbs-ui/src/pages/Shipment/index.tsx
+frontend/dfbs-ui/src/pages/Warehouse/Inventory/index.tsx
+frontend/dfbs-ui/src/pages/Warehouse/Replenish/index.tsx
+frontend/dfbs-ui/src/pages/WorkOrder/Internal/Detail.tsx
+frontend/dfbs-ui/src/pages/WorkOrder/Internal/index.tsx
+frontend/dfbs-ui/src/pages/WorkOrder/Public/index.tsx
+frontend/dfbs-ui/src/stores/useAuthStore.ts
+frontend/dfbs-ui/src/utils/adapters.ts
+frontend/dfbs-ui/src/utils/request.ts
+frontend/dfbs-ui/src/vite-env.d.ts
+frontend/dfbs-ui/tsconfig.app.json
+frontend/dfbs-ui/tsconfig.json
+frontend/dfbs-ui/vite.config.ts
 gen_project_files.py
 infra/docker-compose.yml
 tools/new_module.py

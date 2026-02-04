@@ -13,11 +13,13 @@ import {
   MobileOutlined,
   CreditCardOutlined,
   UnorderedListOutlined,
+  CloudOutlined,
   CloudUploadOutlined,
   BankOutlined,
   InteractionOutlined,
   WarningOutlined,
   TruckOutlined,
+  AuditOutlined,
 } from '@ant-design/icons';
 import { getStoredToken } from '@/utils/request';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -61,6 +63,26 @@ const MENU_ROUTES = [
       { path: '/master-data/model-part-lists', name: '型号BOM', icon: <UnorderedListOutlined /> },
       { path: '/master-data/spare-parts', name: '零部件', icon: <UnorderedListOutlined /> },
       { path: '/master-data/sim-cards', name: 'SIM卡', icon: <CreditCardOutlined /> },
+    ],
+  },
+  {
+    path: '/platform',
+    name: '平台管理',
+    icon: <CloudOutlined />,
+    key: 'platform-group',
+    routes: [
+      { path: '/platform/orgs', name: '机构管理' },
+      { path: '/platform/applications', name: '开户申请' },
+      { path: '/platform/sim-applications', name: '物联网卡申请' },
+    ],
+  },
+  {
+    path: '/admin',
+    name: '系统',
+    icon: <AuditOutlined />,
+    key: 'admin-group',
+    routes: [
+      { path: '/admin/confirmation-center', name: '数据确认中心' },
     ],
   },
 ];

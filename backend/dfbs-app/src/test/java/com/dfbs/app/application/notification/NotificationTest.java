@@ -40,6 +40,7 @@ class NotificationTest {
     @BeforeEach
     void setUp() {
         UserEntity user = new UserEntity();
+        user.setUsername("notif-user");
         user.setCanRequestPermission(false);
         user.setAuthorities("[]");
         user.setAllowNormalNotification(true);

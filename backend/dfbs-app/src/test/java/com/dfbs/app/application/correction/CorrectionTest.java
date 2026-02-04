@@ -73,6 +73,7 @@ class CorrectionTest {
         customer = customerRepo.save(customer);
         customerId = customer.getId();
         UserEntity noPerm = new UserEntity();
+        noPerm.setUsername("corr-noPerm");
         noPerm.setCanRequestPermission(false);
         noPerm.setAuthorities("[\"ROLE_USER\"]");
         noPerm.setAllowNormalNotification(true);
@@ -81,6 +82,7 @@ class CorrectionTest {
         userWithoutPermissionId = noPerm.getId();
 
         UserEntity withPerm = new UserEntity();
+        withPerm.setUsername("corr-withPerm");
         withPerm.setCanRequestPermission(false);
         withPerm.setAuthorities("[\"ROLE_USER\",\"APPROVE_EXECUTE_CORRECTION\"]");
         withPerm.setAllowNormalNotification(true);

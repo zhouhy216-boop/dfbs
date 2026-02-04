@@ -26,6 +26,10 @@ import WarehouseReplenish from '@/pages/Warehouse/Replenish';
 import WorkOrderPublic from '@/pages/WorkOrder/Public';
 import WorkOrderInternal from '@/pages/WorkOrder/Internal';
 import WorkOrderInternalDetail from '@/pages/WorkOrder/Internal/Detail';
+import ConfirmationCenter from '@/pages/Admin/ConfirmationCenter';
+import PlatformApplication from '@/pages/Platform/Application';
+import PlatformOrg from '@/pages/Platform/Org';
+import PlatformSimApplication from '@/pages/Platform/SimApplication';
 
 function App() {
   return (
@@ -63,6 +67,12 @@ function App() {
             <Route path="master-data/sim-cards" element={<MasterDataSimCard />} />
             <Route path="master-data/sim-cards/:id" element={<MasterDataSimCardDetail />} />
             <Route path="master-data/model-part-lists" element={<MasterDataModelPartList />} />
+            <Route path="platform" element={<Navigate to="/platform/applications" replace />} />
+            <Route path="platform/orgs" element={<PlatformOrg />} />
+            <Route path="platform/applications" element={<PlatformApplication />} />
+            <Route path="platform/sim-applications" element={<PlatformSimApplication />} />
+            <Route path="admin" element={<Navigate to="/admin/confirmation-center" replace />} />
+            <Route path="admin/confirmation-center" element={<ConfirmationCenter />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

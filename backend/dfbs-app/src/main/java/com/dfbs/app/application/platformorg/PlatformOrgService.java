@@ -1,0 +1,188 @@
+package com.dfbs.app.application.platformorg;
+
+import com.dfbs.app.application.customer.CustomerMasterDataService;
+import com.dfbs.app.application.platformorg.dto.PlatformOrgRequest;
+import com.dfbs.app.application.platformorg.dto.PlatformOrgResponse;
+import com.dfbs.app.application.platformorg.dto.SimpleCustomerDto;
+import com.dfbs.app.modules.customer.CustomerEntity;
+import com.dfbs.app.modules.platformorg.PlatformOrgCustomerEntity;
+import com.dfbs.app.modules.platformorg.PlatformOrgEntity;
+import com.dfbs.app.modules.platformorg.PlatformOrgPlatform;
+import com.dfbs.app.modules.platformorg.PlatformOrgRepo;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
+
+@Service
+public class PlatformOrgService {
+
+    private final PlatformOrgRepo repo;
+    private final PlatformOrgValidator validator;
+    private final CustomerMasterDataService customerMasterDataService;
+
+    public PlatformOrgService(PlatformOrgRepo repo, PlatformOrgValidator validator,
+                              CustomerMasterDataService customerMasterDataService) {
+        this.repo = repo;
+        this.validator = validator;
+        this.customerMasterDataService = customerMasterDataService;
+    }
+
+    @Transactional
+    public PlatformOrgResponse create(PlatformOrgRequest request) {
+        PlatformOrgEntity entity = toEntity(request);
+        validator.validateForCreate(entity);
+        entity = repo.save(entity);
+        if (request.customerIds() != null && !request.customerIds().isEmpty()) {
+            syncCustomerLinks(entity, request.customerIds());
+            entity = repo.save(entity);
+        }
+        return toResponse(entity);
+    }
+
+    @Transactional
+    public PlatformOrgResponse update(Long id, PlatformOrgRequest request) {
+        PlatformOrgEntity entity = repo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("平台组织不存在"));
+        applyRequest(entity, request);
+        validator.validateForUpdate(entity, id);
+        entity = repo.save(entity);
+        return toResponse(entity);
+    }
+
+    @Transactional(readOnly = true)
+    public PlatformOrgResponse get(Long id) {
+        PlatformOrgEntity entity = repo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("平台组织不存在"));
+        return toResponse(entity);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PlatformOrgResponse> list(Optional<PlatformOrgPlatform> platform, Optional<Long> customerId) {
+        if (platform.isPresent() && customerId.isPresent()) {
+            return findByPlatformAndCustomer(platform.get(), customerId.get());
+        }
+        Stream<PlatformOrgEntity> stream;
+        if (platform.isPresent()) {
+            stream = repo.findByPlatform(platform.get()).stream();
+        } else if (customerId.isPresent()) {
+            stream = repo.findByCustomerId(customerId.get()).stream();
+        } else {
+            stream = repo.findAll().stream();
+        }
+        return toResponseList(stream.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<PlatformOrgResponse> findByPlatformAndCustomer(PlatformOrgPlatform platform, Long customerId) {
+        return toResponseList(repo.findByPlatformAndCustomerId(platform, customerId));
+    }
+
+    private PlatformOrgResponse toResponse(PlatformOrgEntity entity) {
+        List<SimpleCustomerDto> linked = resolveLinkedCustomers(entity);
+        return PlatformOrgResponse.fromEntity(entity, linked);
+    }
+
+    private List<PlatformOrgResponse> toResponseList(List<PlatformOrgEntity> entities) {
+        if (entities.isEmpty()) {
+            return List.of();
+        }
+        java.util.Set<Long> allCustomerIds = new java.util.HashSet<>();
+        for (PlatformOrgEntity e : entities) {
+            if (e.getCustomerLinks() != null) {
+                e.getCustomerLinks().stream().map(PlatformOrgCustomerEntity::getCustomerId).forEach(allCustomerIds::add);
+            }
+        }
+        java.util.Map<Long, String> idToName = resolveCustomerNames(new ArrayList<>(allCustomerIds));
+        return entities.stream()
+                .map(e -> {
+                    List<SimpleCustomerDto> linked = e.getCustomerLinks() == null ? List.of()
+                            : e.getCustomerLinks().stream()
+                                    .map(PlatformOrgCustomerEntity::getCustomerId)
+                                    .map(cid -> new SimpleCustomerDto(cid, idToName.getOrDefault(cid, "客户#" + cid)))
+                                    .toList();
+                    return PlatformOrgResponse.fromEntity(e, linked);
+                })
+                .toList();
+    }
+
+    private List<SimpleCustomerDto> resolveLinkedCustomers(PlatformOrgEntity entity) {
+        if (entity.getCustomerLinks() == null || entity.getCustomerLinks().isEmpty()) {
+            return List.of();
+        }
+        List<Long> ids = entity.getCustomerLinks().stream().map(PlatformOrgCustomerEntity::getCustomerId).toList();
+        java.util.Map<Long, String> idToName = resolveCustomerNames(ids);
+        return ids.stream()
+                .map(cid -> new SimpleCustomerDto(cid, idToName.getOrDefault(cid, "客户#" + cid)))
+                .toList();
+    }
+
+    private java.util.Map<Long, String> resolveCustomerNames(List<Long> customerIds) {
+        java.util.Map<Long, String> map = new java.util.HashMap<>();
+        for (Long id : customerIds) {
+            try {
+                CustomerEntity c = customerMasterDataService.getById(id);
+                map.put(id, c.getName());
+            } catch (Exception ignored) {
+                map.put(id, "客户#" + id);
+            }
+        }
+        return map;
+    }
+
+    private PlatformOrgEntity toEntity(PlatformOrgRequest request) {
+        PlatformOrgEntity entity = new PlatformOrgEntity();
+        applyRequest(entity, request);
+        return entity;
+    }
+
+    private void applyRequest(PlatformOrgEntity entity, PlatformOrgRequest request) {
+        entity.setPlatform(request.platform());
+        entity.setOrgCodeShort(trimToNull(request.orgCodeShort()));
+        entity.setOrgFullName(trimToNull(request.orgFullName()));
+        entity.setContactPerson(trimToNull(request.contactPerson()));
+        entity.setContactPhone(trimToNull(request.contactPhone()));
+        entity.setContactEmail(trimToNull(request.contactEmail()));
+        entity.setSalesPerson(trimToNull(request.salesPerson()));
+        entity.setRegion(trimToNull(request.region()));
+        entity.setRemark(request.remark());
+        if (request.isActive() != null) {
+            entity.setIsActive(request.isActive());
+        } else if (entity.getId() == null) {
+            entity.setIsActive(Boolean.TRUE);
+        }
+        if (entity.getId() != null && request.customerIds() != null) {
+            syncCustomerLinks(entity, request.customerIds());
+        }
+    }
+
+    private void syncCustomerLinks(PlatformOrgEntity entity, List<Long> customerIds) {
+        if (customerIds == null || customerIds.isEmpty()) {
+            entity.getCustomerLinks().clear();
+            return;
+        }
+        java.util.Set<Long> target = new java.util.HashSet<>(customerIds);
+        entity.getCustomerLinks().removeIf(link -> !target.contains(link.getCustomerId()));
+        for (Long cid : target) {
+            if (entity.getCustomerLinks().stream().noneMatch(link -> link.getCustomerId().equals(cid))) {
+                PlatformOrgCustomerEntity link = new PlatformOrgCustomerEntity();
+                link.setOrgId(entity.getId());
+                link.setCustomerId(cid);
+                link.setOrg(entity);
+                entity.getCustomerLinks().add(link);
+            }
+        }
+    }
+
+    private String trimToNull(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+}

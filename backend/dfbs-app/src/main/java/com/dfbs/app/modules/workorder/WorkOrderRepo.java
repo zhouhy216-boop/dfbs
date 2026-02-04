@@ -12,7 +12,11 @@ public interface WorkOrderRepo extends JpaRepository<WorkOrderEntity, Long>, Jpa
 
     List<WorkOrderEntity> findByStatus(WorkOrderStatus status);
 
+    List<WorkOrderEntity> findByStatusIn(java.util.Collection<WorkOrderStatus> statuses);
+
     List<WorkOrderEntity> findByServiceManagerId(Long serviceManagerId);
 
     List<WorkOrderEntity> findByStatusAndServiceManagerId(WorkOrderStatus status, Long serviceManagerId);
+
+    List<WorkOrderEntity> findByCustomerId(Long customerId);
 }

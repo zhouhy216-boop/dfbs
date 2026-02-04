@@ -15,7 +15,7 @@ import {
   message,
   Space,
 } from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import request from '@/utils/request';
 import { useAuthStore } from '@/stores/useAuthStore';
 import dayjs from 'dayjs';
@@ -65,6 +65,8 @@ interface WorkOrderDetailDto {
   workOrder: WorkOrder;
   records: WorkOrderRecord[];
   parts: WorkOrderPart[];
+  /** Resolved from master when work order has customerId; use this for display. */
+  customerNameDisplay?: string;
 }
 
 interface SparePartOption {
@@ -75,6 +77,7 @@ interface SparePartOption {
 
 const STATUS_MAP: Record<string, string> = {
   PENDING: '待受理',
+  ACCEPTED_BY_DISPATCHER: '已受理/待派单',
   DISPATCHED: '已派单',
   ACCEPTED: '已接单',
   PROCESSING: '处理中',
@@ -144,7 +147,8 @@ export default function WorkOrderInternalDetail() {
   const wo = detail?.workOrder;
   const records = detail?.records ?? [];
   const parts = detail?.parts ?? [];
-  const isAssignee = wo && userInfo?.id != null && wo.serviceManagerId === userInfo.id;
+  const isAssignee = wo && userInfo?.id != null && String(userInfo.id) === String(wo.serviceManagerId);
+  console.log('Assignee Check:', userInfo?.id, wo?.serviceManagerId);
 
   const handleDispatch = async () => {
     const values = await dispatchForm.validateFields();
@@ -278,12 +282,12 @@ export default function WorkOrderInternalDetail() {
   }
 
   const status = wo.status;
-  const canDispatch = status === 'PENDING';
+  const canDispatch = status === 'ACCEPTED_BY_DISPATCHER';
   const canAccept = status === 'DISPATCHED' && isAssignee;
-  const canProcess =
-    status === 'ACCEPTED' || status === 'PROCESSING';
-  const canSubmitSign = canProcess;
-  const canComplete = status === 'PENDING_SIGN';
+  const canStart = status === 'ACCEPTED' && isAssignee;
+  const canSubmitSign = status === 'PROCESSING' && isAssignee;
+  const canComplete = status === 'PENDING_SIGN' && isAssignee;
+  const canAddRecordOrParts = (status === 'ACCEPTED' || status === 'PROCESSING') && isAssignee;
 
   return (
     <div style={{ padding: 24 }}>
@@ -317,7 +321,12 @@ export default function WorkOrderInternalDetail() {
                 接单
               </Button>
             )}
-            {canProcess && (
+            {canStart && (
+              <Button type="primary" onClick={() => setRecordOpen(true)}>
+                开始处理
+              </Button>
+            )}
+            {canAddRecordOrParts && (
               <>
                 <Button onClick={() => { setRecordOpen(true); }}>添加记录</Button>
                 <Button
@@ -328,24 +337,39 @@ export default function WorkOrderInternalDetail() {
                 >
                   添加配件
                 </Button>
-                <Button type="primary" onClick={handleSubmitSign} loading={submitting}>
-                  提交签字
-                </Button>
               </>
+            )}
+            {canSubmitSign && (
+              <Button type="primary" onClick={handleSubmitSign} loading={submitting}>
+                提交签字
+              </Button>
             )}
             {canComplete && (
               <Button type="primary" onClick={() => setCompleteOpen(true)}>
-                完成签字
+                完修
               </Button>
             )}
           </Space>
         }
       >
         <Descriptions column={2} bordered size="small">
-          <Descriptions.Item label="客户名称">{wo.customerName}</Descriptions.Item>
+          <Descriptions.Item label="客户名称">{detail?.customerNameDisplay ?? wo?.customerName}</Descriptions.Item>
           <Descriptions.Item label="联系人">{wo.contactPerson}</Descriptions.Item>
           <Descriptions.Item label="电话">{wo.contactPhone}</Descriptions.Item>
-          <Descriptions.Item label="服务地址" span={2}>{wo.serviceAddress}</Descriptions.Item>
+          <Descriptions.Item label="服务地址" span={2}>
+            {wo.serviceAddress}
+            {wo.serviceAddress && (
+              <a
+                href={`https://www.amap.com/search?query=${encodeURIComponent(wo.serviceAddress)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="打开高德地图"
+                style={{ marginLeft: 8 }}
+              >
+                <EnvironmentOutlined /> 打开高德地图
+              </a>
+            )}
+          </Descriptions.Item>
           {wo.machineNo != null && (
             <Descriptions.Item label="机器编号">{wo.machineNo}</Descriptions.Item>
           )}

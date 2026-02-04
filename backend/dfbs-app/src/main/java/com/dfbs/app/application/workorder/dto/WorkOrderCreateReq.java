@@ -11,6 +11,9 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class WorkOrderCreateReq {
 
+    /** When set (from SmartReferenceSelect), links to customer master data. */
+    private Long customerId;
+    /** Snapshot name; required when customerId is null, else filled from customer when customerId present. */
     private String customerName;
     private String contactPerson;
     private String contactPhone;

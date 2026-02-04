@@ -38,24 +38,28 @@ class PermissionRequestTest {
     @BeforeEach
     void setUp() {
         UserEntity applicant = new UserEntity();
+        applicant.setUsername("applicant");
         applicant.setCanRequestPermission(true);
         applicant.setAuthorities("[\"ROLE_USER\"]");
         applicant = userRepo.save(applicant);
         applicantId = applicant.getId();
 
         UserEntity target = new UserEntity();
+        target.setUsername("target");
         target.setCanRequestPermission(false);
         target.setAuthorities("[\"ROLE_USER\"]");
         target = userRepo.save(target);
         targetId = target.getId();
 
         UserEntity other = new UserEntity();
+        other.setUsername("other");
         other.setCanRequestPermission(true);
         other.setAuthorities("[\"ROLE_USER\"]");
         other = userRepo.save(other);
         otherUserId = other.getId();
 
         UserEntity noFlag = new UserEntity();
+        noFlag.setUsername("noFlag");
         noFlag.setCanRequestPermission(false);
         noFlag.setAuthorities("[]");
         noFlag = userRepo.save(noFlag);

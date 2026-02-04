@@ -1,8 +1,24 @@
 import { useState, useEffect } from 'react';
 import { Card, Form, Input, Button, DatePicker, Select, Result, message } from 'antd';
+import type { FormInstance } from 'antd/es/form';
 import type { Dayjs } from 'dayjs';
-import dayjs from 'dayjs';
 import request from '@/utils/request';
+import SmartReferenceSelect from '@/components/SmartReferenceSelect';
+
+function CustomerSmartSelect({ form }: { form: FormInstance }) {
+  const customerName = Form.useWatch('customerName', form);
+  return (
+    <SmartReferenceSelect
+      entityType="CUSTOMER"
+      value={customerName ?? ''}
+      placeholder="输入客户名称或从下拉选择"
+      onChange={(ref) => {
+        form.setFieldValue('customerId', ref.id ?? null);
+        form.setFieldValue('customerName', ref.name);
+      }}
+    />
+  );
+}
 
 interface MachineModelOption {
   id: number;
@@ -40,7 +56,8 @@ export default function WorkOrderPublicPage() {
   }, []);
 
   const onFinish = async (values: {
-    customerName: string;
+    customerId?: number | null;
+    customerName?: string;
     contactPerson: string;
     contactPhone: string;
     serviceAddress: string;
@@ -51,7 +68,8 @@ export default function WorkOrderPublicPage() {
     setLoading(true);
     try {
       const { data } = await request.post<{ orderNo: string }>('/v1/public/work-orders/create', {
-        customerName: values.customerName,
+        customerId: values.customerId ?? undefined,
+        customerName: values.customerName ?? undefined,
         contactPerson: values.contactPerson,
         contactPhone: values.contactPhone,
         serviceAddress: values.serviceAddress,
@@ -92,8 +110,14 @@ export default function WorkOrderPublicPage() {
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5', padding: 24 }}>
       <Card title="在线报修" style={{ maxWidth: 560, width: '100%' }}>
         <Form form={form} layout="vertical" onFinish={onFinish}>
-          <Form.Item name="customerName" label="客户名称" rules={[{ required: true, message: '请输入客户名称' }]}>
-            <Input placeholder="客户名称" />
+          <Form.Item name="customerId" hidden>
+            <Input type="hidden" />
+          </Form.Item>
+          <Form.Item name="customerName" hidden rules={[{ required: true, message: '请输入或选择客户' }]}>
+            <Input type="hidden" />
+          </Form.Item>
+          <Form.Item label="客户" required>
+            <CustomerSmartSelect form={form} />
           </Form.Item>
           <Form.Item name="contactPerson" label="联系人" rules={[{ required: true, message: '请输入联系人' }]}>
             <Input placeholder="联系人" />

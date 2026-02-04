@@ -77,6 +77,7 @@ class ExpenseStatsTest {
     @BeforeEach
     void ensureUsers() {
         UserEntity u1 = new UserEntity();
+        u1.setUsername("stats-u1");
         u1.setCanRequestPermission(false);
         u1.setAuthorities("[]");
         u1.setAllowNormalNotification(true);
@@ -85,6 +86,7 @@ class ExpenseStatsTest {
         user1Id = u1.getId();
 
         UserEntity finance = new UserEntity();
+        finance.setUsername("stats-finance");
         finance.setCanRequestPermission(false);
         finance.setAuthorities("[]");
         finance.setAllowNormalNotification(true);

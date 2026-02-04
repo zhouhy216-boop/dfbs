@@ -74,6 +74,7 @@ public class MachineModelMasterDataService {
                 ));
             }
             if (status != null) p = cb.and(p, cb.equal(root.get("status"), status));
+            p = cb.and(p, cb.equal(root.get("isTemp"), false));
             return p;
         };
         return machineModelRepo.findAll(spec, pageable);

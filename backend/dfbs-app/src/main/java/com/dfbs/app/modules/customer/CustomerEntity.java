@@ -2,6 +2,7 @@ package com.dfbs.app.modules.customer;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,6 +14,14 @@ public class CustomerEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /** Temp record (pending confirmation); excluded from standard search. */
+    @Column(name = "is_temp", nullable = false)
+    private Boolean isTemp = false;
+
+    /** Last used at (for MRU sorting in Smart Select). */
+    @Column(name = "last_used_at")
+    private LocalDateTime lastUsedAt;
 
     @Column(name = "customer_code", nullable = false, unique = true)
     private String customerCode;
@@ -57,6 +66,10 @@ public class CustomerEntity {
     }
 
     public Long getId() { return id; }
+    public Boolean getIsTemp() { return isTemp; }
+    public void setIsTemp(Boolean isTemp) { this.isTemp = isTemp != null ? isTemp : false; }
+    public LocalDateTime getLastUsedAt() { return lastUsedAt; }
+    public void setLastUsedAt(LocalDateTime lastUsedAt) { this.lastUsedAt = lastUsedAt; }
     public String getCustomerCode() { return customerCode; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
