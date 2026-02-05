@@ -16,6 +16,8 @@ public record PlatformOrgRequest(
         @Size(max = 128) String salesPerson,
         @Size(max = 128) String region,
         String remark,
-        Boolean isActive
+        Boolean isActive,
+        Long sourceApplicationId,
+        String sourceType
 ) {
 }

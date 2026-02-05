@@ -4,7 +4,11 @@ import com.dfbs.app.application.customer.CustomerMasterDataService;
 import com.dfbs.app.application.platformorg.dto.PlatformOrgRequest;
 import com.dfbs.app.application.platformorg.dto.PlatformOrgResponse;
 import com.dfbs.app.application.platformorg.dto.SimpleCustomerDto;
+import com.dfbs.app.application.platformorg.dto.SourceInfo;
 import com.dfbs.app.modules.customer.CustomerEntity;
+import com.dfbs.app.modules.platformaccount.ApplicationSourceType;
+import com.dfbs.app.modules.platformaccount.PlatformAccountApplicationEntity;
+import com.dfbs.app.modules.platformaccount.PlatformAccountApplicationRepo;
 import com.dfbs.app.modules.platformorg.PlatformOrgCustomerEntity;
 import com.dfbs.app.modules.platformorg.PlatformOrgEntity;
 import com.dfbs.app.modules.platformorg.PlatformOrgPlatform;
@@ -24,12 +28,15 @@ public class PlatformOrgService {
     private final PlatformOrgRepo repo;
     private final PlatformOrgValidator validator;
     private final CustomerMasterDataService customerMasterDataService;
+    private final PlatformAccountApplicationRepo applicationRepo;
 
     public PlatformOrgService(PlatformOrgRepo repo, PlatformOrgValidator validator,
-                              CustomerMasterDataService customerMasterDataService) {
+                              CustomerMasterDataService customerMasterDataService,
+                              PlatformAccountApplicationRepo applicationRepo) {
         this.repo = repo;
         this.validator = validator;
         this.customerMasterDataService = customerMasterDataService;
+        this.applicationRepo = applicationRepo;
     }
 
     @Transactional
@@ -58,7 +65,9 @@ public class PlatformOrgService {
     public PlatformOrgResponse get(Long id) {
         PlatformOrgEntity entity = repo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("平台组织不存在"));
-        return toResponse(entity);
+        SourceInfo sourceInfo = resolveSourceInfo(entity);
+        List<SimpleCustomerDto> linked = resolveLinkedCustomers(entity);
+        return PlatformOrgResponse.fromEntity(entity, linked, sourceInfo);
     }
 
     @Transactional(readOnly = true)
@@ -84,7 +93,24 @@ public class PlatformOrgService {
 
     private PlatformOrgResponse toResponse(PlatformOrgEntity entity) {
         List<SimpleCustomerDto> linked = resolveLinkedCustomers(entity);
-        return PlatformOrgResponse.fromEntity(entity, linked);
+        return PlatformOrgResponse.fromEntity(entity, linked, null);
+    }
+
+    private SourceInfo resolveSourceInfo(PlatformOrgEntity entity) {
+        if (entity.getSourceApplicationId() == null) {
+            return new SourceInfo(SourceInfo.TYPE_MANUAL, null, null, null, null);
+        }
+        return applicationRepo.findById(entity.getSourceApplicationId())
+                .map(app -> {
+                    String type = app.getSourceType() == ApplicationSourceType.FACTORY ? SourceInfo.TYPE_SALES
+                            : app.getSourceType() == ApplicationSourceType.SERVICE ? SourceInfo.TYPE_SERVICE
+                            : SourceInfo.TYPE_MANUAL;
+                    String applicantName = app.getApplicantId() != null ? "User " + app.getApplicantId() : null;
+                    String plannerName = app.getPlannerId() != null ? "User " + app.getPlannerId() : null;
+                    String adminName = app.getAdminId() != null ? "User " + app.getAdminId() : null;
+                    return new SourceInfo(type, app.getApplicationNo(), applicantName, plannerName, adminName);
+                })
+                .orElse(new SourceInfo(SourceInfo.TYPE_MANUAL, null, null, null, null));
     }
 
     private List<PlatformOrgResponse> toResponseList(List<PlatformOrgEntity> entities) {
@@ -154,6 +180,14 @@ public class PlatformOrgService {
             entity.setIsActive(request.isActive());
         } else if (entity.getId() == null) {
             entity.setIsActive(Boolean.TRUE);
+        }
+        if (request.sourceApplicationId() != null) {
+            entity.setSourceApplicationId(request.sourceApplicationId());
+        }
+        if (request.sourceType() != null && !request.sourceType().isBlank()) {
+            entity.setSourceType(request.sourceType().trim());
+        } else if (entity.getId() == null) {
+            entity.setSourceType("MANUAL");
         }
         if (entity.getId() != null && request.customerIds() != null) {
             syncCustomerLinks(entity, request.customerIds());

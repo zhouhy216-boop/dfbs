@@ -5,6 +5,9 @@ import com.dfbs.app.application.smartselect.dto.TempPoolItemDto;
 import com.dfbs.app.modules.customer.CustomerEntity;
 import com.dfbs.app.modules.customer.CustomerRepo;
 import com.dfbs.app.modules.masterdata.*;
+import com.dfbs.app.modules.platformorg.PlatformOrgCustomerEntity;
+import com.dfbs.app.modules.platformorg.PlatformOrgEntity;
+import com.dfbs.app.modules.platformorg.PlatformOrgRepo;
 import com.dfbs.app.modules.workorder.WorkOrderEntity;
 import com.dfbs.app.modules.workorder.WorkOrderRepo;
 import org.springframework.stereotype.Service;
@@ -27,10 +30,11 @@ public class ConfirmationService {
     private final SimCardRepo simCardRepo;
     private final MachineModelRepo machineModelRepo;
     private final WorkOrderRepo workOrderRepo;
+    private final PlatformOrgRepo platformOrgRepo;
 
     public ConfirmationService(CustomerRepo customerRepo, MachineRepo machineRepo, ContractRepo contractRepo,
                                SparePartRepo sparePartRepo, SimCardRepo simCardRepo, MachineModelRepo machineModelRepo,
-                               WorkOrderRepo workOrderRepo) {
+                               WorkOrderRepo workOrderRepo, PlatformOrgRepo platformOrgRepo) {
         this.customerRepo = customerRepo;
         this.machineRepo = machineRepo;
         this.contractRepo = contractRepo;
@@ -38,6 +42,7 @@ public class ConfirmationService {
         this.simCardRepo = simCardRepo;
         this.machineModelRepo = machineModelRepo;
         this.workOrderRepo = workOrderRepo;
+        this.platformOrgRepo = platformOrgRepo;
     }
 
     @Transactional(readOnly = true)
@@ -102,6 +107,18 @@ public class ConfirmationService {
             wo.setCustomerId(targetId);
             wo.setCustomerName(target.getName() != null ? target.getName() : wo.getCustomerName());
             workOrderRepo.save(wo);
+        }
+        for (PlatformOrgEntity org : platformOrgRepo.findByCustomerId(tempId)) {
+            org.getCustomerLinks().removeIf(l -> tempId.equals(l.getCustomerId()));
+            boolean hasTarget = org.getCustomerLinks().stream().anyMatch(l -> targetId.equals(l.getCustomerId()));
+            if (!hasTarget) {
+                PlatformOrgCustomerEntity link = new PlatformOrgCustomerEntity();
+                link.setOrgId(org.getId());
+                link.setCustomerId(targetId);
+                link.setOrg(org);
+                org.getCustomerLinks().add(link);
+            }
+            platformOrgRepo.save(org);
         }
         customerRepo.deleteById(tempId);
         return new TempPoolItemDto(targetId, "CUSTOMER", target.getCustomerCode(), target.getName());

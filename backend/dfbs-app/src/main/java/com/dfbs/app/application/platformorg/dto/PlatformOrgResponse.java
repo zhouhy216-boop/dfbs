@@ -20,16 +20,23 @@ public record PlatformOrgResponse(
         String region,
         String remark,
         Boolean isActive,
+        SourceInfo sourceInfo,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
 
     public static PlatformOrgResponse fromEntity(PlatformOrgEntity entity) {
-        return fromEntity(entity, java.util.List.of());
+        return fromEntity(entity, java.util.List.of(), null);
     }
 
     public static PlatformOrgResponse fromEntity(PlatformOrgEntity entity,
                                                  java.util.List<SimpleCustomerDto> linkedCustomers) {
+        return fromEntity(entity, linkedCustomers, null);
+    }
+
+    public static PlatformOrgResponse fromEntity(PlatformOrgEntity entity,
+                                                 java.util.List<SimpleCustomerDto> linkedCustomers,
+                                                 SourceInfo sourceInfo) {
         java.util.List<Long> customerIds = entity.getCustomerLinks() == null
                 ? java.util.List.of()
                 : entity.getCustomerLinks().stream().map(PlatformOrgCustomerEntity::getCustomerId).toList();
@@ -47,6 +54,7 @@ public record PlatformOrgResponse(
                 entity.getRegion(),
                 entity.getRemark(),
                 entity.getIsActive(),
+                sourceInfo,
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );

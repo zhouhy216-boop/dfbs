@@ -137,7 +137,7 @@ export default function ConfirmationCenter() {
     <div style={{ padding: 24 }}>
       <h2 style={{ marginBottom: 16 }}>数据确认中心</h2>
       <p style={{ color: '#666', marginBottom: 16 }}>
-        选择已有记录即合并；输入新名称即转为正式（系统自动生成编码）。
+        选择已有记录即合并；输入新名称即转为正式（系统自动生成编码）。开户申请审批通过时，若客户或合同不在主数据中，也会在此以「待确认」形式出现。
       </p>
       <Tabs items={tabItems} />
 

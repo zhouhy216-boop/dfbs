@@ -45,6 +45,11 @@ public class PlatformAccountApplicationController {
         return java.util.Map.of("exists", service.existsCustomerByName(name));
     }
 
+    @PostMapping("/check-duplicates")
+    public java.util.List<CheckDuplicateMatchItem> checkDuplicates(@RequestBody @Valid CheckDuplicatesRequest request) {
+        return service.checkDuplicates(request);
+    }
+
     @GetMapping("/check-org-match")
     public OrgMatchCheckResult checkOrgMatch(
             @RequestParam PlatformOrgPlatform platform,
@@ -68,5 +73,10 @@ public class PlatformAccountApplicationController {
     public PlatformAccountApplicationResponse reject(@PathVariable Long id,
                                                      @RequestBody @Valid PlatformAccountRejectRequest request) {
         return service.reject(id, request);
+    }
+
+    @PostMapping("/{id}/close")
+    public PlatformAccountApplicationResponse close(@PathVariable Long id) {
+        return service.close(id);
     }
 }

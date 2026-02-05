@@ -51,6 +51,12 @@ public class PlatformOrgEntity {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = Boolean.TRUE;
 
+    @Column(name = "source_application_id")
+    private Long sourceApplicationId;
+
+    @Column(name = "source_type", length = 32)
+    private String sourceType;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 

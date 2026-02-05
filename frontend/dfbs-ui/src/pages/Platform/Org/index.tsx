@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Form, Input, message, Modal, Select, Switch, Tag } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
-import { ProTable } from '@ant-design/pro-components';
+import { ProTable, ProDescriptions } from '@ant-design/pro-components';
 import type { AxiosError } from 'axios';
 import request from '@/utils/request';
 import SmartReferenceSelect from '@/components/SmartReferenceSelect';
@@ -33,6 +33,15 @@ interface PlatformOrgRow {
   isActive?: boolean | null;
   createdAt?: string;
   updatedAt?: string;
+  sourceInfo?: SourceInfo | null;
+}
+
+interface SourceInfo {
+  type: 'SALES' | 'SERVICE' | 'MANUAL';
+  applicationNo?: string | null;
+  applicantName?: string | null;
+  plannerName?: string | null;
+  adminName?: string | null;
 }
 
 interface PlatformOrgFormValues {
@@ -117,6 +126,7 @@ export default function PlatformOrg() {
   const actionRef = useRef<ActionType>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [currentRow, setCurrentRow] = useState<PlatformOrgRow | null>(null);
   const [editCustomerOptions, setEditCustomerOptions] = useState<{ label: string; value: number }[]>([]);
   const [createForm] = Form.useForm<PlatformOrgFormValues>();
@@ -298,6 +308,27 @@ export default function PlatformOrg() {
       ellipsis: true,
     },
     {
+      title: '联系人',
+      dataIndex: 'contactPerson',
+      width: 100,
+      ellipsis: true,
+      search: false,
+    },
+    {
+      title: '联系电话',
+      dataIndex: 'contactPhone',
+      width: 130,
+      ellipsis: true,
+      search: false,
+    },
+    {
+      title: '邮箱',
+      dataIndex: 'contactEmail',
+      width: 180,
+      ellipsis: true,
+      search: false,
+    },
+    {
       title: '所属客户',
       dataIndex: 'linkedCustomers',
       width: 260,
@@ -363,9 +394,23 @@ export default function PlatformOrg() {
     {
       title: '操作',
       valueType: 'option',
-      width: 120,
+      width: 160,
       fixed: 'right',
       render: (_, row) => [
+        <a
+          key="detail"
+          onClick={async () => {
+            try {
+              const { data } = await request.get<PlatformOrgRow>(`/v1/platform-orgs/${row.id}`);
+              setCurrentRow(data);
+              setDetailOpen(true);
+            } catch (e) {
+              showError(e);
+            }
+          }}
+        >
+          详情
+        </a>,
         <a
           key="edit"
           onClick={() => {
@@ -545,6 +590,75 @@ export default function PlatformOrg() {
             <Switch />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title="机构详情"
+        open={detailOpen}
+        onCancel={() => { setDetailOpen(false); setCurrentRow(null); }}
+        footer={null}
+        width={560}
+        destroyOnClose
+      >
+        {currentRow && (
+          <ProDescriptions column={1} dataSource={currentRow}>
+            <ProDescriptions.Item dataIndex="platform" label="平台" render={() => PLATFORM_LABELS[currentRow.platform]} />
+            <ProDescriptions.Item dataIndex="orgCodeShort" label="机构代码/简称" />
+            <ProDescriptions.Item dataIndex="orgFullName" label="机构全称" />
+            <ProDescriptions.Item
+              label="所属客户"
+              render={() => {
+                const list = currentRow.linkedCustomers ?? [];
+                if (list.length === 0) return '—';
+                return (
+                  <>
+                    {list.map((c) => (
+                      <Tag key={c.id} color="blue" style={{ marginRight: 4, marginBottom: 4 }}>
+                        {c.name}
+                      </Tag>
+                    ))}
+                  </>
+                );
+              }}
+            />
+            <ProDescriptions.Item dataIndex="contactPerson" label="联系人" render={(_, __) => currentRow.contactPerson ?? '—'} />
+            <ProDescriptions.Item dataIndex="contactPhone" label="联系电话" render={(_, __) => currentRow.contactPhone ?? '—'} />
+            <ProDescriptions.Item dataIndex="contactEmail" label="邮箱" render={(_, __) => currentRow.contactEmail ?? '—'} />
+            <ProDescriptions.Item dataIndex="region" label="区域" render={(_, __) => currentRow.region ?? '—'} />
+            <ProDescriptions.Item dataIndex="salesPerson" label="销售负责人" render={(_, __) => currentRow.salesPerson ?? '—'} />
+            <ProDescriptions.Item
+              dataIndex="isActive"
+              label="状态"
+              render={() => (currentRow.isActive !== false ? '启用' : '停用')}
+            />
+            <ProDescriptions.Item dataIndex="remark" label="备注" render={(_, __) => currentRow.remark ?? '—'} />
+            {currentRow.sourceInfo && (
+              <>
+                <ProDescriptions.Item label="机构来源信息" span={1} />
+                {currentRow.sourceInfo.type === 'MANUAL' && (
+                  <ProDescriptions.Item label="创建方式" render={() => '平台管理员手工创建'} span={1} />
+                )}
+                {currentRow.sourceInfo.type === 'SALES' && (
+                  <>
+                    <ProDescriptions.Item label="审批单号" render={() => currentRow.sourceInfo?.applicationNo ?? '—'} />
+                    <ProDescriptions.Item label="申请人" render={() => currentRow.sourceInfo?.applicantName ?? '—'} />
+                    <ProDescriptions.Item label="营企处理人" render={() => currentRow.sourceInfo?.plannerName ?? '—'} />
+                    <ProDescriptions.Item label="审批人" render={() => currentRow.sourceInfo?.adminName ?? '—'} />
+                  </>
+                )}
+                {currentRow.sourceInfo.type === 'SERVICE' && (
+                  <>
+                    <ProDescriptions.Item label="审批单号" render={() => currentRow.sourceInfo?.applicationNo ?? '—'} />
+                    <ProDescriptions.Item label="申请人" render={() => currentRow.sourceInfo?.applicantName ?? '—'} />
+                    <ProDescriptions.Item label="审批人" render={() => currentRow.sourceInfo?.adminName ?? '—'} />
+                  </>
+                )}
+              </>
+            )}
+            <ProDescriptions.Item dataIndex="createdAt" label="创建时间" valueType="dateTime" />
+            <ProDescriptions.Item dataIndex="updatedAt" label="更新时间" valueType="dateTime" />
+          </ProDescriptions>
+        )}
       </Modal>
     </div>
   );

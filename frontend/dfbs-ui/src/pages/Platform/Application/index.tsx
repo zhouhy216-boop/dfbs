@@ -1,8 +1,8 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ProTable, ModalForm } from '@ant-design/pro-components';
+import { ProTable, ModalForm, ProFormMoney, ProFormDigit } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
-import { Alert, Button, Modal, Form, Input, InputNumber, Select, Tag, message } from 'antd';
+import { Alert, Button, Card, Col, Modal, Form, Input, InputNumber, Row, Select, Spin, Table, Tag, message } from 'antd';
 import request from '@/utils/request';
 import SmartReferenceSelect from '@/components/SmartReferenceSelect';
 
@@ -10,12 +10,20 @@ const PLATFORM_OPTIONS = [
   { label: '映翰通', value: 'INHAND' },
   { label: '恒动', value: 'HENDONG' },
   { label: '京品', value: 'JINGPIN' },
-  { label: '其他', value: 'OTHER' },
 ];
 
+const PHONE_REG = /^(1\d{10}|\d{3,4}-\d{7,8})$/;
+const CONTRACT_NO_CHINESE_REG = /^[a-zA-Z0-9\-_\s./]+$/;
+
 const SOURCE_TYPE_OPTIONS = [
-  { label: '工厂渠道', value: 'FACTORY' },
+  { label: '销售渠道', value: 'FACTORY' },
   { label: '服务渠道', value: 'SERVICE' },
+];
+
+const SALES_PERSON_OPTIONS = [
+  { label: '张三', value: '张三' },
+  { label: '李四', value: '李四' },
+  { label: '王五', value: '王五' },
 ];
 
 const REGION_OPTIONS = [
@@ -28,10 +36,13 @@ const REGION_OPTIONS = [
 
 const STATUS_MAP: Record<string, { label: string; color?: string }> = {
   DRAFT: { label: '草稿', color: 'default' },
-  PENDING_PLANNER: { label: '待规划', color: 'processing' },
+  PENDING: { label: '待申请人', color: 'default' },
+  PENDING_PLANNER: { label: '待确认', color: 'processing' },
+  PENDING_CONFIRM: { label: '待营企确认', color: 'processing' },
   PENDING_ADMIN: { label: '待审核', color: 'warning' },
   APPROVED: { label: '已通过', color: 'success' },
   REJECTED: { label: '已驳回', color: 'error' },
+  CLOSED: { label: '已关闭', color: 'default' },
 };
 
 interface ApplicationRow {
@@ -57,11 +68,122 @@ interface ApplicationRow {
   rejectReason?: string;
   createdAt?: string;
   updatedAt?: string;
+  applicantId?: number | null;
+  applicantName?: string | null;
+}
+
+interface DuplicateMatchItem {
+  orgCodeShort: string;
+  customerName: string;
+  email: string;
+  phone: string;
+  matchReason: string;
 }
 
 function showError(e: unknown) {
   const err = e as { response?: { data?: { message?: string } }; message?: string };
   message.error(err?.response?.data?.message ?? err?.message ?? '操作失败');
+}
+
+/** Input that trims value on blur (use inside Form.Item with name). */
+function TrimInput({ name, ...rest }: { name: string; [k: string]: unknown }) {
+  const form = Form.useFormInstance();
+  return (
+    <Input
+      {...rest}
+      onBlur={(e) => {
+        const v = e.target.value?.trim();
+        if (v !== undefined && form) form.setFieldValue(name, v);
+      }}
+    />
+  );
+}
+
+/** Right-panel: calls check-duplicates and shows 无重复信息 or 命中提醒 with matching records. */
+function HitAnalysisPanel({
+  platform,
+  customerName,
+  email,
+  contactPhone,
+  onHitsLoaded,
+}: {
+  platform: string;
+  customerName: string;
+  email: string;
+  contactPhone: string;
+  onHitsLoaded: (hits: DuplicateMatchItem[]) => void;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [hits, setHits] = useState<DuplicateMatchItem[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    request
+      .post<DuplicateMatchItem[]>('/v1/platform-account-applications/check-duplicates', {
+        platform,
+        customerName: customerName?.trim() ?? '',
+        email: email ?? '',
+        contactPhone: contactPhone ?? '',
+      })
+      .then(({ data }) => {
+        if (!cancelled) {
+          setHits(data ?? []);
+          onHitsLoaded(data ?? []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setHits([]);
+          onHitsLoaded([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [platform, customerName, email, contactPhone, onHitsLoaded]);
+
+  if (loading) {
+    return (
+      <Card size="small" style={{ border: '1px solid #d9d9d9' }}>
+        <div style={{ textAlign: 'center', padding: 24 }}>
+          <Spin tip="正在检查重复..." />
+        </div>
+      </Card>
+    );
+  }
+
+  if (hits.length === 0) {
+    return (
+      <Card size="small" style={{ border: '1px solid #52c41a', background: '#f6ffed' }}>
+        <div style={{ color: '#52c41a', fontWeight: 600 }}>✅ 无重复信息</div>
+      </Card>
+    );
+  }
+
+  const redStyle = { color: '#ff4d4f', fontWeight: 600 as const };
+
+  return (
+    <Card
+      size="small"
+      title={<span style={{ color: '#ff4d4f', fontWeight: 600 }}>⚠️ 命中提醒</span>}
+      style={{ border: '1px solid #ff4d4f', background: '#fff2f0' }}
+    >
+      <div style={{ marginBottom: 8, color: '#333' }}>
+        将命中的平台信息展示在这里，两边都将命中的信息标红。
+      </div>
+      {hits.map((item, idx) => (
+        <div key={idx} style={{ marginBottom: 12, padding: 8, background: '#fff', borderRadius: 4, border: '1px solid #ffccc7' }}>
+          <div style={{ marginBottom: 4 }}><strong>机构代码/简称</strong>: <span style={redStyle}>{item.orgCodeShort ?? '—'}</span></div>
+          <div style={{ marginBottom: 4 }}><strong>客户</strong>: <span style={redStyle}>{item.customerName ?? '—'}</span></div>
+          <div style={{ marginBottom: 4 }}><strong>邮箱</strong>: <span style={redStyle}>{item.email ?? '—'}</span></div>
+          <div style={{ marginBottom: 0 }}><strong>电话</strong>: <span style={redStyle}>{item.phone ?? '—'}</span></div>
+          {item.matchReason && <div style={{ marginTop: 4, fontSize: 12, color: '#666' }}>命中原因: {item.matchReason}</div>}
+        </div>
+      ))}
+    </Card>
+  );
 }
 
 /** Create modal: allows free text (new customer) or select existing. Auto-fills orgFullName from customer. */
@@ -87,25 +209,62 @@ function CustomerFieldCreate() {
   );
 }
 
+/** Planner modal: customer select with orgFullName auto-fill (must be inside Form with form instance). */
+function PlannerCustomerSelect({ setPlannerCustomerExists }: { setPlannerCustomerExists: (v: boolean | null) => void }) {
+  const form = Form.useFormInstance();
+  const customerName = Form.useWatch('customerName', form);
+  return (
+    <SmartReferenceSelect
+      entityType="CUSTOMER"
+      value={customerName ?? ''}
+      placeholder="输入客户名称或从主数据选择"
+      onChange={(ref) => {
+        form.setFieldValue('customerId', ref.id ?? null);
+        form.setFieldValue('customerName', ref.name);
+        form.setFieldValue('orgFullName', ref.name ?? '');
+        setPlannerCustomerExists(ref.id != null ? true : null);
+      }}
+    />
+  );
+}
+
+/** Planner modal: contract select (must be inside Form). */
+function PlannerContractSelect() {
+  const form = Form.useFormInstance();
+  const contractNo = Form.useWatch('contractNo', form);
+  return (
+    <SmartReferenceSelect
+      entityType="CONTRACT"
+      value={contractNo ?? ''}
+      placeholder="输入合同号或从主数据选择"
+      onChange={(ref) => form.setFieldValue('contractNo', ref.name ?? '')}
+    />
+  );
+}
+
 export default function PlatformApplication() {
   const navigate = useNavigate();
   const actionRef = useRef<ActionType>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [plannerModalOpen, setPlannerModalOpen] = useState(false);
   const [adminModalOpen, setAdminModalOpen] = useState(false);
+  const [adminHitMatches, setAdminHitMatches] = useState<DuplicateMatchItem[]>([]);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [currentRow, setCurrentRow] = useState<ApplicationRow | null>(null);
   const [createSourceType, setCreateSourceType] = useState<'FACTORY' | 'SERVICE'>('FACTORY');
   const [plannerCustomerExists, setPlannerCustomerExists] = useState<boolean | null>(null);
+  const [duplicateMatches, setDuplicateMatches] = useState<DuplicateMatchItem[]>([]);
+  const [duplicateCurrentInput, setDuplicateCurrentInput] = useState<{ customerName: string; email: string; phone: string } | null>(null);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [plannerForm] = Form.useForm<ApplicationRow & { customerName?: string }>();
   const [adminForm] = Form.useForm<ApplicationRow>();
 
   const columns: ProColumns<ApplicationRow>[] = [
     { title: '申请单号', dataIndex: 'applicationNo', width: 160, ellipsis: true },
-    { title: '平台', dataIndex: 'platform', width: 100, valueEnum: { INHAND: '映翰通', HENDONG: '恒动', JINGPIN: '京品', OTHER: '其他' } },
-    { title: '渠道', dataIndex: 'sourceType', width: 80, search: false, valueEnum: { FACTORY: '工厂', SERVICE: '服务' } },
+    { title: '平台', dataIndex: 'platform', width: 100, valueEnum: { INHAND: '映翰通', HENDONG: '恒动', JINGPIN: '京品' } },
+    { title: '渠道', dataIndex: 'sourceType', width: 80, search: false, valueEnum: { FACTORY: '销售', SERVICE: '服务' } },
     { title: '客户', dataIndex: 'customerName', width: 140, ellipsis: true, render: (_, row) => row.customerName ?? (row.customerId != null ? `#${row.customerId}` : '—') },
     { title: '机构代码/简称', dataIndex: 'orgCodeShort', width: 120, ellipsis: true },
     { title: '机构全称', dataIndex: 'orgFullName', width: 160, ellipsis: true },
@@ -126,11 +285,12 @@ export default function PlatformApplication() {
       fixed: 'right',
       render: (_, row) => [
         <a key="view" onClick={() => { setCurrentRow(row); setDetailModalOpen(true); }}>详情</a>,
-        row.status === 'PENDING_PLANNER' && (
+        (row.status === 'PENDING_PLANNER' || row.status === 'PENDING_CONFIRM' || row.status === 'CLOSED') && (
           <a
             key="planner"
             onClick={() => {
               setCurrentRow(row);
+              const applicantName = (row as ApplicationRow).applicantName;
               plannerForm.setFieldsValue({
                 platform: row.platform,
                 customerId: row.customerId ?? undefined,
@@ -139,7 +299,7 @@ export default function PlatformApplication() {
                 contactPerson: row.contactPerson,
                 phone: row.phone,
                 email: row.email,
-                salesPerson: row.salesPerson,
+                salesPerson: applicantName ?? row.salesPerson ?? undefined,
                 contractNo: row.contractNo,
                 price: row.price,
                 quantity: row.quantity,
@@ -150,11 +310,11 @@ export default function PlatformApplication() {
               setPlannerModalOpen(true);
             }}
           >
-            规划处理
+            营企处理
           </a>
         ),
         row.status === 'PENDING_ADMIN' && (
-          <a key="admin" onClick={() => { setCurrentRow(row); adminForm.setFieldsValue({ orgCodeShort: row.orgCodeShort ?? '', region: row.region ?? undefined }); setAdminModalOpen(true); }}>
+          <a key="admin" onClick={() => { setCurrentRow(row); setAdminHitMatches([]); adminForm.setFieldsValue({ orgCodeShort: row.orgCodeShort ?? '', region: row.region ?? undefined }); setAdminModalOpen(true); }}>
             管理员审核
           </a>
         ),
@@ -191,7 +351,7 @@ export default function PlatformApplication() {
     }
   };
 
-  const handlePlannerSubmit = async () => {
+  const doPlannerSubmit = async () => {
     if (!currentRow) return;
     const values = await plannerForm.validateFields();
     try {
@@ -199,6 +359,7 @@ export default function PlatformApplication() {
         platform: values.platform ?? undefined,
         customerId: values.customerId ?? undefined,
         customerName: values.customerName ? String(values.customerName).trim() : undefined,
+        orgCodeShort: values.orgCodeShort ?? undefined,
         orgFullName: values.orgFullName ?? undefined,
         contactPerson: values.contactPerson ?? undefined,
         phone: values.phone ?? undefined,
@@ -214,11 +375,89 @@ export default function PlatformApplication() {
       setPlannerModalOpen(false);
       setCurrentRow(null);
       setPlannerCustomerExists(null);
+      setShowDuplicateModal(false);
+      setDuplicateMatches([]);
+      setDuplicateCurrentInput(null);
       plannerForm.resetFields();
       actionRef.current?.reload();
     } catch (e) {
       showError(e);
     }
+  };
+
+  const handlePlannerConfirm = async () => {
+    if (!currentRow) return;
+    try {
+      const values = await plannerForm.validateFields();
+      const { data: matches } = await request.post<DuplicateMatchItem[]>(
+        '/v1/platform-account-applications/check-duplicates',
+        {
+          platform: values.platform,
+          customerName: values.customerName ? String(values.customerName).trim() : '',
+          email: values.email ?? '',
+          contactPhone: values.phone ?? '',
+        }
+      );
+      if (!matches?.length) {
+        await doPlannerSubmit();
+        return;
+      }
+      setDuplicateMatches(matches);
+      setDuplicateCurrentInput({
+        customerName: values.customerName ? String(values.customerName).trim() : '',
+        email: values.email ? String(values.email).trim() : '',
+        phone: values.phone ? String(values.phone).trim() : '',
+      });
+      setShowDuplicateModal(true);
+    } catch (e) {
+      if ((e as { errorFields?: unknown[] })?.errorFields) return;
+      showError(e);
+    }
+  };
+
+  const handleDuplicateReturn = () => {
+    setShowDuplicateModal(false);
+    setDuplicateMatches([]);
+    setDuplicateCurrentInput(null);
+  };
+
+  const handleDuplicateConfirmNew = async () => {
+    await doPlannerSubmit();
+  };
+
+  const handleDuplicateGoSim = () => {
+    setShowDuplicateModal(false);
+    setDuplicateMatches([]);
+    setDuplicateCurrentInput(null);
+    setPlannerModalOpen(false);
+    setCurrentRow(null);
+    plannerForm.resetFields();
+    navigate('/platform/sim-applications');
+    actionRef.current?.reload();
+  };
+
+  const handlePlannerCloseApp = () => {
+    if (!currentRow) return;
+    Modal.confirm({
+      title: '确认关闭申请？',
+      content: '关闭后流程结束，营企可重新打开并提交。确认关闭吗？',
+      okText: '确认关闭',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await request.post(`/v1/platform-account-applications/${currentRow.id}/close`);
+          message.success('申请已关闭');
+          setPlannerModalOpen(false);
+          setCurrentRow(null);
+          setPlannerCustomerExists(null);
+          plannerForm.resetFields();
+          actionRef.current?.reload();
+        } catch (e) {
+          showError(e);
+        }
+      },
+    });
   };
 
   const handleApprove = async () => {
@@ -307,7 +546,7 @@ export default function PlatformApplication() {
         headerTitle="平台开户申请"
         toolBarRender={() => [
           <Button key="factory" type="primary" onClick={() => { setCreateSourceType('FACTORY'); setCreateOpen(true); }}>
-            工厂申请
+            销售申请
           </Button>,
           <Button key="service" onClick={() => { setCreateSourceType('SERVICE'); setCreateOpen(true); }}>
             服务申请
@@ -317,7 +556,7 @@ export default function PlatformApplication() {
 
       <ModalForm
         key={`create-${createSourceType}`}
-        title={createSourceType === 'FACTORY' ? '工厂申请' : '服务申请'}
+        title={createSourceType === 'FACTORY' ? '销售申请' : '服务申请'}
         open={createOpen}
         onOpenChange={(open) => { setCreateOpen(open); if (!open) setCreateSourceType('FACTORY'); }}
         onFinish={handleCreate}
@@ -335,25 +574,68 @@ export default function PlatformApplication() {
         <Form.Item name="contactPerson" label="联系人" rules={[{ required: true, message: '此项必填' }]}>
           <Input placeholder="联系人" />
         </Form.Item>
-        <Form.Item name="phone" label="联系电话" rules={[{ required: true, message: '此项必填' }]}>
-          <Input placeholder="联系电话" />
+        <Form.Item
+          name="phone"
+          label="联系电话"
+          rules={[
+            { required: true, message: '此项必填' },
+            { pattern: PHONE_REG, message: '请输入11位手机号或区号-号码格式固话' },
+          ]}
+        >
+          <TrimInput name="phone" placeholder="11位手机号或区号-号码" />
         </Form.Item>
-        <Form.Item name="email" label="邮箱" rules={[{ required: true, message: '此项必填' }]}>
-          <Input placeholder="邮箱" />
+        <Form.Item
+          name="email"
+          label="邮箱"
+          rules={[
+            { required: true, message: '此项必填' },
+            { type: 'email', message: '请输入有效邮箱' },
+          ]}
+        >
+          <TrimInput name="email" type="email" placeholder="邮箱" />
         </Form.Item>
         {createSourceType === 'FACTORY' && (
-          <Form.Item name="contractNo" label="合同号" rules={[{ required: true, message: '请输入合同号' }]}>
-            <Input placeholder="合同号" />
+          <Form.Item
+            name="contractNo"
+            label="合同号"
+            rules={[
+              { required: true, message: '请输入合同号' },
+              { pattern: CONTRACT_NO_CHINESE_REG, message: '合同号不能包含中文字符，仅限英文、数字及常用符号' },
+            ]}
+          >
+            <TrimInput name="contractNo" placeholder="合同号（英文/数字/符号）" />
           </Form.Item>
         )}
         {createSourceType === 'SERVICE' && (
           <>
-            <Form.Item name="price" label="价格" rules={[{ required: true, message: '请填写价格' }]}>
-              <InputNumber min={0} style={{ width: '100%' }} />
-            </Form.Item>
-            <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '请填写数量' }]}>
-              <InputNumber min={0} style={{ width: '100%' }} />
-            </Form.Item>
+            <Alert
+              type="warning"
+              message="首次开通必须交满1年（12个月），特殊情况请单独联系管理员"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+            <ProFormMoney
+              name="price"
+              label="单价（元/点）"
+              initialValue={25}
+              rules={[{ required: true, message: '请填写单价' }]}
+              fieldProps={{
+                min: 0,
+                precision: 2,
+                step: 0.01,
+                moneySymbol: false,
+                addonAfter: '元/点',
+                formatter: (value) => (value != null && value !== '' ? Number(value).toFixed(2) : ''),
+                parser: (v) => (v ? parseFloat(String(v).replace(/,/g, '')) : undefined),
+              }}
+            />
+            <ProFormDigit
+              name="quantity"
+              label="台数"
+              initialValue={1}
+              rules={[{ required: true, message: '请填写台数' }]}
+              fieldProps={{ min: 1, precision: 0, addonAfter: '台' }}
+            />
             <Form.Item name="reason" label="原因" rules={[{ required: true, message: '请填写原因' }]}>
               <Input.TextArea rows={2} placeholder="原因" />
             </Form.Item>
@@ -362,88 +644,128 @@ export default function PlatformApplication() {
       </ModalForm>
 
       <Modal
-        title="规划处理"
+        title="营企确认"
         open={plannerModalOpen}
-        onOk={handlePlannerSubmit}
+        onOk={handlePlannerConfirm}
         onCancel={() => { setPlannerModalOpen(false); setCurrentRow(null); setPlannerCustomerExists(null); plannerForm.resetFields(); }}
-        okText="提交至管理员"
         destroyOnClose
         width={560}
+        footer={[
+          <Button key="closeApp" danger onClick={handlePlannerCloseApp}>
+            关闭申请
+          </Button>,
+          <Button key="cancel" onClick={() => { setPlannerModalOpen(false); setCurrentRow(null); setPlannerCustomerExists(null); plannerForm.resetFields(); }}>
+            取消
+          </Button>,
+          <Button key="submit" type="primary" onClick={() => handlePlannerConfirm()}>
+            提交至管理员
+          </Button>,
+        ]}
       >
         {currentRow && (
           <div style={{ marginBottom: 16, padding: 12, background: '#fafafa', borderRadius: 8 }}>
             <p><strong>申请单号</strong>: {currentRow.applicationNo}</p>
           </div>
         )}
+        {currentRow?.rejectReason && (
+          <Alert type="error" showIcon message={`被驳回，理由：${currentRow.rejectReason}`} style={{ marginBottom: 16 }} />
+        )}
         {plannerCustomerExists === true && (
           <Alert type="warning" message="该客户后台已存在" style={{ marginBottom: 16 }} showIcon />
         )}
+        {currentRow?.sourceType === 'SERVICE' && (
+          <Alert
+            type="warning"
+            message="首次开通必须交满1年（12个月），特殊情况请单独联系管理员"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
         <Form form={plannerForm} layout="vertical">
-          <Form.Item name="platform" label="平台">
-            <Select options={PLATFORM_OPTIONS} placeholder="平台" />
+          <Form.Item name="platform" label="平台" rules={[{ required: true, message: '此项必填' }]}>
+            <Select options={PLATFORM_OPTIONS} placeholder="请选择平台" />
           </Form.Item>
           <Form.Item name="customerId" hidden><Input type="hidden" /></Form.Item>
-          <Form.Item name="customerName" label="客户名称">
-            <Input
-              placeholder="客户名称（可修改，失焦时检查是否已存在）"
-              onChange={(e) => {
-                plannerForm.setFieldValue('customerId', null);
-                setPlannerCustomerExists(null);
-              }}
-              onBlur={async () => {
-                const name = plannerForm.getFieldValue('customerName')?.trim();
-                if (!name) { setPlannerCustomerExists(null); return; }
-                try {
-                  const { data } = await request.get<{ exists?: boolean }>('/v1/platform-account-applications/check-customer-name', { params: { name } });
-                  setPlannerCustomerExists(data?.exists ?? false);
-                } catch {
-                  setPlannerCustomerExists(null);
-                }
-              }}
-            />
+          <Form.Item name="customerName" label="客户名称" rules={[{ required: true, message: '此项必填' }]}>
+            <PlannerCustomerSelect setPlannerCustomerExists={setPlannerCustomerExists} />
           </Form.Item>
-          <Form.Item name="orgFullName" label="机构全称" rules={[{ required: true, message: '必填' }]}>
-            <Input placeholder="机构全称" />
+          <Form.Item name="orgFullName" label="机构全称" rules={[{ required: true, message: '此项必填' }]}>
+            <Input placeholder="机构全称（选客户后自动带出，可修改）" />
           </Form.Item>
-          <Form.Item name="contactPerson" label="联系人">
+          <Form.Item name="contactPerson" label="联系人" rules={[{ required: true, message: '此项必填' }]}>
             <Input placeholder="联系人" />
           </Form.Item>
-          <Form.Item name="phone" label="联系电话">
-            <Input placeholder="联系电话" />
+          <Form.Item
+            name="phone"
+            label="联系电话"
+            rules={[
+              { required: true, message: '此项必填' },
+              { pattern: PHONE_REG, message: '请输入11位手机号或区号-号码格式固话' },
+            ]}
+          >
+            <TrimInput name="phone" placeholder="11位手机号或区号-号码" />
           </Form.Item>
-          <Form.Item name="email" label="邮箱">
-            <Input placeholder="邮箱" />
+          <Form.Item
+            name="email"
+            label="邮箱"
+            rules={[
+              { required: true, message: '此项必填' },
+              { type: 'email', message: '请输入有效邮箱' },
+            ]}
+          >
+            <TrimInput name="email" type="email" placeholder="邮箱" />
           </Form.Item>
-          <Form.Item name="salesPerson" label="销售负责人">
-            <Input placeholder="销售负责人" />
+          <Form.Item name="salesPerson" label="销售负责人" rules={[{ required: true, message: '此项必填' }]}>
+            <Select
+              options={[
+                ...SALES_PERSON_OPTIONS,
+                ...(currentRow?.applicantName && !SALES_PERSON_OPTIONS.some((o) => o.value === currentRow.applicantName)
+                  ? [{ label: currentRow.applicantName, value: currentRow.applicantName }]
+                  : []),
+              ]}
+              placeholder="请选择销售负责人"
+              allowClear={false}
+            />
           </Form.Item>
           {currentRow?.sourceType === 'SERVICE' ? (
             <>
-              <Form.Item name="price" label="价格">
-                <InputNumber min={0} style={{ width: '100%' }} />
+              <Form.Item name="price" label="单价（元/点）" initialValue={25} rules={[{ required: true, message: '此项必填' }]}>
+                <InputNumber
+                  min={0}
+                  precision={2}
+                  step={0.01}
+                  style={{ width: '100%' }}
+                  addonAfter="元/点"
+                  placeholder="25.00"
+                  formatter={(value) => (value != null && value !== '' ? Number(value).toFixed(2) : '')}
+                  parser={(v) => (v ? parseFloat(String(v).replace(/,/g, '')) : undefined)}
+                />
               </Form.Item>
-              <Form.Item name="quantity" label="数量">
-                <InputNumber min={0} style={{ width: '100%' }} />
+              <Form.Item name="quantity" label="台数" initialValue={1} rules={[{ required: true, message: '此项必填' }]}>
+                <InputNumber min={1} precision={0} style={{ width: '100%' }} addonAfter="台" placeholder="1" />
               </Form.Item>
-              <Form.Item name="reason" label="原因">
+              <Form.Item name="reason" label="原因" rules={[{ required: true, message: '此项必填' }]}>
                 <Input.TextArea rows={2} placeholder="原因" />
               </Form.Item>
             </>
           ) : (
             <>
-              <Form.Item name="contractNo" label="合同号">
-                <Input placeholder="合同号" />
+              <Form.Item
+                name="contractNo"
+                label="合同号"
+                rules={[
+                  { required: true, message: '此项必填' },
+                  { pattern: CONTRACT_NO_CHINESE_REG, message: '合同号不能包含中文字符，仅限英文、数字及常用符号' },
+                ]}
+              >
+                <PlannerContractSelect />
               </Form.Item>
               {currentRow?.sourceType === 'FACTORY' && (
-                <Form.Item name="ccPlanner" label="抄送规划">
+                <Form.Item name="ccPlanner" label="抄送规划" rules={[{ required: true, message: '此项必填' }]}>
                   <Select
-                    placeholder="选填"
-                    allowClear
-                    options={[
-                      { label: '张三', value: '张三' },
-                      { label: '李四', value: '李四' },
-                      { label: '王五', value: '王五' },
-                    ]}
+                    placeholder="请选择"
+                    allowClear={false}
+                    options={SALES_PERSON_OPTIONS}
                   />
                 </Form.Item>
               )}
@@ -453,53 +775,183 @@ export default function PlatformApplication() {
       </Modal>
 
       <Modal
-        title="管理员审核"
-        open={adminModalOpen}
-        onCancel={() => { setAdminModalOpen(false); setCurrentRow(null); adminForm.resetFields(); }}
-        footer={null}
+        title="重复提醒"
+        open={showDuplicateModal}
+        onCancel={handleDuplicateReturn}
+        footer={[
+          <Button key="return" onClick={handleDuplicateReturn}>
+            返回
+          </Button>,
+          <Button key="confirm" type="primary" onClick={handleDuplicateConfirmNew}>
+            确认新增
+          </Button>,
+          <Button key="sim" onClick={handleDuplicateGoSim}>
+            我要开卡
+          </Button>,
+        ]}
         width={640}
         destroyOnClose
       >
-        {currentRow && (
+        {duplicateCurrentInput && (
           <>
-            <div style={{ marginBottom: 16, padding: 12, background: '#fafafa', borderRadius: 8, lineHeight: 1.8 }}>
-              <p><strong>申请单号</strong>: {currentRow.applicationNo}</p>
-              <p><strong>平台</strong>: {PLATFORM_OPTIONS.find((o) => o.value === currentRow.platform)?.label ?? currentRow.platform}</p>
-              <p><strong>渠道</strong>: {currentRow.sourceType === 'SERVICE' ? '服务渠道' : '工厂渠道'}</p>
-              <p><strong>客户</strong>: {currentRow.customerName ?? (currentRow.customerId != null ? `#${currentRow.customerId}` : '—')}</p>
-              <p><strong>机构全称</strong>: {currentRow.orgFullName ?? '—'}</p>
-              <p><strong>联系人</strong>: {currentRow.contactPerson ?? '—'}</p>
-              <p><strong>联系电话</strong>: {currentRow.phone ?? '—'}</p>
-              <p><strong>邮箱</strong>: {currentRow.email ?? '—'}</p>
-              {currentRow.contractNo != null && <p><strong>合同号</strong>: {currentRow.contractNo}</p>}
-              {currentRow.price != null && <p><strong>价格</strong>: {currentRow.price}</p>}
-              {currentRow.quantity != null && <p><strong>数量</strong>: {currentRow.quantity}</p>}
-              {currentRow.reason != null && <p><strong>原因</strong>: {currentRow.reason}</p>}
+            <div style={{ marginBottom: 12 }}>
+              {(() => {
+                const anyCustomer = duplicateMatches.some((m) => m.matchReason?.includes('客户'));
+                const anyPhone = duplicateMatches.some((m) => m.matchReason?.includes('电话'));
+                const anyEmail = duplicateMatches.some((m) => m.matchReason?.includes('邮箱'));
+                const red = { color: '#ff4d4f', fontWeight: 600 };
+                return (
+                  <>
+                    <p style={{ marginBottom: 4 }}>
+                      客户名称：<span style={anyCustomer ? red : undefined}>{duplicateCurrentInput.customerName || '—'}</span>
+                    </p>
+                    <p style={{ marginBottom: 4 }}>
+                      联系电话：<span style={anyPhone ? red : undefined}>{duplicateCurrentInput.phone || '—'}</span>
+                    </p>
+                    <p style={{ marginBottom: 0 }}>
+                      邮箱：<span style={anyEmail ? red : undefined}>{duplicateCurrentInput.email || '—'}</span>
+                    </p>
+                  </>
+                );
+              })()}
             </div>
-            <Form form={adminForm} layout="vertical" initialValues={{ orgCodeShort: currentRow.orgCodeShort, region: currentRow.region }}>
-              <Form.Item name="orgCodeShort" label="机构代码/简称" rules={[{ required: true, message: '请填写机构代码/简称' }]}>
-                <Input placeholder="机构代码/简称" />
-              </Form.Item>
-              <Form.Item name="region" label="区域" rules={[{ required: true, message: '请选择区域' }]}>
-                <Select options={REGION_OPTIONS} placeholder="华东/华北/华南/西部/海外" allowClear />
-              </Form.Item>
-              <Form.Item>
-                <Button type="primary" onClick={handleApprove} style={{ marginRight: 8 }}>通过</Button>
-                <Button danger onClick={() => setRejectModalOpen(true)}>驳回</Button>
-              </Form.Item>
-            </Form>
+            <p style={{ marginBottom: 12, color: '#666' }}>检测到以上您写入的信息已存在于下表平台机构中：</p>
+            {(() => {
+              const norm = (s: string) => (s ?? '').trim().toLowerCase();
+              const cur = {
+                customerName: norm(duplicateCurrentInput.customerName),
+                email: norm(duplicateCurrentInput.email),
+                phone: norm(duplicateCurrentInput.phone),
+              };
+              return (
+                <Table
+                  dataSource={duplicateMatches}
+                  rowKey={(r, i) => `${r.orgCodeShort}-${i}`}
+                  pagination={false}
+                  size="small"
+                  columns={[
+                    { title: '机构代码', dataIndex: 'orgCodeShort', width: 120 },
+                    {
+                      title: '客户',
+                      dataIndex: 'customerName',
+                      width: 120,
+                      ellipsis: true,
+                      render: (val: string) => (
+                        <span style={norm(val) === cur.customerName ? { color: '#ff4d4f', fontWeight: 600 } : undefined}>
+                          {val || '—'}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: '邮箱',
+                      dataIndex: 'email',
+                      width: 160,
+                      ellipsis: true,
+                      render: (val: string) => (
+                        <span style={norm(val) === cur.email ? { color: '#ff4d4f', fontWeight: 600 } : undefined}>
+                          {val || '—'}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: '电话',
+                      dataIndex: 'phone',
+                      width: 120,
+                      render: (val: string) => (
+                        <span style={norm(val) === cur.phone ? { color: '#ff4d4f', fontWeight: 600 } : undefined}>
+                          {val || '—'}
+                        </span>
+                      ),
+                    },
+                  ]}
+                />
+              );
+            })()}
           </>
         )}
       </Modal>
 
       <Modal
-        title="驳回原因"
+        title="管理员审核"
+        open={adminModalOpen}
+        onCancel={() => { setAdminModalOpen(false); setCurrentRow(null); setAdminHitMatches([]); adminForm.resetFields(); }}
+        footer={null}
+        width={900}
+        destroyOnClose
+      >
+        {currentRow && (
+          <Row gutter={16} wrap={false}>
+            <Col span={14} style={{ borderRight: '1px solid #f0f0f0', paddingRight: 16 }}>
+              {(() => {
+                const hasHits = adminHitMatches.length > 0;
+                const anyCustomer = hasHits && adminHitMatches.some((m) => m.matchReason?.includes('客户'));
+                const anyPhone = hasHits && adminHitMatches.some((m) => m.matchReason?.includes('电话'));
+                const anyEmail = hasHits && adminHitMatches.some((m) => m.matchReason?.includes('邮箱'));
+                const red = { color: '#ff4d4f', fontWeight: 'bold' as const };
+                const customerVal = currentRow.customerName ?? (currentRow.customerId != null ? `#${currentRow.customerId}` : '—');
+                const phoneVal = currentRow.phone ?? '—';
+                const emailVal = currentRow.email ?? '—';
+                return (
+                  <div style={{ marginBottom: 16, padding: 12, background: '#fafafa', borderRadius: 8, lineHeight: 1.8 }}>
+                    <p><strong>申请单号</strong>: {currentRow.applicationNo}</p>
+                    <p><strong>平台</strong>: {PLATFORM_OPTIONS.find((o) => o.value === currentRow.platform)?.label ?? currentRow.platform}</p>
+                    <p><strong>渠道</strong>: {currentRow.sourceType === 'SERVICE' ? '服务渠道' : '销售渠道'}</p>
+                    <p><strong>客户</strong>: {anyCustomer ? <span style={red}>{customerVal}</span> : customerVal}</p>
+                    <p><strong>机构全称</strong>: {currentRow.orgFullName ?? '—'}</p>
+                    <p><strong>联系人</strong>: {currentRow.contactPerson ?? '—'}</p>
+                    <p><strong>联系电话</strong>: {anyPhone ? <span style={red}>{phoneVal}</span> : phoneVal}</p>
+                    <p><strong>邮箱</strong>: {anyEmail ? <span style={red}>{emailVal}</span> : emailVal}</p>
+                    {currentRow.contractNo != null && <p><strong>合同号</strong>: {currentRow.contractNo}</p>}
+                    {currentRow.price != null && <p><strong>价格</strong>: {currentRow.price}</p>}
+                    {currentRow.quantity != null && <p><strong>数量</strong>: {currentRow.quantity}</p>}
+                    {currentRow.reason != null && <p><strong>原因</strong>: {currentRow.reason}</p>}
+                  </div>
+                );
+              })()}
+              <Form form={adminForm} layout="vertical" initialValues={{ orgCodeShort: currentRow.orgCodeShort, region: currentRow.region }}>
+                <Form.Item name="orgCodeShort" label="机构代码/简称" rules={[{ required: true, message: '请填写机构代码/简称' }]}>
+                  <Input placeholder="机构代码/简称" />
+                </Form.Item>
+                <Form.Item name="region" label="区域" rules={[{ required: true, message: '请选择区域' }]}>
+                  <Select options={REGION_OPTIONS} placeholder="华东/华北/华南/西部/海外" allowClear />
+                </Form.Item>
+                <Form.Item>
+                  <Button type="primary" onClick={handleApprove} style={{ marginRight: 8 }}>通过</Button>
+                  <Button danger onClick={() => setRejectModalOpen(true)}>驳回</Button>
+                </Form.Item>
+              </Form>
+            </Col>
+            <Col span={10}>
+              <HitAnalysisPanel
+                platform={currentRow.platform}
+                customerName={currentRow.customerName ?? ''}
+                email={currentRow.email ?? ''}
+                contactPhone={currentRow.phone ?? ''}
+                onHitsLoaded={setAdminHitMatches}
+              />
+            </Col>
+          </Row>
+        )}
+      </Modal>
+
+      <Modal
+        title="确认驳回"
         open={rejectModalOpen}
         onOk={handleRejectConfirm}
         onCancel={() => { setRejectModalOpen(false); setRejectReason(''); }}
         okText="确认驳回"
+        destroyOnClose
       >
-        <Input.TextArea rows={4} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="请输入驳回原因" style={{ marginTop: 16 }} />
+        <Form layout="vertical">
+          <Form.Item label="驳回理由" required>
+            <Input.TextArea
+              rows={4}
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="请输入驳回理由（必填）"
+            />
+          </Form.Item>
+        </Form>
       </Modal>
 
       <Modal
@@ -514,7 +966,7 @@ export default function PlatformApplication() {
             <p><strong>申请单号</strong>: {currentRow.applicationNo}</p>
             <p><strong>状态</strong>: {STATUS_MAP[currentRow.status]?.label ?? currentRow.status}</p>
             <p><strong>平台</strong>: {PLATFORM_OPTIONS.find((o) => o.value === currentRow.platform)?.label ?? currentRow.platform}</p>
-            <p><strong>渠道</strong>: {currentRow.sourceType === 'SERVICE' ? '服务渠道' : '工厂渠道'}</p>
+            <p><strong>渠道</strong>: {currentRow.sourceType === 'SERVICE' ? '服务渠道' : '销售渠道'}</p>
             <p><strong>客户</strong>: {currentRow.customerName ?? (currentRow.customerId != null ? `#${currentRow.customerId}` : '—')}</p>
             <p><strong>机构代码/简称</strong>: {currentRow.orgCodeShort}</p>
             <p><strong>机构全称</strong>: {currentRow.orgFullName}</p>

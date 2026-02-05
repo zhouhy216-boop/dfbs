@@ -35,6 +35,16 @@ public class CustomerMasterDataService {
         return repo.save(entity);
     }
 
+    /** Create customer from name only; generates a unique customer code (e.g. for data governance). */
+    @Transactional
+    public CustomerEntity createFromName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("name is required");
+        }
+        String code = "GOV-" + System.currentTimeMillis();
+        return create(code, name.trim());
+    }
+
     @Transactional(readOnly = true)
     public Optional<CustomerEntity> findFirstByName(String name) {
         if (name == null || name.isBlank()) return Optional.empty();

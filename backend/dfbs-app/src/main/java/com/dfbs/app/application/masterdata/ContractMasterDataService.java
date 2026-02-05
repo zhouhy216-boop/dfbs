@@ -103,4 +103,18 @@ public class ContractMasterDataService {
     public java.util.Optional<ContractEntity> findById(Long id) {
         return contractRepo.findById(id);
     }
+
+    /** Minimal create for data governance: contractNo only; uses default customer and placeholder attachment. */
+    @Transactional
+    public ContractEntity createFromContractNo(String contractNo, Long defaultCustomerId) {
+        LocalDate today = LocalDate.now();
+        return save(
+                contractNo.trim(),
+                defaultCustomerId != null ? defaultCustomerId : 1L,
+                today,
+                today,
+                "—",
+                "data-governance"
+        );
+    }
 }

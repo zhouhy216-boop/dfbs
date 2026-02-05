@@ -31,11 +31,12 @@ public record PlatformAccountApplicationResponse(
         Long applicantId,
         Long plannerId,
         Long adminId,
+        String applicantName,
         String rejectReason,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
-    public static PlatformAccountApplicationResponse fromEntity(PlatformAccountApplicationEntity entity) {
+    public static PlatformAccountApplicationResponse fromEntity(PlatformAccountApplicationEntity entity, String applicantName) {
         return new PlatformAccountApplicationResponse(
                 entity.getId(),
                 entity.getApplicationNo(),
@@ -59,6 +60,7 @@ public record PlatformAccountApplicationResponse(
                 entity.getApplicantId(),
                 entity.getPlannerId(),
                 entity.getAdminId(),
+                applicantName,
                 entity.getRejectReason(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()

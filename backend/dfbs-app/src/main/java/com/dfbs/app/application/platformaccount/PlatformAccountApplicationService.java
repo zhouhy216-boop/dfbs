@@ -4,7 +4,10 @@ import com.dfbs.app.application.platformaccount.dto.*;
 import com.dfbs.app.application.customer.CustomerMasterDataService;
 import com.dfbs.app.application.platformorg.PlatformOrgService;
 import com.dfbs.app.application.platformorg.dto.PlatformOrgRequest;
+import com.dfbs.app.application.smartselect.TempDataService;
+import com.dfbs.app.application.smartselect.dto.GetOrCreateTempRequest;
 import com.dfbs.app.config.CurrentUserIdResolver;
+import com.dfbs.app.modules.masterdata.ContractRepo;
 import com.dfbs.app.modules.platformaccount.ApplicationSourceType;
 import com.dfbs.app.modules.platformaccount.PlatformAccountApplicationEntity;
 import com.dfbs.app.modules.platformaccount.PlatformAccountApplicationRepo;
@@ -13,6 +16,7 @@ import com.dfbs.app.modules.platformorg.PlatformOrgCustomerEntity;
 import com.dfbs.app.modules.platformorg.PlatformOrgEntity;
 import com.dfbs.app.modules.platformorg.PlatformOrgPlatform;
 import com.dfbs.app.modules.platformorg.PlatformOrgRepo;
+import com.dfbs.app.modules.user.UserRepo;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,6 +29,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -37,17 +42,37 @@ public class PlatformAccountApplicationService {
     private final PlatformOrgService platformOrgService;
     private final CurrentUserIdResolver currentUserIdResolver;
     private final CustomerMasterDataService customerMasterDataService;
+    private final TempDataService tempDataService;
+    private final ContractRepo contractRepo;
+    private final UserRepo userRepo;
 
     public PlatformAccountApplicationService(PlatformAccountApplicationRepo repo,
                                              PlatformOrgRepo platformOrgRepo,
                                              PlatformOrgService platformOrgService,
                                              CurrentUserIdResolver currentUserIdResolver,
-                                             CustomerMasterDataService customerMasterDataService) {
+                                             CustomerMasterDataService customerMasterDataService,
+                                             TempDataService tempDataService,
+                                             ContractRepo contractRepo,
+                                             UserRepo userRepo) {
         this.repo = repo;
         this.platformOrgRepo = platformOrgRepo;
         this.platformOrgService = platformOrgService;
         this.currentUserIdResolver = currentUserIdResolver;
         this.customerMasterDataService = customerMasterDataService;
+        this.tempDataService = tempDataService;
+        this.contractRepo = contractRepo;
+        this.userRepo = userRepo;
+    }
+
+    private String resolveApplicantName(Long applicantId) {
+        if (applicantId == null) return null;
+        return userRepo.findById(applicantId)
+                .map(u -> (u.getNickname() != null && !u.getNickname().isBlank()) ? u.getNickname() : u.getUsername())
+                .orElse("User " + applicantId);
+    }
+
+    private PlatformAccountApplicationResponse toResponse(PlatformAccountApplicationEntity entity) {
+        return PlatformAccountApplicationResponse.fromEntity(entity, resolveApplicantName(entity.getApplicantId()));
     }
 
     @Transactional
@@ -84,14 +109,16 @@ public class PlatformAccountApplicationService {
             entity.setStatus(Boolean.TRUE.equals(request.skipPlanner()) ? PlatformAccountApplicationStatus.PENDING_ADMIN
                     : PlatformAccountApplicationStatus.PENDING_PLANNER);
         }
-        return PlatformAccountApplicationResponse.fromEntity(repo.save(entity));
+        return toResponse(repo.save(entity));
     }
 
     @Transactional
     public PlatformAccountApplicationResponse plannerSubmit(Long id, PlatformAccountPlannerSubmitRequest request) {
         PlatformAccountApplicationEntity entity = getOrThrow(id);
-        if (entity.getStatus() != PlatformAccountApplicationStatus.PENDING_PLANNER) {
-            throw new IllegalStateException("当前申请不处于待规划处理状态");
+        if (entity.getStatus() != PlatformAccountApplicationStatus.PENDING_PLANNER
+                && entity.getStatus() != PlatformAccountApplicationStatus.CLOSED
+                && entity.getStatus() != PlatformAccountApplicationStatus.PENDING_CONFIRM) {
+            throw new IllegalStateException("当前申请不处于待规划/待确认或已关闭状态，无法提交");
         }
         if (request.platform() != null) entity.setPlatform(request.platform());
         if (request.customerId() != null) {
@@ -115,7 +142,19 @@ public class PlatformAccountApplicationService {
         if (request.isCcPlanner() != null) entity.setIsCcPlanner(request.isCcPlanner());
         entity.setPlannerId(currentUserIdResolver.getCurrentUserId());
         entity.setStatus(PlatformAccountApplicationStatus.PENDING_ADMIN);
-        return PlatformAccountApplicationResponse.fromEntity(repo.save(entity));
+        return toResponse(repo.save(entity));
+    }
+
+    @Transactional
+    public PlatformAccountApplicationResponse close(Long id) {
+        PlatformAccountApplicationEntity entity = getOrThrow(id);
+        if (entity.getStatus() != PlatformAccountApplicationStatus.PENDING_PLANNER
+                && entity.getStatus() != PlatformAccountApplicationStatus.CLOSED
+                && entity.getStatus() != PlatformAccountApplicationStatus.PENDING_CONFIRM) {
+            throw new IllegalStateException("只有待规划/待确认或已关闭的申请可执行关闭操作");
+        }
+        entity.setStatus(PlatformAccountApplicationStatus.CLOSED);
+        return toResponse(repo.save(entity));
     }
 
     @Transactional
@@ -128,14 +167,16 @@ public class PlatformAccountApplicationService {
             entity.setStatus(PlatformAccountApplicationStatus.REJECTED);
             entity.setAdminId(currentUserIdResolver.getCurrentUserId());
             entity.setRejectReason("管理员取消绑定");
-            return PlatformAccountApplicationResponse.fromEntity(repo.save(entity));
+            return toResponse(repo.save(entity));
         }
         applyAdminRequest(entity, request);
         syncMasterDataBindOnly(entity);
         entity.setAdminId(currentUserIdResolver.getCurrentUserId());
         entity.setStatus(PlatformAccountApplicationStatus.APPROVED);
         entity.setRejectReason(null);
-        return PlatformAccountApplicationResponse.fromEntity(repo.save(entity));
+        PlatformAccountApplicationEntity saved = repo.save(entity);
+        createTempContractIfNeeded(saved);
+        return toResponse(saved);
     }
 
     @Transactional
@@ -144,15 +185,19 @@ public class PlatformAccountApplicationService {
         if (entity.getStatus() != PlatformAccountApplicationStatus.PENDING_ADMIN) {
             throw new IllegalStateException("只有待管理员审核的申请才能驳回");
         }
-        entity.setStatus(PlatformAccountApplicationStatus.REJECTED);
         entity.setAdminId(currentUserIdResolver.getCurrentUserId());
-        entity.setRejectReason(request.reason());
-        return PlatformAccountApplicationResponse.fromEntity(repo.save(entity));
+        entity.setRejectReason(request.reason() != null ? request.reason().trim() : null);
+        if (entity.getSourceType() == ApplicationSourceType.SERVICE) {
+            entity.setStatus(PlatformAccountApplicationStatus.PENDING);
+        } else {
+            entity.setStatus(PlatformAccountApplicationStatus.PENDING_CONFIRM);
+        }
+        return toResponse(repo.save(entity));
     }
 
     @Transactional(readOnly = true)
     public PlatformAccountApplicationResponse get(Long id) {
-        return PlatformAccountApplicationResponse.fromEntity(getOrThrow(id));
+        return toResponse(getOrThrow(id));
     }
 
     @Transactional(readOnly = true)
@@ -168,7 +213,7 @@ public class PlatformAccountApplicationService {
             customerId.ifPresent(cid -> predicates.getExpressions().add(cb.equal(root.get("customerId"), cid)));
             return predicates;
         }, PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt")))
-                .map(PlatformAccountApplicationResponse::fromEntity);
+                .map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
@@ -188,6 +233,58 @@ public class PlatformAccountApplicationService {
                 ? List.of()
                 : org.getCustomerLinks().stream().map(PlatformOrgCustomerEntity::getCustomerId).toList();
         return new OrgMatchCheckResult(true, org.getId(), customerIds, 0);
+    }
+
+    /** Check for existing orgs on same platform with matching customer name, email, or phone (normalized). */
+    @Transactional(readOnly = true)
+    public List<CheckDuplicateMatchItem> checkDuplicates(CheckDuplicatesRequest request) {
+        String nCustomer = normalize(request.customerName());
+        String nEmail = normalize(request.email());
+        String nPhone = normalize(request.contactPhone());
+        if (!StringUtils.hasText(nCustomer) && !StringUtils.hasText(nEmail) && !StringUtils.hasText(nPhone)) {
+            return List.of();
+        }
+        List<PlatformOrgEntity> orgs = platformOrgRepo.findByPlatform(request.platform());
+        List<CheckDuplicateMatchItem> result = new ArrayList<>();
+        for (PlatformOrgEntity org : orgs) {
+            List<String> linkedNames = getLinkedCustomerNames(org);
+            boolean nameMatch = StringUtils.hasText(nCustomer) && linkedNames.stream()
+                    .anyMatch(name -> normalize(name).equals(nCustomer));
+            boolean emailMatch = StringUtils.hasText(nEmail) && nEmail.equals(normalize(org.getContactEmail()));
+            boolean phoneMatch = StringUtils.hasText(nPhone) && nPhone.equals(normalize(org.getContactPhone()));
+            if (!nameMatch && !emailMatch && !phoneMatch) continue;
+            List<String> reasons = new ArrayList<>();
+            if (nameMatch) reasons.add("客户名称已存在");
+            if (emailMatch) reasons.add("邮箱已存在");
+            if (phoneMatch) reasons.add("电话已存在");
+            String customerDisplay = linkedNames.isEmpty() ? "—" : String.join(", ", linkedNames);
+            result.add(new CheckDuplicateMatchItem(
+                    org.getOrgCodeShort(),
+                    customerDisplay,
+                    org.getContactEmail() != null ? org.getContactEmail() : "—",
+                    org.getContactPhone() != null ? org.getContactPhone() : "—",
+                    String.join("；", reasons)
+            ));
+        }
+        return result;
+    }
+
+    private List<String> getLinkedCustomerNames(PlatformOrgEntity org) {
+        if (org.getCustomerLinks() == null || org.getCustomerLinks().isEmpty()) return List.of();
+        List<String> names = new ArrayList<>();
+        for (PlatformOrgCustomerEntity link : org.getCustomerLinks()) {
+            try {
+                names.add(customerMasterDataService.getById(link.getCustomerId()).getName());
+            } catch (Exception ignored) {
+                names.add("客户#" + link.getCustomerId());
+            }
+        }
+        return names;
+    }
+
+    private static String normalize(String value) {
+        if (value == null) return "";
+        return value.trim().toLowerCase();
     }
 
     private PlatformAccountApplicationEntity getOrThrow(Long id) {
@@ -234,7 +331,7 @@ public class PlatformAccountApplicationService {
         if (request.isCcPlanner() != null) entity.setIsCcPlanner(request.isCcPlanner());
     }
 
-    /** BIND_ONLY: If org exists, only add application's customer to org (never overwrite). If not exists, create org. */
+    /** BIND_ONLY: If org exists, only add application's customer to org (never overwrite). If not exists, create org. Missing customer/contract create temp records (show in Data Confirmation Center). */
     private void syncMasterDataBindOnly(PlatformAccountApplicationEntity entity) {
         if (!StringUtils.hasText(entity.getOrgCodeShort())) {
             throw new IllegalStateException("审批前必须提供机构代码/简称");
@@ -243,15 +340,22 @@ public class PlatformAccountApplicationService {
         entity.setOrgCodeShort(code);
         Long customerId = entity.getCustomerId();
         if (customerId == null && StringUtils.hasText(entity.getCustomerName())) {
-            customerId = customerMasterDataService.findFirstByName(entity.getCustomerName())
-                    .map(c -> c.getId())
-                    .orElseThrow(() -> new IllegalStateException("未找到客户: " + entity.getCustomerName() + "，请先在客户主数据中创建或由规划节点确认"));
-            entity.setCustomerId(customerId);
+            Optional<com.dfbs.app.modules.customer.CustomerEntity> found = customerMasterDataService.findFirstByName(entity.getCustomerName());
+            if (found.isPresent()) {
+                customerId = found.get().getId();
+                entity.setCustomerId(customerId);
+            } else {
+                long tempId = tempDataService.getOrCreateTemp(
+                        new GetOrCreateTempRequest("CUSTOMER", entity.getCustomerName().trim(), Map.of())).getId();
+                customerId = tempId;
+                entity.setCustomerId(customerId);
+            }
         }
-        if (customerId == null) {
+        if (customerId == null && !StringUtils.hasText(entity.getCustomerName())) {
             throw new IllegalStateException("审批前必须确认客户");
         }
         final Long finalCustomerId = customerId;
+        List<Long> customerIdsForOrg = List.of(finalCustomerId);
         Optional<PlatformOrgEntity> existingOpt = platformOrgRepo.findByPlatformAndOrgCodeShort(entity.getPlatform(), code);
         if (existingOpt.isPresent()) {
             bindCustomerToOrg(existingOpt.get(), finalCustomerId);
@@ -260,15 +364,17 @@ public class PlatformAccountApplicationService {
                 PlatformOrgRequest orgRequest = new PlatformOrgRequest(
                         entity.getPlatform(),
                         code,
-                        entity.getOrgFullName(),
-                        List.of(finalCustomerId),
-                        entity.getContactPerson(),
-                        entity.getPhone(),
-                        entity.getEmail(),
-                        entity.getSalesPerson(),
-                        entity.getRegion(),
+                        trimToNull(entity.getOrgFullName()),
+                        customerIdsForOrg,
+                        trimToNull(entity.getContactPerson()),
+                        trimToNull(entity.getPhone()),
+                        trimToNull(entity.getEmail()),
+                        trimToNull(entity.getSalesPerson()),
+                        trimToNull(entity.getRegion()),
                         null,
-                        Boolean.TRUE
+                        Boolean.TRUE,
+                        entity.getId(),
+                        "APP"
                 );
                 platformOrgService.create(orgRequest);
             } catch (DataIntegrityViolationException e) {
@@ -276,6 +382,14 @@ public class PlatformAccountApplicationService {
                         .ifPresent(existing -> bindCustomerToOrg(existing, finalCustomerId));
             }
         }
+    }
+
+    private void createTempContractIfNeeded(PlatformAccountApplicationEntity entity) {
+        if (entity.getSourceType() != ApplicationSourceType.FACTORY) return;
+        String contractNo = trimToNull(entity.getContractNo());
+        if (contractNo == null) return;
+        if (contractRepo.existsByContractNo(contractNo)) return;
+        tempDataService.getOrCreateTemp(new GetOrCreateTempRequest("CONTRACT", contractNo, Map.of()));
     }
 
     private void bindCustomerToOrg(PlatformOrgEntity existing, Long customerId) {
