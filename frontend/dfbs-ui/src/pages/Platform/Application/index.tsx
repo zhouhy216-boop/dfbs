@@ -2,18 +2,19 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ProTable, ModalForm, ProFormMoney, ProFormDigit } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
-import { Alert, Button, Card, Col, Modal, Form, Input, InputNumber, Row, Select, Spin, Table, Tag, message } from 'antd';
+import { Alert, Button, Card, Col, Modal, Form, Input, InputNumber, Row, Select, Spin, Tag, message } from 'antd';
 import request from '@/utils/request';
 import SmartReferenceSelect from '@/components/SmartReferenceSelect';
+import SmartInput from '@/components/SmartInput';
+import DuplicateCheckModal from '@/components/Business/DuplicateCheckModal';
+import type { DuplicateMatchItem } from '@/components/Business/DuplicateCheckModal';
+import { PhoneRule, EmailRule, ContractRule, OrgCodeRule, OrgCodeUppercaseRule } from '@/utils/validators';
 
 const PLATFORM_OPTIONS = [
   { label: '映翰通', value: 'INHAND' },
   { label: '恒动', value: 'HENDONG' },
   { label: '京品', value: 'JINGPIN' },
 ];
-
-const PHONE_REG = /^(1\d{10}|\d{3,4}-\d{7,8})$/;
-const CONTRACT_NO_CHINESE_REG = /^[a-zA-Z0-9\-_\s./]+$/;
 
 const SOURCE_TYPE_OPTIONS = [
   { label: '销售渠道', value: 'FACTORY' },
@@ -72,31 +73,9 @@ interface ApplicationRow {
   applicantName?: string | null;
 }
 
-interface DuplicateMatchItem {
-  orgCodeShort: string;
-  customerName: string;
-  email: string;
-  phone: string;
-  matchReason: string;
-}
-
 function showError(e: unknown) {
   const err = e as { response?: { data?: { message?: string } }; message?: string };
   message.error(err?.response?.data?.message ?? err?.message ?? '操作失败');
-}
-
-/** Input that trims value on blur (use inside Form.Item with name). */
-function TrimInput({ name, ...rest }: { name: string; [k: string]: unknown }) {
-  const form = Form.useFormInstance();
-  return (
-    <Input
-      {...rest}
-      onBlur={(e) => {
-        const v = e.target.value?.trim();
-        if (v !== undefined && form) form.setFieldValue(name, v);
-      }}
-    />
-  );
 }
 
 /** Right-panel: calls check-duplicates and shows 无重复信息 or 命中提醒 with matching records. */
@@ -574,36 +553,15 @@ export default function PlatformApplication() {
         <Form.Item name="contactPerson" label="联系人" rules={[{ required: true, message: '此项必填' }]}>
           <Input placeholder="联系人" />
         </Form.Item>
-        <Form.Item
-          name="phone"
-          label="联系电话"
-          rules={[
-            { required: true, message: '此项必填' },
-            { pattern: PHONE_REG, message: '请输入11位手机号或区号-号码格式固话' },
-          ]}
-        >
-          <TrimInput name="phone" placeholder="11位手机号或区号-号码" />
+        <Form.Item name="phone" label="联系电话" rules={[{ required: true, message: '此项必填' }, PhoneRule]}>
+          <SmartInput name="phone" noSpaces placeholder="11位手机号或区号-号码" />
         </Form.Item>
-        <Form.Item
-          name="email"
-          label="邮箱"
-          rules={[
-            { required: true, message: '此项必填' },
-            { type: 'email', message: '请输入有效邮箱' },
-          ]}
-        >
-          <TrimInput name="email" type="email" placeholder="邮箱" />
+        <Form.Item name="email" label="邮箱" rules={[{ required: true, message: '此项必填' }, EmailRule]}>
+          <SmartInput name="email" type="email" noSpaces placeholder="邮箱" />
         </Form.Item>
         {createSourceType === 'FACTORY' && (
-          <Form.Item
-            name="contractNo"
-            label="合同号"
-            rules={[
-              { required: true, message: '请输入合同号' },
-              { pattern: CONTRACT_NO_CHINESE_REG, message: '合同号不能包含中文字符，仅限英文、数字及常用符号' },
-            ]}
-          >
-            <TrimInput name="contractNo" placeholder="合同号（英文/数字/符号）" />
+          <Form.Item name="contractNo" label="合同号" rules={[{ required: true, message: '请输入合同号' }, ContractRule]}>
+            <SmartInput name="contractNo" uppercase noSpaces placeholder="合同号（英文/数字/符号）" />
           </Form.Item>
         )}
         {createSourceType === 'SERVICE' && (
@@ -695,25 +653,11 @@ export default function PlatformApplication() {
           <Form.Item name="contactPerson" label="联系人" rules={[{ required: true, message: '此项必填' }]}>
             <Input placeholder="联系人" />
           </Form.Item>
-          <Form.Item
-            name="phone"
-            label="联系电话"
-            rules={[
-              { required: true, message: '此项必填' },
-              { pattern: PHONE_REG, message: '请输入11位手机号或区号-号码格式固话' },
-            ]}
-          >
-            <TrimInput name="phone" placeholder="11位手机号或区号-号码" />
+          <Form.Item name="phone" label="联系电话" rules={[{ required: true, message: '此项必填' }, PhoneRule]}>
+            <SmartInput name="phone" noSpaces placeholder="11位手机号或区号-号码" />
           </Form.Item>
-          <Form.Item
-            name="email"
-            label="邮箱"
-            rules={[
-              { required: true, message: '此项必填' },
-              { type: 'email', message: '请输入有效邮箱' },
-            ]}
-          >
-            <TrimInput name="email" type="email" placeholder="邮箱" />
+          <Form.Item name="email" label="邮箱" rules={[{ required: true, message: '此项必填' }, EmailRule]}>
+            <SmartInput name="email" type="email" noSpaces placeholder="邮箱" />
           </Form.Item>
           <Form.Item name="salesPerson" label="销售负责人" rules={[{ required: true, message: '此项必填' }]}>
             <Select
@@ -750,14 +694,7 @@ export default function PlatformApplication() {
             </>
           ) : (
             <>
-              <Form.Item
-                name="contractNo"
-                label="合同号"
-                rules={[
-                  { required: true, message: '此项必填' },
-                  { pattern: CONTRACT_NO_CHINESE_REG, message: '合同号不能包含中文字符，仅限英文、数字及常用符号' },
-                ]}
-              >
+              <Form.Item name="contractNo" label="合同号" rules={[{ required: true, message: '此项必填' }, ContractRule]}>
                 <PlannerContractSelect />
               </Form.Item>
               {currentRow?.sourceType === 'FACTORY' && (
@@ -774,13 +711,15 @@ export default function PlatformApplication() {
         </Form>
       </Modal>
 
-      <Modal
+      <DuplicateCheckModal
+        visible={showDuplicateModal}
+        matches={duplicateMatches}
+        currentInput={duplicateCurrentInput ?? undefined}
         title="重复提醒"
-        open={showDuplicateModal}
         onCancel={handleDuplicateReturn}
-        footer={[
+        renderFooter={(close) => [
           <Button key="return" onClick={handleDuplicateReturn}>
-            返回
+            返回编辑
           </Button>,
           <Button key="confirm" type="primary" onClick={handleDuplicateConfirmNew}>
             确认新增
@@ -789,87 +728,7 @@ export default function PlatformApplication() {
             我要开卡
           </Button>,
         ]}
-        width={640}
-        destroyOnClose
-      >
-        {duplicateCurrentInput && (
-          <>
-            <div style={{ marginBottom: 12 }}>
-              {(() => {
-                const anyCustomer = duplicateMatches.some((m) => m.matchReason?.includes('客户'));
-                const anyPhone = duplicateMatches.some((m) => m.matchReason?.includes('电话'));
-                const anyEmail = duplicateMatches.some((m) => m.matchReason?.includes('邮箱'));
-                const red = { color: '#ff4d4f', fontWeight: 600 };
-                return (
-                  <>
-                    <p style={{ marginBottom: 4 }}>
-                      客户名称：<span style={anyCustomer ? red : undefined}>{duplicateCurrentInput.customerName || '—'}</span>
-                    </p>
-                    <p style={{ marginBottom: 4 }}>
-                      联系电话：<span style={anyPhone ? red : undefined}>{duplicateCurrentInput.phone || '—'}</span>
-                    </p>
-                    <p style={{ marginBottom: 0 }}>
-                      邮箱：<span style={anyEmail ? red : undefined}>{duplicateCurrentInput.email || '—'}</span>
-                    </p>
-                  </>
-                );
-              })()}
-            </div>
-            <p style={{ marginBottom: 12, color: '#666' }}>检测到以上您写入的信息已存在于下表平台机构中：</p>
-            {(() => {
-              const norm = (s: string) => (s ?? '').trim().toLowerCase();
-              const cur = {
-                customerName: norm(duplicateCurrentInput.customerName),
-                email: norm(duplicateCurrentInput.email),
-                phone: norm(duplicateCurrentInput.phone),
-              };
-              return (
-                <Table
-                  dataSource={duplicateMatches}
-                  rowKey={(r, i) => `${r.orgCodeShort}-${i}`}
-                  pagination={false}
-                  size="small"
-                  columns={[
-                    { title: '机构代码', dataIndex: 'orgCodeShort', width: 120 },
-                    {
-                      title: '客户',
-                      dataIndex: 'customerName',
-                      width: 120,
-                      ellipsis: true,
-                      render: (val: string) => (
-                        <span style={norm(val) === cur.customerName ? { color: '#ff4d4f', fontWeight: 600 } : undefined}>
-                          {val || '—'}
-                        </span>
-                      ),
-                    },
-                    {
-                      title: '邮箱',
-                      dataIndex: 'email',
-                      width: 160,
-                      ellipsis: true,
-                      render: (val: string) => (
-                        <span style={norm(val) === cur.email ? { color: '#ff4d4f', fontWeight: 600 } : undefined}>
-                          {val || '—'}
-                        </span>
-                      ),
-                    },
-                    {
-                      title: '电话',
-                      dataIndex: 'phone',
-                      width: 120,
-                      render: (val: string) => (
-                        <span style={norm(val) === cur.phone ? { color: '#ff4d4f', fontWeight: 600 } : undefined}>
-                          {val || '—'}
-                        </span>
-                      ),
-                    },
-                  ]}
-                />
-              );
-            })()}
-          </>
-        )}
-      </Modal>
+      />
 
       <Modal
         title="管理员审核"
@@ -909,9 +768,30 @@ export default function PlatformApplication() {
                 );
               })()}
               <Form form={adminForm} layout="vertical" initialValues={{ orgCodeShort: currentRow.orgCodeShort, region: currentRow.region }}>
-                <Form.Item name="orgCodeShort" label="机构代码/简称" rules={[{ required: true, message: '请填写机构代码/简称' }]}>
-                  <Input placeholder="机构代码/简称" />
-                </Form.Item>
+                {(() => {
+                  const platform = currentRow.platform;
+                  const isUppercaseOnly = platform === 'INHAND' || platform === 'JINGPIN';
+                  const isHengdong = platform === 'HENDONG';
+                  const label = isUppercaseOnly ? '机构代码 (仅限大写字母)' : isHengdong ? '机构简称 (建议汉字)' : '机构代码/简称';
+                  const placeholder = isUppercaseOnly ? '机构代码 (仅限大写字母)' : isHengdong ? '机构简称 (建议汉字)' : '机构代码/简称（大写字母+汉字）';
+                  const rules = isUppercaseOnly
+                    ? [{ required: true, message: '请填写机构代码/简称' }, OrgCodeUppercaseRule]
+                    : isHengdong
+                      ? [{ required: true, message: '请填写机构简称' }]
+                      : [{ required: true, message: '请填写机构代码/简称' }, OrgCodeRule];
+                  return (
+                    <Form.Item name="orgCodeShort" label={label} rules={rules}>
+                      <SmartInput
+                        name="orgCodeShort"
+                        uppercase={isUppercaseOnly}
+                        onlyLetters={isUppercaseOnly}
+                        trim={!isUppercaseOnly && !isHengdong}
+                        noSpaces
+                        placeholder={placeholder}
+                      />
+                    </Form.Item>
+                  );
+                })()}
                 <Form.Item name="region" label="区域" rules={[{ required: true, message: '请选择区域' }]}>
                   <Select options={REGION_OPTIONS} placeholder="华东/华北/华南/西部/海外" allowClear />
                 </Form.Item>

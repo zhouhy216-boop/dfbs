@@ -13,10 +13,13 @@ import com.dfbs.app.modules.platformorg.PlatformOrgCustomerEntity;
 import com.dfbs.app.modules.platformorg.PlatformOrgEntity;
 import com.dfbs.app.modules.platformorg.PlatformOrgPlatform;
 import com.dfbs.app.modules.platformorg.PlatformOrgRepo;
+import com.dfbs.app.modules.platformorg.PlatformOrgStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -55,7 +58,18 @@ public class PlatformOrgService {
     public PlatformOrgResponse update(Long id, PlatformOrgRequest request) {
         PlatformOrgEntity entity = repo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("平台组织不存在"));
+        PlatformOrgStatus oldStatus = entity.getStatus() != null ? entity.getStatus() : PlatformOrgStatus.ACTIVE;
+        PlatformOrgStatus newStatus = request.status() != null ? request.status() : oldStatus;
         applyRequest(entity, request);
+        if (newStatus == PlatformOrgStatus.DELETED && oldStatus != PlatformOrgStatus.DELETED) {
+            String suffix = "_DEL_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmm"));
+            String base = entity.getOrgCodeShort() != null ? entity.getOrgCodeShort().trim() : "";
+            String newCode = base + suffix;
+            if (newCode.length() > 128) {
+                newCode = base.substring(0, Math.max(0, 128 - suffix.length())) + suffix;
+            }
+            entity.setOrgCodeShort(newCode);
+        }
         validator.validateForUpdate(entity, id);
         entity = repo.save(entity);
         return toResponse(entity);
@@ -97,6 +111,13 @@ public class PlatformOrgService {
     }
 
     private SourceInfo resolveSourceInfo(PlatformOrgEntity entity) {
+        String sourceType = entity.getSourceType() != null ? entity.getSourceType().trim() : null;
+        if (sourceType == null || sourceType.isEmpty()) {
+            return new SourceInfo(SourceInfo.TYPE_LEGACY, null, null, null, null);
+        }
+        if ("MANUAL".equalsIgnoreCase(sourceType)) {
+            return new SourceInfo(SourceInfo.TYPE_MANUAL, null, null, null, null);
+        }
         if (entity.getSourceApplicationId() == null) {
             return new SourceInfo(SourceInfo.TYPE_MANUAL, null, null, null, null);
         }
@@ -110,7 +131,7 @@ public class PlatformOrgService {
                     String adminName = app.getAdminId() != null ? "User " + app.getAdminId() : null;
                     return new SourceInfo(type, app.getApplicationNo(), applicantName, plannerName, adminName);
                 })
-                .orElse(new SourceInfo(SourceInfo.TYPE_MANUAL, null, null, null, null));
+                .orElse(new SourceInfo(SourceInfo.TYPE_LEGACY, null, null, null, null));
     }
 
     private List<PlatformOrgResponse> toResponseList(List<PlatformOrgEntity> entities) {
@@ -180,6 +201,9 @@ public class PlatformOrgService {
             entity.setIsActive(request.isActive());
         } else if (entity.getId() == null) {
             entity.setIsActive(Boolean.TRUE);
+        }
+        if (request.status() != null) {
+            entity.setStatus(request.status());
         }
         if (request.sourceApplicationId() != null) {
             entity.setSourceApplicationId(request.sourceApplicationId());

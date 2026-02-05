@@ -3,6 +3,7 @@ package com.dfbs.app.application.platformorg.dto;
 import com.dfbs.app.modules.platformorg.PlatformOrgCustomerEntity;
 import com.dfbs.app.modules.platformorg.PlatformOrgEntity;
 import com.dfbs.app.modules.platformorg.PlatformOrgPlatform;
+import com.dfbs.app.modules.platformorg.PlatformOrgStatus;
 
 import java.time.LocalDateTime;
 
@@ -20,6 +21,7 @@ public record PlatformOrgResponse(
         String region,
         String remark,
         Boolean isActive,
+        PlatformOrgStatus status,
         SourceInfo sourceInfo,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
@@ -54,6 +56,7 @@ public record PlatformOrgResponse(
                 entity.getRegion(),
                 entity.getRemark(),
                 entity.getIsActive(),
+                entity.getStatus(),
                 sourceInfo,
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()

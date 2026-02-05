@@ -1,6 +1,7 @@
 package com.dfbs.app.application.platformorg.dto;
 
 import com.dfbs.app.modules.platformorg.PlatformOrgPlatform;
+import com.dfbs.app.modules.platformorg.PlatformOrgStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -17,6 +18,7 @@ public record PlatformOrgRequest(
         @Size(max = 128) String region,
         String remark,
         Boolean isActive,
+        PlatformOrgStatus status,
         Long sourceApplicationId,
         String sourceType
 ) {

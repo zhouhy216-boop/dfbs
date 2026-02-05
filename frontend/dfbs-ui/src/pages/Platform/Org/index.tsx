@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Form, Input, message, Modal, Select, Switch, Tag } from 'antd';
+import { Alert, Button, Form, Input, message, Modal, Select, Switch, Tag } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable, ProDescriptions } from '@ant-design/pro-components';
@@ -31,13 +31,14 @@ interface PlatformOrgRow {
   region?: string | null;
   remark?: string | null;
   isActive?: boolean | null;
+  status?: 'ACTIVE' | 'ARREARS' | 'DELETED' | null;
   createdAt?: string;
   updatedAt?: string;
   sourceInfo?: SourceInfo | null;
 }
 
 interface SourceInfo {
-  type: 'SALES' | 'SERVICE' | 'MANUAL';
+  type: 'LEGACY' | 'SALES' | 'SERVICE' | 'MANUAL';
   applicationNo?: string | null;
   applicantName?: string | null;
   plannerName?: string | null;
@@ -58,6 +59,7 @@ interface PlatformOrgFormValues {
   region?: string;
   remark?: string;
   isActive?: boolean;
+  status?: 'ACTIVE' | 'ARREARS' | 'DELETED';
 }
 
 const PLATFORM_LABELS: Record<PlatformType, string> = {
@@ -272,6 +274,7 @@ export default function PlatformOrg() {
         region: values.region ?? undefined,
         remark: values.remark ?? undefined,
         isActive: values.isActive ?? true,
+        status: values.status ?? 'ACTIVE',
       });
       message.success('更新成功');
       setEditOpen(false);
@@ -362,20 +365,19 @@ export default function PlatformOrg() {
     },
     {
       title: '状态',
-      dataIndex: 'isActive',
+      dataIndex: 'status',
       width: 120,
       valueType: 'select',
       valueEnum: {
-        true: { text: '启用' },
-        false: { text: '停用' },
+        ACTIVE: { text: '启用', status: 'Success' },
+        ARREARS: { text: '欠费', status: 'Warning' },
+        DELETED: { text: '已删除', status: 'Error' },
       },
-      render: (_, row) => (
-        <Switch
-          checked={row.isActive ?? true}
-          onChange={(checked) => handleToggleActive(row, checked)}
-          size="small"
-        />
-      ),
+      render: (_, row) => {
+        const s = row.status ?? 'ACTIVE';
+        const map: Record<string, string> = { ACTIVE: '启用', ARREARS: '欠费', DELETED: '已删除' };
+        return <Tag color={s === 'DELETED' ? 'error' : s === 'ARREARS' ? 'warning' : 'green'}>{map[s] ?? s}</Tag>;
+      },
     },
     {
       title: '备注',
@@ -421,6 +423,7 @@ export default function PlatformOrg() {
               orgFullName: row.orgFullName ?? row.orgName,
               customerIds: row.customerIds ?? (row.customerId != null ? [row.customerId] : []),
               isActive: row.isActive ?? true,
+              status: row.status ?? 'ACTIVE',
             });
             setEditOpen(true);
           }}
@@ -586,6 +589,24 @@ export default function PlatformOrg() {
           <Form.Item name="remark" label="备注">
             <Input.TextArea rows={3} placeholder="备注信息" />
           </Form.Item>
+          <Form.Item name="status" label="状态">
+            <Select
+              options={[
+                { label: '启用', value: 'ACTIVE' },
+                { label: '欠费', value: 'ARREARS' },
+                { label: '已删除', value: 'DELETED' },
+              ]}
+              placeholder="选择状态"
+            />
+          </Form.Item>
+          {Form.useWatch('status', editForm) === 'DELETED' && (
+            <Alert
+              type="warning"
+              message="注意：保存为「已删除」后，该机构代码将被释放，且此操作不可逆（代码将被重命名）。"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
           <Form.Item name="isActive" label="启用状态" valuePropName="checked">
             <Switch />
           </Form.Item>
@@ -627,29 +648,41 @@ export default function PlatformOrg() {
             <ProDescriptions.Item dataIndex="region" label="区域" render={(_, __) => currentRow.region ?? '—'} />
             <ProDescriptions.Item dataIndex="salesPerson" label="销售负责人" render={(_, __) => currentRow.salesPerson ?? '—'} />
             <ProDescriptions.Item
-              dataIndex="isActive"
+              dataIndex="status"
               label="状态"
-              render={() => (currentRow.isActive !== false ? '启用' : '停用')}
+              render={() => {
+                const s = currentRow.status ?? 'ACTIVE';
+                const map: Record<string, { text: string; color: string }> = {
+                  ACTIVE: { text: '启用', color: 'green' },
+                  ARREARS: { text: '欠费', color: 'orange' },
+                  DELETED: { text: '已删除', color: 'red' },
+                };
+                const cfg = map[s] ?? { text: s, color: 'default' };
+                return <Tag color={cfg.color}>{cfg.text}</Tag>;
+              }}
             />
             <ProDescriptions.Item dataIndex="remark" label="备注" render={(_, __) => currentRow.remark ?? '—'} />
-            {currentRow.sourceInfo && (
+            <ProDescriptions.Item label="机构来源" render={() => {
+              const info = currentRow.sourceInfo;
+              if (!info) return <Tag color="default">历史数据</Tag>;
+              if (info.type === 'LEGACY') return <Tag color="default">历史数据</Tag>;
+              if (info.type === 'MANUAL') return <Tag color="default">管理员创建</Tag>;
+              if (info.type === 'SALES') return <Tag color="blue">销售申请</Tag>;
+              if (info.type === 'SERVICE') return <Tag color="orange">服务申请</Tag>;
+              return <Tag color="default">{info.type}</Tag>;
+            }} span={1} />
+            {currentRow.sourceInfo && (currentRow.sourceInfo.type === 'MANUAL' || currentRow.sourceInfo.type === 'SALES' || currentRow.sourceInfo.type === 'SERVICE') && (
               <>
-                <ProDescriptions.Item label="机构来源信息" span={1} />
-                {currentRow.sourceInfo.type === 'MANUAL' && (
-                  <ProDescriptions.Item label="创建方式" render={() => '平台管理员手工创建'} span={1} />
+                {currentRow.sourceInfo.type === 'MANUAL' && currentRow.sourceInfo.adminName != null && (
+                  <ProDescriptions.Item label="管理员" render={() => currentRow.sourceInfo?.adminName ?? '—'} />
                 )}
-                {currentRow.sourceInfo.type === 'SALES' && (
+                {(currentRow.sourceInfo.type === 'SALES' || currentRow.sourceInfo.type === 'SERVICE') && (
                   <>
                     <ProDescriptions.Item label="审批单号" render={() => currentRow.sourceInfo?.applicationNo ?? '—'} />
                     <ProDescriptions.Item label="申请人" render={() => currentRow.sourceInfo?.applicantName ?? '—'} />
-                    <ProDescriptions.Item label="营企处理人" render={() => currentRow.sourceInfo?.plannerName ?? '—'} />
-                    <ProDescriptions.Item label="审批人" render={() => currentRow.sourceInfo?.adminName ?? '—'} />
-                  </>
-                )}
-                {currentRow.sourceInfo.type === 'SERVICE' && (
-                  <>
-                    <ProDescriptions.Item label="审批单号" render={() => currentRow.sourceInfo?.applicationNo ?? '—'} />
-                    <ProDescriptions.Item label="申请人" render={() => currentRow.sourceInfo?.applicantName ?? '—'} />
+                    {currentRow.sourceInfo.type === 'SALES' && (
+                      <ProDescriptions.Item label="营企处理人" render={() => currentRow.sourceInfo?.plannerName ?? '—'} />
+                    )}
                     <ProDescriptions.Item label="审批人" render={() => currentRow.sourceInfo?.adminName ?? '—'} />
                   </>
                 )}

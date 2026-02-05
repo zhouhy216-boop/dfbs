@@ -10,6 +10,7 @@ public record SourceInfo(
         String plannerName,
         String adminName
 ) {
+    public static final String TYPE_LEGACY = "LEGACY";
     public static final String TYPE_SALES = "SALES";
     public static final String TYPE_SERVICE = "SERVICE";
     public static final String TYPE_MANUAL = "MANUAL";

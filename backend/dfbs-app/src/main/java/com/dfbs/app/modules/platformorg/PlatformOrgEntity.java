@@ -51,6 +51,10 @@ public class PlatformOrgEntity {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = Boolean.TRUE;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 32)
+    private PlatformOrgStatus status = PlatformOrgStatus.ACTIVE;
+
     @Column(name = "source_application_id")
     private Long sourceApplicationId;
 

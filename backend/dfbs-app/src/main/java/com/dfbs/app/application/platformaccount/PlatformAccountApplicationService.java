@@ -16,6 +16,7 @@ import com.dfbs.app.modules.platformorg.PlatformOrgCustomerEntity;
 import com.dfbs.app.modules.platformorg.PlatformOrgEntity;
 import com.dfbs.app.modules.platformorg.PlatformOrgPlatform;
 import com.dfbs.app.modules.platformorg.PlatformOrgRepo;
+import com.dfbs.app.modules.platformorg.PlatformOrgStatus;
 import com.dfbs.app.modules.user.UserRepo;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -373,6 +374,7 @@ public class PlatformAccountApplicationService {
                         trimToNull(entity.getRegion()),
                         null,
                         Boolean.TRUE,
+                        PlatformOrgStatus.ACTIVE,
                         entity.getId(),
                         "APP"
                 );
