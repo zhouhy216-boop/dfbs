@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ProTable, ModalForm, ProFormMoney, ProFormDigit } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
@@ -7,14 +7,10 @@ import request from '@/utils/request';
 import SmartReferenceSelect from '@/components/SmartReferenceSelect';
 import SmartInput from '@/components/SmartInput';
 import DuplicateCheckModal from '@/components/Business/DuplicateCheckModal';
-import type { DuplicateMatchItem } from '@/components/Business/DuplicateCheckModal';
+import HitAnalysisPanel from '@/components/Business/HitAnalysisPanel';
+import type { DuplicateMatchItem } from '@/components/Business/HitAnalysisPanel';
 import { PhoneRule, EmailRule, ContractRule, OrgCodeRule, OrgCodeUppercaseRule } from '@/utils/validators';
-
-const PLATFORM_OPTIONS = [
-  { label: '映翰通', value: 'INHAND' },
-  { label: '恒动', value: 'HENDONG' },
-  { label: '京品', value: 'JINGPIN' },
-];
+import { getPlatformConfigs, type PlatformConfigItem } from '@/services/platformConfig';
 
 const SOURCE_TYPE_OPTIONS = [
   { label: '销售渠道', value: 'FACTORY' },
@@ -78,91 +74,17 @@ function showError(e: unknown) {
   message.error(err?.response?.data?.message ?? err?.message ?? '操作失败');
 }
 
-/** Right-panel: calls check-duplicates and shows 无重复信息 or 命中提醒 with matching records. */
-function HitAnalysisPanel({
-  platform,
-  customerName,
-  email,
-  contactPhone,
-  onHitsLoaded,
-}: {
-  platform: string;
-  customerName: string;
-  email: string;
-  contactPhone: string;
-  onHitsLoaded: (hits: DuplicateMatchItem[]) => void;
-}) {
-  const [loading, setLoading] = useState(true);
-  const [hits, setHits] = useState<DuplicateMatchItem[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    request
-      .post<DuplicateMatchItem[]>('/v1/platform-account-applications/check-duplicates', {
-        platform,
-        customerName: customerName?.trim() ?? '',
-        email: email ?? '',
-        contactPhone: contactPhone ?? '',
-      })
-      .then(({ data }) => {
-        if (!cancelled) {
-          setHits(data ?? []);
-          onHitsLoaded(data ?? []);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setHits([]);
-          onHitsLoaded([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [platform, customerName, email, contactPhone, onHitsLoaded]);
-
-  if (loading) {
-    return (
-      <Card size="small" style={{ border: '1px solid #d9d9d9' }}>
-        <div style={{ textAlign: 'center', padding: 24 }}>
-          <Spin tip="正在检查重复..." />
-        </div>
-      </Card>
-    );
+/** Robust match for backend reason strings (e.g. "客户名称已存在" or "Contact Email already used"). */
+function isHitReason(reason: string | undefined, kind: 'customer' | 'phone' | 'email' | 'orgCode'): boolean {
+  if (!reason) return false;
+  const r = reason;
+  switch (kind) {
+    case 'customer': return r.includes('客户') || r.includes('Customer');
+    case 'phone': return r.includes('电话') || r.includes('Phone');
+    case 'email': return r.includes('邮箱') || r.includes('Email');
+    case 'orgCode': return r.includes('代码') || r.includes('编码') || r.includes('Code');
+    default: return false;
   }
-
-  if (hits.length === 0) {
-    return (
-      <Card size="small" style={{ border: '1px solid #52c41a', background: '#f6ffed' }}>
-        <div style={{ color: '#52c41a', fontWeight: 600 }}>✅ 无重复信息</div>
-      </Card>
-    );
-  }
-
-  const redStyle = { color: '#ff4d4f', fontWeight: 600 as const };
-
-  return (
-    <Card
-      size="small"
-      title={<span style={{ color: '#ff4d4f', fontWeight: 600 }}>⚠️ 命中提醒</span>}
-      style={{ border: '1px solid #ff4d4f', background: '#fff2f0' }}
-    >
-      <div style={{ marginBottom: 8, color: '#333' }}>
-        将命中的平台信息展示在这里，两边都将命中的信息标红。
-      </div>
-      {hits.map((item, idx) => (
-        <div key={idx} style={{ marginBottom: 12, padding: 8, background: '#fff', borderRadius: 4, border: '1px solid #ffccc7' }}>
-          <div style={{ marginBottom: 4 }}><strong>机构代码/简称</strong>: <span style={redStyle}>{item.orgCodeShort ?? '—'}</span></div>
-          <div style={{ marginBottom: 4 }}><strong>客户</strong>: <span style={redStyle}>{item.customerName ?? '—'}</span></div>
-          <div style={{ marginBottom: 4 }}><strong>邮箱</strong>: <span style={redStyle}>{item.email ?? '—'}</span></div>
-          <div style={{ marginBottom: 0 }}><strong>电话</strong>: <span style={redStyle}>{item.phone ?? '—'}</span></div>
-          {item.matchReason && <div style={{ marginTop: 4, fontSize: 12, color: '#666' }}>命中原因: {item.matchReason}</div>}
-        </div>
-      ))}
-    </Card>
-  );
 }
 
 /** Create modal: allows free text (new customer) or select existing. Auto-fills orgFullName from customer. */
@@ -237,12 +159,28 @@ export default function PlatformApplication() {
   const [duplicateMatches, setDuplicateMatches] = useState<DuplicateMatchItem[]>([]);
   const [duplicateCurrentInput, setDuplicateCurrentInput] = useState<{ customerName: string; email: string; phone: string } | null>(null);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  /** When duplicate modal is open, platform/label for HitAnalysisPanel summary (set in both Create and Planner flows). */
+  const [duplicateModalPlatform, setDuplicateModalPlatform] = useState('');
+  const [duplicateModalPlatformLabel, setDuplicateModalPlatformLabel] = useState('');
+  /** When non-null, duplicate modal was opened from Create flow; "确认新增" will call create with this. */
+  const [pendingCreateValues, setPendingCreateValues] = useState<Record<string, unknown> | null>(null);
   const [plannerForm] = Form.useForm<ApplicationRow & { customerName?: string }>();
   const [adminForm] = Form.useForm<ApplicationRow>();
 
+  const [platformConfigs, setPlatformConfigs] = useState<PlatformConfigItem[]>([]);
+  useEffect(() => {
+    getPlatformConfigs().then(setPlatformConfigs).catch(() => setPlatformConfigs([]));
+  }, []);
+  const platformOptions = useMemo(
+    () => (platformConfigs?.filter((p) => p.isActive) ?? []).map((p) => ({ label: p.platformName, value: p.platformCode })),
+    [platformConfigs]
+  );
+  const getConfig = (code: string) => platformConfigs?.find((p) => p.platformCode === code);
+  const getPlatformLabel = (code: string) => getConfig(code)?.platformName ?? code;
+
   const columns: ProColumns<ApplicationRow>[] = [
     { title: '申请单号', dataIndex: 'applicationNo', width: 160, ellipsis: true },
-    { title: '平台', dataIndex: 'platform', width: 100, valueEnum: { INHAND: '映翰通', HENDONG: '恒动', JINGPIN: '京品' } },
+    { title: '平台', dataIndex: 'platform', width: 100, render: (_, row) => getPlatformLabel(row.platform ?? '') },
     { title: '渠道', dataIndex: 'sourceType', width: 80, search: false, valueEnum: { FACTORY: '销售', SERVICE: '服务' } },
     { title: '客户', dataIndex: 'customerName', width: 140, ellipsis: true, render: (_, row) => row.customerName ?? (row.customerId != null ? `#${row.customerId}` : '—') },
     { title: '机构代码/简称', dataIndex: 'orgCodeShort', width: 120, ellipsis: true },
@@ -301,25 +239,53 @@ export default function PlatformApplication() {
     },
   ];
 
-  const handleCreate = async (values: Record<string, unknown>) => {
+  /** Perform the create API call (used when no duplicates, or when user confirms add from duplicate modal). */
+  const doCreate = async (values: Record<string, unknown>) => {
     const sourceType = (values.sourceType ?? createSourceType) as 'FACTORY' | 'SERVICE';
+    await request.post('/v1/platform-account-applications/create', {
+      platform: values.platform,
+      sourceType,
+      customerId: values.customerId ?? undefined,
+      customerName: values.customerName ? String(values.customerName).trim() : undefined,
+      orgFullName: values.orgFullName,
+      contactPerson: values.contactPerson ?? undefined,
+      phone: values.phone ?? undefined,
+      email: values.email ?? undefined,
+      contractNo: sourceType === 'FACTORY' ? (values.contractNo ?? undefined) : undefined,
+      price: sourceType === 'SERVICE' ? values.price ?? undefined : undefined,
+      quantity: sourceType === 'SERVICE' ? values.quantity ?? undefined : undefined,
+      reason: sourceType === 'SERVICE' ? values.reason ?? undefined : undefined,
+      isCcPlanner: false,
+      skipPlanner: false,
+    });
+  };
+
+  const handleCreate = async (values: Record<string, unknown>) => {
     try {
-      await request.post('/v1/platform-account-applications/create', {
-        platform: values.platform,
-        sourceType,
-        customerId: values.customerId ?? undefined,
-        customerName: values.customerName ? String(values.customerName).trim() : undefined,
-        orgFullName: values.orgFullName,
-        contactPerson: values.contactPerson ?? undefined,
-        phone: values.phone ?? undefined,
-        email: values.email ?? undefined,
-        contractNo: sourceType === 'FACTORY' ? (values.contractNo ?? undefined) : undefined,
-        price: sourceType === 'SERVICE' ? values.price ?? undefined : undefined,
-        quantity: sourceType === 'SERVICE' ? values.quantity ?? undefined : undefined,
-        reason: sourceType === 'SERVICE' ? values.reason ?? undefined : undefined,
-        isCcPlanner: false,
-        skipPlanner: false,
-      });
+      const { data: matches } = await request.post<DuplicateMatchItem[]>(
+        '/v1/platform-account-applications/check-duplicates',
+        {
+          platform: values.platform,
+          customerName: values.customerName ? String(values.customerName).trim() : '',
+          email: values.email ?? '',
+          contactPhone: values.phone ?? '',
+          orgFullName: values.orgFullName ? String(values.orgFullName).trim() : '',
+        }
+      );
+      if (matches?.length) {
+        setPendingCreateValues(values);
+        setDuplicateMatches(matches);
+        setDuplicateCurrentInput({
+          customerName: values.customerName ? String(values.customerName).trim() : '',
+          email: (values.email ?? '') as string,
+          phone: (values.phone ?? '') as string,
+        });
+        setDuplicateModalPlatform(String(values.platform ?? ''));
+        setDuplicateModalPlatformLabel(getPlatformLabel(String(values.platform ?? '')));
+        setShowDuplicateModal(true);
+        return false;
+      }
+      await doCreate(values);
       message.success('申请已提交');
       setCreateOpen(false);
       actionRef.current?.reload();
@@ -375,18 +341,22 @@ export default function PlatformApplication() {
           customerName: values.customerName ? String(values.customerName).trim() : '',
           email: values.email ?? '',
           contactPhone: values.phone ?? '',
+          orgFullName: values.orgFullName ? String(values.orgFullName).trim() : '',
         }
       );
       if (!matches?.length) {
         await doPlannerSubmit();
         return;
       }
+      setPendingCreateValues(null);
       setDuplicateMatches(matches);
       setDuplicateCurrentInput({
         customerName: values.customerName ? String(values.customerName).trim() : '',
         email: values.email ? String(values.email).trim() : '',
         phone: values.phone ? String(values.phone).trim() : '',
       });
+      setDuplicateModalPlatform(String(values.platform ?? ''));
+      setDuplicateModalPlatformLabel(getPlatformLabel(String(values.platform ?? '')));
       setShowDuplicateModal(true);
     } catch (e) {
       if ((e as { errorFields?: unknown[] })?.errorFields) return;
@@ -404,6 +374,26 @@ export default function PlatformApplication() {
     await doPlannerSubmit();
   };
 
+  /** "确认新增": from Create flow call doCreate and close both modals; from Planner flow call doPlannerSubmit. */
+  const handleDuplicateConfirmAdd = async () => {
+    if (pendingCreateValues) {
+      try {
+        await doCreate(pendingCreateValues);
+        message.success('申请已提交');
+        setPendingCreateValues(null);
+        setShowDuplicateModal(false);
+        setDuplicateMatches([]);
+        setDuplicateCurrentInput(null);
+        setCreateOpen(false);
+        actionRef.current?.reload();
+      } catch (e) {
+        showError(e);
+      }
+    } else {
+      await handleDuplicateConfirmNew();
+    }
+  };
+
   const handleDuplicateGoSim = () => {
     setShowDuplicateModal(false);
     setDuplicateMatches([]);
@@ -413,6 +403,18 @@ export default function PlatformApplication() {
     plannerForm.resetFields();
     navigate('/platform/sim-applications');
     actionRef.current?.reload();
+  };
+
+  /** Close duplicate modal and parent modal(s) — full exit. */
+  const handleDuplicateCancel = () => {
+    setShowDuplicateModal(false);
+    setDuplicateMatches([]);
+    setDuplicateCurrentInput(null);
+    setPendingCreateValues(null);
+    setPlannerModalOpen(false);
+    setCurrentRow(null);
+    setCreateOpen(false);
+    plannerForm.resetFields();
   };
 
   const handlePlannerCloseApp = () => {
@@ -543,7 +545,7 @@ export default function PlatformApplication() {
         modalProps={{ destroyOnClose: true }}
       >
         <Form.Item name="platform" label="平台" rules={[{ required: true }]}>
-          <Select options={PLATFORM_OPTIONS} placeholder="选择平台" />
+          <Select options={platformOptions} placeholder="选择平台" />
         </Form.Item>
         <Form.Item name="sourceType" hidden initialValue={createSourceType}><Input type="hidden" /></Form.Item>
         <CustomerFieldCreate />
@@ -551,7 +553,7 @@ export default function PlatformApplication() {
           <Input placeholder="机构全称（默认同客户名称，可修改）" />
         </Form.Item>
         <Form.Item name="contactPerson" label="联系人" rules={[{ required: true, message: '此项必填' }]}>
-          <Input placeholder="联系人" />
+          <SmartInput name="contactPerson" trim placeholder="联系人" />
         </Form.Item>
         <Form.Item name="phone" label="联系电话" rules={[{ required: true, message: '此项必填' }, PhoneRule]}>
           <SmartInput name="phone" noSpaces placeholder="11位手机号或区号-号码" />
@@ -641,7 +643,7 @@ export default function PlatformApplication() {
         )}
         <Form form={plannerForm} layout="vertical">
           <Form.Item name="platform" label="平台" rules={[{ required: true, message: '此项必填' }]}>
-            <Select options={PLATFORM_OPTIONS} placeholder="请选择平台" />
+            <Select options={platformOptions} placeholder="请选择平台" />
           </Form.Item>
           <Form.Item name="customerId" hidden><Input type="hidden" /></Form.Item>
           <Form.Item name="customerName" label="客户名称" rules={[{ required: true, message: '此项必填' }]}>
@@ -714,20 +716,66 @@ export default function PlatformApplication() {
       <DuplicateCheckModal
         visible={showDuplicateModal}
         matches={duplicateMatches}
+        platform={duplicateModalPlatform}
+        platformLabel={duplicateModalPlatformLabel}
         currentInput={duplicateCurrentInput ?? undefined}
         title="重复提醒"
         onCancel={handleDuplicateReturn}
-        renderFooter={(close) => [
-          <Button key="return" onClick={handleDuplicateReturn}>
-            返回编辑
-          </Button>,
-          <Button key="confirm" type="primary" onClick={handleDuplicateConfirmNew}>
-            确认新增
-          </Button>,
-          <Button key="sim" onClick={handleDuplicateGoSim}>
-            我要开卡
-          </Button>,
-        ]}
+        renderFooter={(close) => {
+          const isServiceFlow = pendingCreateValues?.sourceType === 'SERVICE';
+          const config = getConfig((pendingCreateValues?.platform as string) ?? '');
+          const reason = (h: DuplicateMatchItem) => h.matchReason ?? '';
+          const violationEmail = !!config?.ruleUniqueEmail && duplicateMatches.some((h) => reason(h).includes('邮箱'));
+          const violationPhone = !!config?.ruleUniquePhone && duplicateMatches.some((h) => reason(h).includes('电话'));
+          const violationName = !!config?.ruleUniqueOrgName && duplicateMatches.some((h) => reason(h).includes('全称'));
+          const isBlocked = violationEmail || violationPhone || violationName;
+          if (isServiceFlow) {
+            return [
+              <Button key="return" onClick={handleDuplicateReturn}>
+                返回编辑
+              </Button>,
+              <Button
+                key="requestCheck"
+                type="primary"
+                onClick={() => message.info('功能暂留：后续合并开发')}
+              >
+                申请核查
+              </Button>,
+              <Button
+                key="payReuse"
+                type="primary"
+                onClick={() => message.info('功能暂留：后续合并开发')}
+              >
+                缴费复用
+              </Button>,
+              <Button key="cancel" onClick={handleDuplicateCancel}>
+                取消
+              </Button>,
+            ];
+          }
+          return (
+            <div>
+              {isBlocked && (
+                <p style={{ color: '#ff4d4f', marginBottom: 12 }}>
+                  根据平台规则，上述字段严禁重复，无法强制提交。
+                </p>
+              )}
+              <span>
+                <Button key="return" onClick={handleDuplicateReturn}>
+                  返回编辑
+                </Button>
+                {!isBlocked && (
+                  <Button key="confirm" type="primary" onClick={handleDuplicateConfirmAdd} style={{ marginLeft: 8 }}>
+                    确认新增
+                  </Button>
+                )}
+                <Button key="cancel" onClick={handleDuplicateCancel} style={{ marginLeft: 8 }}>
+                  取消
+                </Button>
+              </span>
+            </div>
+          );
+        }}
       />
 
       <Modal
@@ -742,24 +790,32 @@ export default function PlatformApplication() {
           <Row gutter={16} wrap={false}>
             <Col span={14} style={{ borderRight: '1px solid #f0f0f0', paddingRight: 16 }}>
               {(() => {
-                const hasHits = adminHitMatches.length > 0;
-                const anyCustomer = hasHits && adminHitMatches.some((m) => m.matchReason?.includes('客户'));
-                const anyPhone = hasHits && adminHitMatches.some((m) => m.matchReason?.includes('电话'));
-                const anyEmail = hasHits && adminHitMatches.some((m) => m.matchReason?.includes('邮箱'));
-                const red = { color: '#ff4d4f', fontWeight: 'bold' as const };
+                if (adminHitMatches.length > 0) {
+                  console.log('Admin Hits:', adminHitMatches);
+                }
+                const reason = (h: DuplicateMatchItem) => h.matchReason || '';
+                const anyCustomer = adminHitMatches.some((h) => reason(h).includes('客户') || reason(h).includes('Customer'));
+                const anyPhone = adminHitMatches.some((h) => reason(h).includes('电话') || reason(h).includes('Phone'));
+                const anyEmail = adminHitMatches.some((h) => reason(h).includes('邮箱') || reason(h).includes('Email'));
+                const anyOrgCode = adminHitMatches.some((h) => reason(h).includes('代码') || reason(h).includes('Code') || reason(h).includes('编码'));
+                const redStyle = { color: '#ff4d4f', fontWeight: 'bold' as const };
                 const customerVal = currentRow.customerName ?? (currentRow.customerId != null ? `#${currentRow.customerId}` : '—');
                 const phoneVal = currentRow.phone ?? '—';
                 const emailVal = currentRow.email ?? '—';
+                const orgCodeVal = currentRow.orgCodeShort ?? '—';
+                const wrapIfHit = (hit: boolean, text: string) =>
+                  hit ? <span style={redStyle}>{text}</span> : text;
                 return (
                   <div style={{ marginBottom: 16, padding: 12, background: '#fafafa', borderRadius: 8, lineHeight: 1.8 }}>
                     <p><strong>申请单号</strong>: {currentRow.applicationNo}</p>
-                    <p><strong>平台</strong>: {PLATFORM_OPTIONS.find((o) => o.value === currentRow.platform)?.label ?? currentRow.platform}</p>
+                    <p><strong>平台</strong>: {getPlatformLabel(currentRow.platform ?? '')}</p>
                     <p><strong>渠道</strong>: {currentRow.sourceType === 'SERVICE' ? '服务渠道' : '销售渠道'}</p>
-                    <p><strong>客户</strong>: {anyCustomer ? <span style={red}>{customerVal}</span> : customerVal}</p>
+                    <p><strong>客户</strong>: {wrapIfHit(anyCustomer, customerVal)}</p>
+                    <p><strong>机构代码/简称</strong>: {wrapIfHit(anyOrgCode, orgCodeVal)}</p>
                     <p><strong>机构全称</strong>: {currentRow.orgFullName ?? '—'}</p>
                     <p><strong>联系人</strong>: {currentRow.contactPerson ?? '—'}</p>
-                    <p><strong>联系电话</strong>: {anyPhone ? <span style={red}>{phoneVal}</span> : phoneVal}</p>
-                    <p><strong>邮箱</strong>: {anyEmail ? <span style={red}>{emailVal}</span> : emailVal}</p>
+                    <p><strong>联系电话</strong>: {wrapIfHit(anyPhone, phoneVal)}</p>
+                    <p><strong>邮箱</strong>: {wrapIfHit(anyEmail, emailVal)}</p>
                     {currentRow.contractNo != null && <p><strong>合同号</strong>: {currentRow.contractNo}</p>}
                     {currentRow.price != null && <p><strong>价格</strong>: {currentRow.price}</p>}
                     {currentRow.quantity != null && <p><strong>数量</strong>: {currentRow.quantity}</p>}
@@ -769,23 +825,24 @@ export default function PlatformApplication() {
               })()}
               <Form form={adminForm} layout="vertical" initialValues={{ orgCodeShort: currentRow.orgCodeShort, region: currentRow.region }}>
                 {(() => {
-                  const platform = currentRow.platform;
-                  const isUppercaseOnly = platform === 'INHAND' || platform === 'JINGPIN';
-                  const isHengdong = platform === 'HENDONG';
-                  const label = isUppercaseOnly ? '机构代码 (仅限大写字母)' : isHengdong ? '机构简称 (建议汉字)' : '机构代码/简称';
-                  const placeholder = isUppercaseOnly ? '机构代码 (仅限大写字母)' : isHengdong ? '机构简称 (建议汉字)' : '机构代码/简称（大写字母+汉字）';
-                  const rules = isUppercaseOnly
+                  const config = getConfig(currentRow.platform ?? '');
+                  const validatorType = config?.codeValidatorType ?? 'NONE';
+                  const isUppercase = validatorType === 'UPPERCASE';
+                  const isMixedOrChinese = validatorType === 'MIXED' || validatorType === 'CHINESE';
+                  const label = isUppercase ? '机构代码 (仅限大写)' : isMixedOrChinese ? '机构代码/简称 (建议汉字)' : '机构代码/简称';
+                  const placeholder = isUppercase ? '机构代码 (仅限大写字母)' : isMixedOrChinese ? '机构简称 (建议汉字)' : '机构代码/简称（大写字母+汉字）';
+                  const rules = isUppercase
                     ? [{ required: true, message: '请填写机构代码/简称' }, OrgCodeUppercaseRule]
-                    : isHengdong
+                    : isMixedOrChinese
                       ? [{ required: true, message: '请填写机构简称' }]
                       : [{ required: true, message: '请填写机构代码/简称' }, OrgCodeRule];
                   return (
                     <Form.Item name="orgCodeShort" label={label} rules={rules}>
                       <SmartInput
                         name="orgCodeShort"
-                        uppercase={isUppercaseOnly}
-                        onlyLetters={isUppercaseOnly}
-                        trim={!isUppercaseOnly && !isHengdong}
+                        uppercase={isUppercase}
+                        onlyLetters={isUppercase}
+                        trim={!isUppercase && !isMixedOrChinese}
                         noSpaces
                         placeholder={placeholder}
                       />
@@ -803,10 +860,12 @@ export default function PlatformApplication() {
             </Col>
             <Col span={10}>
               <HitAnalysisPanel
-                platform={currentRow.platform}
+                platform={currentRow.platform ?? ''}
+                platformLabel={getPlatformLabel(currentRow.platform ?? '')}
                 customerName={currentRow.customerName ?? ''}
                 email={currentRow.email ?? ''}
                 contactPhone={currentRow.phone ?? ''}
+                orgFullName={currentRow.orgFullName ?? ''}
                 onHitsLoaded={setAdminHitMatches}
               />
             </Col>
@@ -845,7 +904,7 @@ export default function PlatformApplication() {
           <div style={{ lineHeight: 2 }}>
             <p><strong>申请单号</strong>: {currentRow.applicationNo}</p>
             <p><strong>状态</strong>: {STATUS_MAP[currentRow.status]?.label ?? currentRow.status}</p>
-            <p><strong>平台</strong>: {PLATFORM_OPTIONS.find((o) => o.value === currentRow.platform)?.label ?? currentRow.platform}</p>
+            <p><strong>平台</strong>: {getPlatformLabel(currentRow.platform ?? '')}</p>
             <p><strong>渠道</strong>: {currentRow.sourceType === 'SERVICE' ? '服务渠道' : '销售渠道'}</p>
             <p><strong>客户</strong>: {currentRow.customerName ?? (currentRow.customerId != null ? `#${currentRow.customerId}` : '—')}</p>
             <p><strong>机构代码/简称</strong>: {currentRow.orgCodeShort}</p>

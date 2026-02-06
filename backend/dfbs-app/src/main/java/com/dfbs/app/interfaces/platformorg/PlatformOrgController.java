@@ -3,7 +3,6 @@ package com.dfbs.app.interfaces.platformorg;
 import com.dfbs.app.application.platformorg.PlatformOrgService;
 import com.dfbs.app.application.platformorg.dto.PlatformOrgRequest;
 import com.dfbs.app.application.platformorg.dto.PlatformOrgResponse;
-import com.dfbs.app.modules.platformorg.PlatformOrgPlatform;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,7 +21,7 @@ public class PlatformOrgController {
 
     @GetMapping
     public List<PlatformOrgResponse> list(
-            @RequestParam(name = "platform", required = false) PlatformOrgPlatform platform,
+            @RequestParam(name = "platform", required = false) String platform,
             @RequestParam(name = "customerId", required = false) Long customerId) {
         return service.list(Optional.ofNullable(platform), Optional.ofNullable(customerId));
     }
@@ -33,7 +32,7 @@ public class PlatformOrgController {
     }
 
     @GetMapping("/platform/{platform}/customer/{customerId}")
-    public List<PlatformOrgResponse> findByPlatformAndCustomer(@PathVariable PlatformOrgPlatform platform,
+    public List<PlatformOrgResponse> findByPlatformAndCustomer(@PathVariable String platform,
                                                                @PathVariable Long customerId) {
         return service.findByPlatformAndCustomer(platform, customerId);
     }

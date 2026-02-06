@@ -1,14 +1,12 @@
 package com.dfbs.app.application.platformaccount.dto;
 
-import com.dfbs.app.modules.platformorg.PlatformOrgPlatform;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 
 public record PlatformAccountApproveRequest(
-        @NotNull PlatformOrgPlatform platform,
+        @NotBlank @Size(max = 64) String platform,
         Long customerId,
         @NotBlank @Size(max = 128) String orgCodeShort,
         @NotBlank @Size(max = 256) String orgFullName,

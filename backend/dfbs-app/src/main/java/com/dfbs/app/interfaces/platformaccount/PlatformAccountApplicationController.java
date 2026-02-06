@@ -3,7 +3,6 @@ package com.dfbs.app.interfaces.platformaccount;
 import com.dfbs.app.application.platformaccount.PlatformAccountApplicationService;
 import com.dfbs.app.application.platformaccount.dto.*;
 import com.dfbs.app.modules.platformaccount.PlatformAccountApplicationStatus;
-import com.dfbs.app.modules.platformorg.PlatformOrgPlatform;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
@@ -28,7 +27,7 @@ public class PlatformAccountApplicationController {
     @GetMapping("/page")
     public Page<PlatformAccountApplicationResponse> page(
             @RequestParam(name = "status", required = false) PlatformAccountApplicationStatus status,
-            @RequestParam(name = "platform", required = false) PlatformOrgPlatform platform,
+            @RequestParam(name = "platform", required = false) String platform,
             @RequestParam(name = "customerId", required = false) Long customerId,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size) {
@@ -52,7 +51,7 @@ public class PlatformAccountApplicationController {
 
     @GetMapping("/check-org-match")
     public OrgMatchCheckResult checkOrgMatch(
-            @RequestParam PlatformOrgPlatform platform,
+            @RequestParam String platform,
             @RequestParam String orgCodeShort) {
         return service.checkOrgMatch(platform, orgCodeShort);
     }

@@ -17,9 +17,8 @@ public class PlatformOrgEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "platform", nullable = false, length = 32)
-    private PlatformOrgPlatform platform;
+    @Column(name = "platform", nullable = false, length = 64)
+    private String platform;
 
     @Column(name = "org_code_short", nullable = false, length = 128)
     private String orgCodeShort;

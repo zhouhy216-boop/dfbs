@@ -1,6 +1,5 @@
 package com.dfbs.app.modules.platformaccount;
 
-import com.dfbs.app.modules.platformorg.PlatformOrgPlatform;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -27,9 +26,8 @@ public class PlatformAccountApplicationEntity {
     private PlatformAccountApplicationStatus status = PlatformAccountApplicationStatus.DRAFT;
 
     // Org snapshot
-    @Enumerated(EnumType.STRING)
-    @Column(name = "platform", nullable = false, length = 32)
-    private PlatformOrgPlatform platform;
+    @Column(name = "platform", nullable = false, length = 64)
+    private String platform;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "source_type", nullable = false, length = 32)

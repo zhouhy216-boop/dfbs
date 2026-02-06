@@ -14,7 +14,6 @@ import com.dfbs.app.modules.platformaccount.PlatformAccountApplicationRepo;
 import com.dfbs.app.modules.platformaccount.PlatformAccountApplicationStatus;
 import com.dfbs.app.modules.platformorg.PlatformOrgCustomerEntity;
 import com.dfbs.app.modules.platformorg.PlatformOrgEntity;
-import com.dfbs.app.modules.platformorg.PlatformOrgPlatform;
 import com.dfbs.app.modules.platformorg.PlatformOrgRepo;
 import com.dfbs.app.modules.platformorg.PlatformOrgStatus;
 import com.dfbs.app.modules.user.UserRepo;
@@ -203,7 +202,7 @@ public class PlatformAccountApplicationService {
 
     @Transactional(readOnly = true)
     public Page<PlatformAccountApplicationResponse> page(Optional<PlatformAccountApplicationStatus> status,
-                                                         Optional<PlatformOrgPlatform> platform,
+                                                         Optional<String> platform,
                                                          Optional<Long> customerId,
                                                          int page,
                                                          int size) {
@@ -224,7 +223,7 @@ public class PlatformAccountApplicationService {
     }
 
     @Transactional(readOnly = true)
-    public OrgMatchCheckResult checkOrgMatch(PlatformOrgPlatform platform, String orgCodeShort) {
+    public OrgMatchCheckResult checkOrgMatch(String platform, String orgCodeShort) {
         Optional<PlatformOrgEntity> existing = platformOrgRepo.findByPlatformAndOrgCodeShort(platform, orgCodeShort == null ? "" : orgCodeShort.trim());
         if (existing.isEmpty()) {
             return new OrgMatchCheckResult(false, null, List.of(), 0);
@@ -236,13 +235,15 @@ public class PlatformAccountApplicationService {
         return new OrgMatchCheckResult(true, org.getId(), customerIds, 0);
     }
 
-    /** Check for existing orgs on same platform with matching customer name, email, or phone (normalized). */
+    /** Check for existing orgs on same platform with matching customer name, email, phone, or org full name (normalized). */
     @Transactional(readOnly = true)
     public List<CheckDuplicateMatchItem> checkDuplicates(CheckDuplicatesRequest request) {
         String nCustomer = normalize(request.customerName());
         String nEmail = normalize(request.email());
         String nPhone = normalize(request.contactPhone());
-        if (!StringUtils.hasText(nCustomer) && !StringUtils.hasText(nEmail) && !StringUtils.hasText(nPhone)) {
+        String trimmedOrgFullName = request.orgFullName() != null ? request.orgFullName().trim() : "";
+        if (!StringUtils.hasText(nCustomer) && !StringUtils.hasText(nEmail) && !StringUtils.hasText(nPhone)
+                && !StringUtils.hasText(trimmedOrgFullName)) {
             return List.of();
         }
         List<PlatformOrgEntity> orgs = platformOrgRepo.findByPlatform(request.platform());
@@ -253,19 +254,56 @@ public class PlatformAccountApplicationService {
                     .anyMatch(name -> normalize(name).equals(nCustomer));
             boolean emailMatch = StringUtils.hasText(nEmail) && nEmail.equals(normalize(org.getContactEmail()));
             boolean phoneMatch = StringUtils.hasText(nPhone) && nPhone.equals(normalize(org.getContactPhone()));
-            if (!nameMatch && !emailMatch && !phoneMatch) continue;
+            boolean orgNameMatch = StringUtils.hasText(trimmedOrgFullName)
+                    && normalize(org.getOrgFullName()).equals(normalize(trimmedOrgFullName));
+            if (!nameMatch && !emailMatch && !phoneMatch && !orgNameMatch) continue;
             List<String> reasons = new ArrayList<>();
             if (nameMatch) reasons.add("客户名称已存在");
             if (emailMatch) reasons.add("邮箱已存在");
             if (phoneMatch) reasons.add("电话已存在");
+            if (orgNameMatch) reasons.add("机构全称已存在");
             String customerDisplay = linkedNames.isEmpty() ? "—" : String.join(", ", linkedNames);
+            String orgFullNameDisplay = org.getOrgFullName() != null ? org.getOrgFullName() : "—";
             result.add(new CheckDuplicateMatchItem(
                     org.getOrgCodeShort(),
                     customerDisplay,
                     org.getContactEmail() != null ? org.getContactEmail() : "—",
                     org.getContactPhone() != null ? org.getContactPhone() : "—",
+                    orgFullNameDisplay,
                     String.join("；", reasons)
             ));
+        }
+        if (StringUtils.hasText(trimmedOrgFullName)) {
+            List<PlatformOrgEntity> byFullName = platformOrgRepo.findByPlatformAndOrgFullName(request.platform(), trimmedOrgFullName);
+            for (PlatformOrgEntity org : byFullName) {
+                String code = org.getOrgCodeShort();
+                boolean merged = false;
+                for (int i = 0; i < result.size(); i++) {
+                    if (java.util.Objects.equals(code, result.get(i).orgCodeShort())) {
+                        result.set(i, new CheckDuplicateMatchItem(
+                                result.get(i).orgCodeShort(),
+                                result.get(i).customerName(),
+                                result.get(i).email(),
+                                result.get(i).phone(),
+                                result.get(i).orgFullName(),
+                                result.get(i).matchReason() + "；机构全称已存在"
+                        ));
+                        merged = true;
+                        break;
+                    }
+                }
+                if (!merged) {
+                    String customerDisplay = getLinkedCustomerNames(org).isEmpty() ? "—" : String.join(", ", getLinkedCustomerNames(org));
+                    result.add(new CheckDuplicateMatchItem(
+                            org.getOrgCodeShort(),
+                            customerDisplay,
+                            org.getContactEmail() != null ? org.getContactEmail() : "—",
+                            org.getContactPhone() != null ? org.getContactPhone() : "—",
+                            org.getOrgFullName() != null ? org.getOrgFullName() : "—",
+                            "机构全称已存在"
+                    ));
+                }
+            }
         }
         return result;
     }

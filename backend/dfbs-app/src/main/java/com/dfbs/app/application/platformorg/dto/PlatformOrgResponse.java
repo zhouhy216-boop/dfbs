@@ -2,14 +2,13 @@ package com.dfbs.app.application.platformorg.dto;
 
 import com.dfbs.app.modules.platformorg.PlatformOrgCustomerEntity;
 import com.dfbs.app.modules.platformorg.PlatformOrgEntity;
-import com.dfbs.app.modules.platformorg.PlatformOrgPlatform;
 import com.dfbs.app.modules.platformorg.PlatformOrgStatus;
 
 import java.time.LocalDateTime;
 
 public record PlatformOrgResponse(
         Long id,
-        PlatformOrgPlatform platform,
+        String platform,
         String orgCodeShort,
         String orgFullName,
         java.util.List<Long> customerIds,

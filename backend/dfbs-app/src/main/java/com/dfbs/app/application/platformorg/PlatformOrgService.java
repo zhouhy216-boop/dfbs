@@ -11,7 +11,6 @@ import com.dfbs.app.modules.platformaccount.PlatformAccountApplicationEntity;
 import com.dfbs.app.modules.platformaccount.PlatformAccountApplicationRepo;
 import com.dfbs.app.modules.platformorg.PlatformOrgCustomerEntity;
 import com.dfbs.app.modules.platformorg.PlatformOrgEntity;
-import com.dfbs.app.modules.platformorg.PlatformOrgPlatform;
 import com.dfbs.app.modules.platformorg.PlatformOrgRepo;
 import com.dfbs.app.modules.platformorg.PlatformOrgStatus;
 import org.springframework.stereotype.Service;
@@ -85,7 +84,7 @@ public class PlatformOrgService {
     }
 
     @Transactional(readOnly = true)
-    public List<PlatformOrgResponse> list(Optional<PlatformOrgPlatform> platform, Optional<Long> customerId) {
+    public List<PlatformOrgResponse> list(Optional<String> platform, Optional<Long> customerId) {
         if (platform.isPresent() && customerId.isPresent()) {
             return findByPlatformAndCustomer(platform.get(), customerId.get());
         }
@@ -101,7 +100,7 @@ public class PlatformOrgService {
     }
 
     @Transactional(readOnly = true)
-    public List<PlatformOrgResponse> findByPlatformAndCustomer(PlatformOrgPlatform platform, Long customerId) {
+    public List<PlatformOrgResponse> findByPlatformAndCustomer(String platform, Long customerId) {
         return toResponseList(repo.findByPlatformAndCustomerId(platform, customerId));
     }
 

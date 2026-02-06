@@ -20,6 +20,7 @@ import {
   WarningOutlined,
   TruckOutlined,
   AuditOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import { getStoredToken } from '@/utils/request';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -83,6 +84,7 @@ const MENU_ROUTES = [
     key: 'admin-group',
     routes: [
       { path: '/admin/confirmation-center', name: '数据确认中心' },
+      { path: '/system/platform-config', name: '平台配置', icon: <SettingOutlined /> },
     ],
   },
 ];

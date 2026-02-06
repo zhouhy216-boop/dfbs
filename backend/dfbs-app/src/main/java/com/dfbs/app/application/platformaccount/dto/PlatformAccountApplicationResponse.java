@@ -3,7 +3,6 @@ package com.dfbs.app.application.platformaccount.dto;
 import com.dfbs.app.modules.platformaccount.ApplicationSourceType;
 import com.dfbs.app.modules.platformaccount.PlatformAccountApplicationEntity;
 import com.dfbs.app.modules.platformaccount.PlatformAccountApplicationStatus;
-import com.dfbs.app.modules.platformorg.PlatformOrgPlatform;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -12,7 +11,7 @@ public record PlatformAccountApplicationResponse(
         Long id,
         String applicationNo,
         PlatformAccountApplicationStatus status,
-        PlatformOrgPlatform platform,
+        String platform,
         ApplicationSourceType sourceType,
         Long customerId,
         String customerName,

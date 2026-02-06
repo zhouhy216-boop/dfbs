@@ -32,6 +32,7 @@ public class SecurityConfig {
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 // Internal APIs: permitAll until token filter is added; then switch to .anyRequest().authenticated()
+                // When auth is enabled, consider restricting POST/PUT/PATCH /api/v1/platform-configs to Admin only; GET /options and GET /{code}/rules can remain for dropdowns/rules.
                 .anyRequest().permitAll()
             );
         return http.build();

@@ -1,8 +1,10 @@
 package com.dfbs.app.modules.platformorg;
 
 /**
- * Supported platform identifiers for platform organization master data.
+ * Legacy platform identifiers. Platform is now dynamic (String) from md_platform.
+ * @deprecated Use platform code string and {@link com.dfbs.app.application.platformconfig.PlatformConfigService#getRulesByCode(String)} for rules.
  */
+@Deprecated
 public enum PlatformOrgPlatform {
     INHAND,
     HENDONG,

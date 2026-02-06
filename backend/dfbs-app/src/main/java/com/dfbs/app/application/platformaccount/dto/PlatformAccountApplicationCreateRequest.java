@@ -1,7 +1,6 @@
 package com.dfbs.app.application.platformaccount.dto;
 
 import com.dfbs.app.modules.platformaccount.ApplicationSourceType;
-import com.dfbs.app.modules.platformorg.PlatformOrgPlatform;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -9,7 +8,7 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
 public record PlatformAccountApplicationCreateRequest(
-        @NotNull PlatformOrgPlatform platform,
+        @NotBlank @Size(max = 64) String platform,
         @NotNull ApplicationSourceType sourceType,
         /** Existing customer ID; optional when customerName is provided (free-text new customer). */
         Long customerId,

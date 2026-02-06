@@ -27,6 +27,7 @@ import WorkOrderPublic from '@/pages/WorkOrder/Public';
 import WorkOrderInternal from '@/pages/WorkOrder/Internal';
 import WorkOrderInternalDetail from '@/pages/WorkOrder/Internal/Detail';
 import ConfirmationCenter from '@/pages/Admin/ConfirmationCenter';
+import PlatformConfig from '@/pages/System/PlatformConfig';
 import PlatformApplication from '@/pages/Platform/Application';
 import PlatformOrg from '@/pages/Platform/Org';
 import PlatformSimApplication from '@/pages/Platform/SimApplication';
@@ -73,6 +74,7 @@ function App() {
             <Route path="platform/sim-applications" element={<PlatformSimApplication />} />
             <Route path="admin" element={<Navigate to="/admin/confirmation-center" replace />} />
             <Route path="admin/confirmation-center" element={<ConfirmationCenter />} />
+            <Route path="system/platform-config" element={<PlatformConfig />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
