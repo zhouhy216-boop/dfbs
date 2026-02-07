@@ -1,0 +1,153 @@
+DFBS 项目目录结构设计（v2.1_final · 冻结版 · 基于 PROJECT_FILES.md 不臆测）
+
+用途说明（必读）：
+- 本文件定义【允许/期望】的项目结构蓝图（Blueprint），用于防止未来代码乱放与结构性返工。
+- “当前真实存在的文件/路径”以 PROJECT_FILES.md 为唯一事实依据（事实清单）。
+- 目录存在 ≠ 立即开发：本蓝图允许预留目录，但不得把“预留”当作“已存在”。
+
+事实约束（冻结）：
+- 涉及“本地文件路径/目录结构/文件是否存在”的判断：
+  - 一律以 PROJECT_FILES.md 或用户上传的真实文件为准
+  - 助手禁止臆测（例如猜测 scripts/ 是否存在）
+
+状态标识说明：
+- [EXISTS]   ：PROJECT_FILES.md 中已存在（事实）
+- [V1]       ：v2.1_final 明确要求（可能尚未开发，但允许存在目录/文件）
+- [RESERVED] ：结构预留（当前禁止实现业务）
+- [FORBIDDEN]: 明确禁止的结构（守门）
+
+============================================================
+0. 当前事实快照（来自 PROJECT_FILES.md）
+============================================================
+
+根目录当前存在的关键文件（[EXISTS]）：
+- 各 .ps1 脚本位于项目根目录（例如 DFBS-APP-RUN.ps1、DFBS-TEST.ps1 等）
+- infra/docker-compose.yml
+- docs/baseline/final_01/02/03（三份冻结基准）
+- docs/DECISIONS.md
+- backend/dfbs-app/（Spring Boot 项目）
+- backend/dfbs-platform / dfbs-modules / dfbs-application / dfbs-interfaces（骨架占位）
+- 根目录 logs/ 与 backend/dfbs-app/logs/（运行日志产物）
+
+注意：
+- logs 目录及 .log/.gz 文件属于运行产物（建议不纳入 PROJECT_FILES.md 的全量清单，见本文件末尾的“日志规则”）
+
+============================================================
+1. 根目录结构蓝图（允许/期望）
+============================================================
+
+dfbs/
+├─ docs/
+│  ├─ baseline/                                   # [EXISTS] v2.1_final 唯一权威基准文件目录（冻结）
+│  │  ├─ final_01_mvp_scope_v2_1_final_full.md
+│  │  ├─ final_02_module_map_v2_1_final_full.mmd
+│  │  └─ final_03_project_structure_v2_1_final_full.txt
+│  ├─ DECISIONS.md                                 # [EXISTS] 工程/架构决策记录
+│  └─ archived/                                    # [RESERVED] 历史文件归档（不参与约束）
+│
+├─ infra/
+│  └─ docker-compose.yml                           # [EXISTS] 本地基础设施编排
+│
+├─ （根目录 PowerShell 脚本）                       # [EXISTS] 当前事实：脚本就在根目录
+│  ├─ DFBS-INFRA-UP.ps1
+│  ├─ DFBS-APP-RUN.ps1
+│  ├─ DFBS-HEALTHZ.ps1
+│  ├─ DFBS-TEST.ps1
+│  ├─ DFBS-DEV.ps1
+│  ├─ DFBS-END.ps1
+│  ├─ DFBS-GIT-PULL.ps1
+│  ├─ DFBS-STOP-APP.ps1
+│  ├─ DFBS-LOG-CLEAN.ps1
+│  ├─ DFBS-GEN-PROJECT-FILES.ps1
+│  └─ DFBS-NEW-MODULE.ps1
+│
+├─ PROJECT_STATUS.md                               # [EXISTS] 项目推进状态 + 封板决策（唯一）
+├─ PROJECT_FILES.md                                # [EXISTS] 项目文件清单（自动生成，事实）
+├─ README.md                                       # [EXISTS]
+├─ gen_project_files.py                            # [EXISTS] 生成 PROJECT_FILES.md 的脚本（需要排除日志）
+│
+├─ logs/                                           # [EXISTS] 运行日志产物（建议不纳入 PROJECT_FILES.md 全量）
+│
+├─ deprecated-bat/                                 # [EXISTS] 历史 bat（已弃用，仅保留）
+│
+├─ tools/                                          # [EXISTS] 工具脚本
+│  └─ new_module.py
+│
+└─ backend/
+   ├─ pom.xml                                      # [EXISTS] 后端聚合 pom
+   ├─ dfbs-app/                                    # [EXISTS] 当前主应用（Spring Boot）
+   │  ├─ pom.xml
+   │  ├─ mvnw / mvnw.cmd
+   │  ├─ src/main/java/...                          # 真实包名以项目内为准
+   │  │  ├─ com/dfbs/app/
+   │  │  │  ├─ DfbsAppApplication.java
+   │  │  │  ├─ HealthController.java
+   │  │  │  ├─ application/
+   │  │  │  │  ├─ customer/ CustomerMasterDataService.java        # [EXISTS]
+   │  │  │  │  ├─ contract/ ContractMasterDataService.java        # [EXISTS]
+   │  │  │  │  ├─ product/ ProductMasterDataService.java          # [EXISTS]
+   │  │  │  │  ├─ machine/ MachineMasterDataService.java          # [EXISTS]
+   │  │  │  │  ├─ iccid/ IccidMasterDataService.java              # [EXISTS]
+   │  │  │  │  └─ quote/ QuoteVersionService.java                 # [EXISTS]
+   │  │  │  ├─ interfaces/
+   │  │  │  │  ├─ customer/ CustomerMasterDataController.java     # [EXISTS]
+   │  │  │  │  └─ quote/ QuoteVersionController.java              # [EXISTS]
+   │  │  │  └─ modules/
+   │  │  │     ├─ customer/ CustomerEntity.java + CustomerRepo.java   # [EXISTS]
+   │  │  │     ├─ contract/ ContractEntity.java + ContractRepo.java   # [EXISTS]
+   │  │  │     ├─ product/ ProductEntity.java + ProductRepo.java      # [EXISTS]
+   │  │  │     ├─ machine/ MachineEntity.java + MachineRepo.java      # [EXISTS]
+   │  │  │     ├─ iccid/ IccidEntity.java + IccidRepo.java            # [EXISTS]
+   │  │  │     └─ quote/ QuoteVersionEntity.java + QuoteVersionRepo.java # [EXISTS]
+   │  ├─ src/main/resources/
+   │  │  ├─ application.yml                            # [EXISTS]
+   │  │  └─ db/migration/                              # [EXISTS] Flyway
+   │  │     ├─ V0001__init.sql
+   │  │     ├─ V0002__quote_version.sql
+   │  │     ├─ V0003__quote_version_only_one_active.sql
+   │  │     └─ V0004__masterdata_init.sql
+   │  ├─ src/test/java/com/dfbs/app/
+   │  │  ├─ ArchitectureRulesTest.java                 # [EXISTS]
+   │  │  ├─ MasterDataReadOnlyRulesTest.java           # [EXISTS]
+   │  │  ├─ interfaces/customer/ CustomerMasterDataCreateTest.java # [EXISTS]
+   │  │  └─ interfaces/quote/ QuoteVersionActivateTest.java        # [EXISTS]
+   │  └─ logs/                                         # [EXISTS] 运行日志产物（建议不纳入 PROJECT_FILES.md 全量）
+   │
+   ├─ dfbs-platform/                                   # [EXISTS] 占位骨架（当前仅 .gitkeep/README）
+   ├─ dfbs-modules/                                    # [EXISTS] 占位骨架
+   ├─ dfbs-application/                                # [EXISTS] 占位骨架
+   └─ dfbs-interfaces/                                 # [EXISTS] 占位骨架
+
+============================================================
+2. 结构是否需要现在调整？
+============================================================
+
+结论：不建议现在调整目录结构（为了“最小返工”）
+- 你现在的结构已经清晰：根目录脚本 + backend/dfbs-app 主工程 + baseline 冻结文件。
+- 如果现在把根目录脚本搬到 scripts/，会触发：
+  - README/文档引用需要改
+  - 你自己操作习惯需要改
+  - 未来我也要重新学习路径（增加错误概率）
+- 所以：保持现状最稳。等到“脚本数量明显变多、或要发布给更多人用”再考虑迁移。
+
+（可选未来调整预案，仅记录，不执行）
+- 若未来要统一到 scripts/：
+  - 必须作为“单独工程级决策”封板
+  - 一次性迁移 + 同步更新所有引用（README/DECISIONS/脚本互相调用）
+
+============================================================
+3. 日志规则（与 PROJECT_FILES.md 生成相关）
+============================================================
+
+- logs/、backend/dfbs-app/logs/ 以及 *.log/*.gz 属于运行产物：
+  - 不应进入 PROJECT_FILES.md 的“全量文件列表”
+  - 否则会导致文件清单被大量噪音淹没，反而降低定位效率
+- 处理方式：修改 gen_project_files.py，排除 logs 目录与 .log/.gz 文件（见下方第 2 部分操作）
+
+============================================================
+文件状态
+============================================================
+
+- 文件：docs/baseline/final_03_project_structure_v2_1_final_full.txt
+- 状态：冻结（v2.1_final）
+- 修改方式：只能通过“工程级决策”整体替换

@@ -1,126 +1,115 @@
-# DFBS-END.ps1 - git add + commit + push (safe)
-# - Always write FULL output log to logs\
-# - Keep window open (Press Enter to close)
-param([switch]$NoPause)
+# DFBS-END.ps1 - git add + commit + push with clear progress (Win11 + PS 7.x)
+# Commit may "fail" when there are no changes; push still runs.
+# By default does NOT exit the shell (returns to prompt); use -ExitOnFinish for CI/automation.
+param([switch]$NoPause, [switch]$ExitOnFinish)
 
-$Root   = $PSScriptRoot
-$LogDir = Join-Path $Root "logs"
-New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
-$Ts = Get-Date -Format "yyyyMMdd_HHmmss"
-$LogFile = Join-Path $LogDir ("dfbs-end_{0}.log" -f $Ts)
+. "$PSScriptRoot\DFBS-UTILS.ps1"
 
-function Write-LogHeader {
-  "==================================================" | Out-File -FilePath $LogFile -Encoding UTF8
-  "DFBS END - git add + commit + push" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  ("Time: {0}" -f (Get-Date)) | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  ("Root: {0}" -f $Root) | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  "==================================================" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  "" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-}
-
-function Run-Cmd {
-  param(
-    [Parameter(Mandatory=$true)][string]$WorkingDirectory,
-    [Parameter(Mandatory=$true)][string]$CommandLine
-  )
-
-  $psi = New-Object System.Diagnostics.ProcessStartInfo
-  $psi.FileName = "cmd.exe"
-  $psi.Arguments = "/c " + $CommandLine
-  $psi.WorkingDirectory = $WorkingDirectory
-  $psi.UseShellExecute = $false
-  $psi.RedirectStandardOutput = $true
-  $psi.RedirectStandardError  = $true
-  $psi.CreateNoWindow = $true
-
-  $p = New-Object System.Diagnostics.Process
-  $p.StartInfo = $psi
-  [void]$p.Start()
-
-  while (-not $p.HasExited) {
-    while (-not $p.StandardOutput.EndOfStream) {
-      $line = $p.StandardOutput.ReadLine()
-      $line | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-      Write-Host $line
-    }
-    while (-not $p.StandardError.EndOfStream) {
-      $line = $p.StandardError.ReadLine()
-      $line | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-      Write-Host $line
-    }
-    Start-Sleep -Milliseconds 50
-  }
-
-  while (-not $p.StandardOutput.EndOfStream) {
-    $line = $p.StandardOutput.ReadLine()
-    $line | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-    Write-Host $line
-  }
-  while (-not $p.StandardError.EndOfStream) {
-    $line = $p.StandardError.ReadLine()
-    $line | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-    Write-Host $line
-  }
-
-  return $p.ExitCode
-}
+$sw = [System.Diagnostics.Stopwatch]::StartNew()
+$root = Resolve-RepoRoot
+$logFile = Start-RunLog "dfbs-end"
+$step = 0
+$total = 5
 
 try {
-  Write-Host "=================================================="
-  Write-Host "DFBS END - git add + commit + push"
-  Write-Host "Time: $(Get-Date)"
-  Write-Host "Root: $Root"
-  Write-Host "Log : $LogFile"
-  Write-Host "=================================================="
-  Write-Host ""
+    Write-RunHeader "END (add + commit + push)" $logFile
 
-  Write-LogHeader
+    # [1/5] Preflight: git + repo
+    $step++; Write-Step "[$step/$total] Checking Git and repository..."
+    Assert-Git
+    Push-Location $root
+    try {
+        $null = & git rev-parse --is-inside-work-tree 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Write-Fail "Current folder is not a Git repository."
+            throw "Not a git repo."
+        }
+    } finally { Pop-Location }
+    Write-Ok "  [$step/$total] Git and repository OK"
 
-  # 1) git status
-  "[RUN] git status" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  Write-Host "[RUN] git status"
-  $ec = Run-Cmd -WorkingDirectory $Root -CommandLine "git status"
-  if ($ec -ne 0) { throw "git status failed (exit code=$ec)" }
+    # [2/5] What will be committed / pushed (branch + remote; full status only in log)
+    $step++; Write-Step "[$step/$total] What will be committed and pushed..."
+    Invoke-External -StepName "git status" -CommandLine "git status" -LogFile $logFile -WorkingDirectory $root
+    Invoke-External -StepName "git remote -v" -CommandLine "git remote -v" -LogFile $logFile -WorkingDirectory $root
+    Write-Ok "  [$step/$total] Branch and remote recorded (details in log)"
 
-  # 2) git add .
-  "" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  "[RUN] git add ." | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  Write-Host ""
-  Write-Host "[RUN] git add ."
-  $ec = Run-Cmd -WorkingDirectory $Root -CommandLine "git add ."
-  if ($ec -ne 0) { throw "git add failed (exit code=$ec)" }
+    # [3/5] Staging: 3.0 quick view, 3A tracked, 3B new files (safe)
+    $step++; Write-Step "[$step/$total] Staging changes (tracked + new files safely)..."
+    $summary = Get-RepoStatusSummary -RepoRoot $root
+    Write-Host "  Tracked changes: $($summary.TrackedCount)"
+    Write-Host "  New files (untracked): $($summary.UntrackedCount)"
+    if ($summary.TopUntrackedFolders -and $summary.TopUntrackedFolders.Count -gt 0) {
+        Write-Host "  Top new folders:"
+        foreach ($t in $summary.TopUntrackedFolders) { Write-Host "    $($t.Name): $($t.Count)" }
+    }
+    $includeNewFiles = $true
+    if ($summary.HighRisk) {
+        Write-Warn "  Large new content detected (likely dependencies/build output). Recommended: do NOT include new files now."
+        $safeCmd = "git add -u"
+        $forceCmd = "git add ."
+        Write-Host "  Safe command (tracked only): $safeCmd"
+        Write-Host "  Force include all new files: $forceCmd"
+        try { Set-Clipboard -Value $safeCmd } catch { }
+        $ans = Read-Host "  Type YES to include new files anyway (otherwise only tracked changes will be staged)"
+        if ($ans -ne "YES") {
+            $includeNewFiles = $false
+            Write-Host "  Proceeding with tracked changes only. New files were NOT included; they are still on disk; nothing was deleted." -ForegroundColor Yellow
+        }
+    }
+    $statusCounts = @{ Tracked = $summary.TrackedCount; Untracked = $summary.UntrackedCount }
+    Write-Host "  [3A] Stage tracked (git add -u)..."
+    Invoke-External -StepName "git add -u" -CommandLine "git add -u" -LogFile $logFile -WorkingDirectory $root -HeartbeatSec 10 -TimeoutSec 120 -StatusCounts $statusCounts
+    Write-Ok "  [3A] Tracked staged"
+    if ($includeNewFiles -and $summary.UntrackedCount -gt 0) {
+        Write-Host "  [3B] Stage new files (excluding build/deps/junk)..."
+        $pathListFile = Get-SafeUntrackedPathListFile -RepoRoot $root
+        if ($pathListFile) {
+            $addCmd = "git add --pathspec-from-file=`"$pathListFile`""
+            Invoke-External -StepName "git add new files" -CommandLine $addCmd -LogFile $logFile -WorkingDirectory $root -HeartbeatSec 10 -TimeoutSec 120 -StatusCounts $statusCounts
+            Write-Ok "  [3B] New files staged (safe list)"
+        } else {
+            Write-Host "  [3B] No new files to add (after exclusions)." -ForegroundColor Gray
+        }
+    } elseif (-not $includeNewFiles -and $summary.UntrackedCount -gt 0) {
+        Write-Host "  [3B] Skipped (per your choice). New files remain on disk; nothing was deleted." -ForegroundColor Gray
+    }
+    Write-Ok "  [$step/$total] Staging done"
 
-  # 3) git commit -m "sync"（无改动时允许失败）
-  "" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  "[RUN] git commit -m ""sync""" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  Write-Host ""
-  Write-Host "[RUN] git commit -m ""sync"""
-  $ecCommit = Run-Cmd -WorkingDirectory $Root -CommandLine "git commit -m ""sync"""
-  # 不强制要求 commit 成功：没变更会返回非 0，这是正常情况
+    # [4/5] git commit -m "sync" (allow failure when nothing to commit)
+    $step++; Write-Step "[$step/$total] Committing (git commit -m ""sync"")..."
+    $commitSucceeded = $false
+    try {
+        Invoke-External -StepName "git commit -m sync" -CommandLine "git commit -m ""sync""" -LogFile $logFile -WorkingDirectory $root
+        $commitSucceeded = $true
+    } catch {
+        Write-Warn "  [$step/$total] Commit skipped (no changes or other reason). Push will still run."
+    }
+    if ($commitSucceeded) { Write-Ok "  [$step/$total] Committed" }
 
-  # 4) git push（无论 commit 是否成功都执行 push；没提交就会提示 up-to-date）
-  "" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  "[RUN] git push" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  Write-Host ""
-  Write-Host "[RUN] git push"
-  $ec = Run-Cmd -WorkingDirectory $Root -CommandLine "git push"
-  if ($ec -ne 0) { throw "git push failed (exit code=$ec)" }
+    # [5/5] git push
+    $step++; Write-Step "[$step/$total] Pushing to remote (git push)..."
+    Invoke-External -StepName "git push" -CommandLine "git push" -LogFile $logFile -WorkingDirectory $root
+    Write-Ok "  [$step/$total] Pushed"
 
-  "" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  "[OK] END OK" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  Write-Host ""
-  Write-Host "[OK] END OK"
+    $sw.Stop()
+    Write-Host ""
+    Write-Ok ("SUCCESS. Elapsed: {0:N1}s. Log: {1}" -f $sw.Elapsed.TotalSeconds, $logFile)
+    $global:LASTEXITCODE = 0
 }
 catch {
-  "" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  ("[FAILED] {0}" -f $_.Exception.Message) | Out-File -FilePath $LogFile -Encoding UTF8 -Append
-  Write-Host ""
-  Write-Host "[FAILED] $($_.Exception.Message)"
-  Write-Host "Please open log: $LogFile"
-  if (-not $NoPause) { Read-Host "Press Enter to close" }
-  exit 1
+    $sw.Stop()
+    Write-Host ""
+    Write-Fail ("FAILED at step $step. Log: {0}" -f $logFile)
+    Write-Host $_.Exception.Message
+    $global:LASTEXITCODE = 1
+    if (-not $NoPause) { Read-Host "Press Enter to close" }
+    if ($ExitOnFinish) { exit 1 }
+    return
 }
 
 if (-not $NoPause) { Read-Host "Press Enter to close" }
-exit 0
+if ($ExitOnFinish) { exit $global:LASTEXITCODE }
+return
