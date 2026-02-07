@@ -1,287 +1,409 @@
-# CEO 操作速查（复制粘贴）
+# CEO 操作速查（一行一行复制）
 
-命令 + 中文行内注释；每步先 `cd` 再执行，路径均相对仓库根目录。
+每步两行：第一行 `cd` 说明在哪儿执行，第二行要执行的命令。注释用大白话说明「属于哪一步、干了啥、清空啥」。
 
 ---
 
-## 一、一键脚本（仓库根执行）
+## 【开工】确认本机 Docker 已就绪（可验证的命令）
 
-```powershell
-cd .   # 【拉取】确保在仓库根
-.\DFBS-GIT-PULL.ps1 -NoPause
+```
+cd .   # 【开工】在仓库根；任意目录也能执行
 ```
 
-```powershell
-cd .   # 【基建】启动 Docker 编排（Postgres/Redis/RabbitMQ/MinIO）
-.\DFBS-INFRA-UP.ps1 -NoPause
+```
+docker version   # 【开工】检查本机是否装了 Docker、能否连上引擎
 ```
 
-```powershell
-cd .   # 【收尾】暂存 + 提交 + 推送（无暂停、不退出当前 shell）
-.\DFBS-END.ps1 -NoPause
+```
+docker compose version   # 【开工】检查本机是否有 Compose（任意目录也能执行）
 ```
 
 ---
 
-## 二、脚本不可用时的等价命令（仓库根）
+## 【脚本-首选】拉取远程代码
 
-### 拉取（GIT-PULL 等价）
-
-```powershell
-cd .   # 【拉取】查看状态
-git status
+```
+cd .   # 【脚本-首选】在仓库根，准备拉取
 ```
 
-```powershell
-cd .   # 【拉取】查看远程
-git remote -v
 ```
-
-```powershell
-cd .   # 【拉取】拉取远程
-git pull
-```
-
-### 基建（INFRA-UP 等价）
-
-```powershell
-cd .   # 【基建】检查 Docker（任意目录可执行）
-docker version
-```
-
-```powershell
-cd .   # 【基建】检查 Compose（任意目录可执行）
-docker compose version
-```
-
-```powershell
-cd .   # 【基建】启动所有服务
-docker compose -f ".\infra\docker-compose.yml" up -d
-```
-
-```powershell
-cd .   # 【基建】查看运行中的服务
-docker compose -f ".\infra\docker-compose.yml" ps
-```
-
-```powershell
-cd .   # 【基建】查看某服务日志（把 <service> 换成 postgres / redis / rabbitmq / minio）
-docker compose -f ".\infra\docker-compose.yml" logs <service>
-```
-
-```powershell
-cd .   # 【基建】停止并删除容器（不删卷）
-docker compose -f ".\infra\docker-compose.yml" down
-```
-
-### 收尾（END 等价）
-
-```powershell
-cd .   # 【收尾】查看状态
-git status
-```
-
-```powershell
-cd .   # 【收尾】只暂存已跟踪文件的修改
-git add -u
-```
-
-```powershell
-cd .   # 【收尾】检查是否有暂存（0=无，1=有）
-git diff --cached --quiet
-```
-
-```powershell
-cd .   # 【收尾】提交
-git commit -m "sync"
-```
-
-```powershell
-cd .   # 【收尾】推送（带进度，凭证提示会显示在当前窗口）
-git push --progress
+.\DFBS-GIT-PULL.ps1 -NoPause   # 【脚本-首选】拉取远程代码（无暂停）
 ```
 
 ---
 
-## 三、换电脑前（仓库根）
+## 【脚本-首选】启动本机数据库和中间件（Postgres/Redis/RabbitMQ/MinIO）
 
-```powershell
-cd .   # 【换电脑前】只暂存已跟踪修改
-git add -u
+```
+cd .   # 【脚本-首选】在仓库根，准备启动
 ```
 
-```powershell
-cd .   # 【换电脑前】可选：包含新文件（可能很慢、容易把 node_modules 等杂物加进去）
-git add .
 ```
-
-```powershell
-cd .   # 【换电脑前】提交备份
-git commit -m "Backup: before switching computers"
-```
-
-```powershell
-cd .   # 【换电脑前】推送到远程
-git push --progress
+.\DFBS-INFRA-UP.ps1 -NoPause   # 【脚本-首选】启动本机数据库和中间件（无暂停）
 ```
 
 ---
 
-## 四、换电脑后（仓库根）
+## 【脚本-首选】下班前：暂存 + 提交 + 推送到远程
 
-```powershell
-cd .   # 【换电脑后】先看状态
-git status
+```
+cd .   # 【脚本-首选】在仓库根，准备收尾
 ```
 
-```powershell
-cd .   # 【换电脑后】拉取
-git pull
 ```
-
-```powershell
-cd .   # 【换电脑后】再确认
-git status
+.\DFBS-END.ps1 -NoPause   # 【脚本-首选】暂存、提交、推送（无暂停、不关窗口）
 ```
 
 ---
 
-## 五、启动后端（仓库根 → 后端目录）
+## 【换电脑前】用脚本收尾（首选）
 
-```powershell
+```
+cd .   # 【换电脑前】在仓库根
+```
+
+```
+.\DFBS-END.ps1 -NoPause   # 【换电脑前】把当前改动推上去，换电脑后能拉下来
+```
+
+---
+
+## 【换电脑后】用脚本拉取（首选）
+
+```
+cd .   # 【换电脑后】在仓库根
+```
+
+```
+.\DFBS-GIT-PULL.ps1 -NoPause   # 【换电脑后】把远程最新代码拉下来
+```
+
+---
+
+## 【脚本坏了-手动等价】拉取：看状态、看远程、拉取
+
+```
+cd .   # 【拉取-手动】在仓库根
+```
+
+```
+git status   # 【拉取-手动】看当前有哪些改动
+```
+
+```
+cd .   # 【拉取-手动】在仓库根
+```
+
+```
+git remote -v   # 【拉取-手动】看远程地址
+```
+
+```
+cd .   # 【拉取-手动】在仓库根
+```
+
+```
+git pull   # 【拉取-手动】从远程拉最新代码
+```
+
+---
+
+## 【脚本坏了-手动等价】启动本机服务：看版本、启动、看状态、看日志、停止
+
+```
+cd .   # 【启动-手动】在仓库根；任意目录也能执行
+```
+
+```
+docker version   # 【启动-手动】检查 Docker 是否可用
+```
+
+```
+cd .   # 【启动-手动】在仓库根；任意目录也能执行
+```
+
+```
+docker compose version   # 【启动-手动】检查 Compose 是否可用
+```
+
+```
+cd .   # 【启动-手动】在仓库根
+```
+
+```
+docker compose -f ".\infra\docker-compose.yml" up -d   # 【启动-手动】启动本机数据库和中间件（后台跑）
+```
+
+```
+cd .   # 【启动-手动】在仓库根
+```
+
+```
+docker compose -f ".\infra\docker-compose.yml" ps   # 【启动-手动】看哪些服务在跑
+```
+
+```
+cd .   # 【启动-手动】在仓库根
+```
+
+```
+docker compose -f ".\infra\docker-compose.yml" logs postgres   # 【启动-手动】看数据库服务日志
+```
+
+```
+cd .   # 【启动-手动】在仓库根
+```
+
+```
+docker compose -f ".\infra\docker-compose.yml" logs redis   # 【启动-手动】看 Redis 服务日志
+```
+
+```
+cd .   # 【启动-手动】在仓库根
+```
+
+```
+docker compose -f ".\infra\docker-compose.yml" logs rabbitmq   # 【启动-手动】看 RabbitMQ 服务日志
+```
+
+```
+cd .   # 【启动-手动】在仓库根
+```
+
+```
+docker compose -f ".\infra\docker-compose.yml" logs minio   # 【启动-手动】看 MinIO 服务日志
+```
+
+```
+cd .   # 【启动-手动】在仓库根
+```
+
+```
+docker compose -f ".\infra\docker-compose.yml" down   # 【启动-手动】停止所有服务（不删本机数据）
+```
+
+---
+
+## 【脚本坏了-手动等价】收尾：暂存、看有没有要提交的、提交、推送
+
+```
+cd .   # 【收尾-手动】在仓库根
+```
+
+```
+git status   # 【收尾-手动】看当前有哪些改动
+```
+
+```
+cd .   # 【收尾-手动】在仓库根
+```
+
+```
+git add -u   # 【收尾-手动】只把已跟踪文件的修改放进「待提交」
+```
+
+```
+cd .   # 【收尾-手动】在仓库根
+```
+
+```
+git diff --cached --quiet   # 【收尾-手动】看有没有待提交的（0=没有，1=有）
+```
+
+```
+cd .   # 【收尾-手动】在仓库根
+```
+
+```
+git commit -m "sync"   # 【收尾-手动】把待提交的打成一条提交
+```
+
+```
+cd .   # 【收尾-手动】在仓库根
+```
+
+```
+git push --progress   # 【收尾-手动】推送到远程（会显示进度；要输密码时在本窗口输）
+```
+
+---
+
+## 【启动后端】在后端目录启动 Spring Boot
+
+```
 cd .\backend\dfbs-app   # 【启动后端】进入后端目录
-.\mvnw.cmd spring-boot:run
-```
-停止：在该窗口按 `Ctrl+C`。
-
----
-
-## 六、启动前端（仓库根 → 前端目录）
-
-```powershell
-cd .   # 【前端】在仓库根（首次或依赖变更时执行）
-cd .\frontend\dfbs-ui
-npm install
 ```
 
-```powershell
-cd .\frontend\dfbs-ui   # 【前端】启动开发服务器
-npm run dev
+```
+.\mvnw.cmd spring-boot:run   # 【启动后端】启动本机后端服务（停用请在本窗口按 Ctrl+C）
 ```
 
 ---
 
-## 七、数据库清理（说明：各命令“清掉什么”）
+## 【启动前端】在前端目录装依赖、启动开发服务器
 
-### A) Docker 卷重置（清掉所有持久化数据，含整库）
-
-```powershell
-cd .   # 【清库】停止并删容器+卷，清掉 Postgres/MinIO 等所有卷内数据
-docker compose -f ".\infra\docker-compose.yml" down -v
+```
+cd .\frontend\dfbs-ui   # 【启动前端】进入前端目录（仓库根没有 package.json，必须进这里）
 ```
 
-```powershell
-cd .   # 【清库后】重新启动服务
-docker compose -f ".\infra\docker-compose.yml" up -d
+```
+npm install   # 【启动前端】安装依赖（首次或依赖改过时执行）
 ```
 
-### B) 查当前容器名（便于下面用 docker exec）
-
-```powershell
-cd .   # 【查容器】看服务名与容器名
-docker compose -f ".\infra\docker-compose.yml" ps
 ```
-Postgres 容器名为：`dfbs-postgres`。
-
-### C) 执行 SQL：只清业务表（truncate-business-data.sql）
-
-清掉表：`work_order`（及 CASCADE 子表）、`platform_account_applications`、`platform_org`、`md_customer`、`contracts`。
-
-```powershell
-cd .   # 【清业务表】复制 SQL 进容器
-docker cp .\backend\dfbs-app\truncate-business-data.sql dfbs-postgres:/tmp\truncate-business-data.sql
+cd .\frontend\dfbs-ui   # 【启动前端】进入前端目录
 ```
 
-```powershell
-cd .   # 【清业务表】在容器内用 psql 执行（用户 dfbs，库 dfbs）
-docker exec -i dfbs-postgres psql -U dfbs -d dfbs -f /tmp/truncate-business-data.sql
 ```
-
-### D) 执行 SQL：清空 public 库（wipe-schema.sql）
-
-清掉：删除并重建 `public` schema，库内 public 下全部对象和数据清空。
-
-```powershell
-cd .   # 【清 public】复制 SQL 进容器
-docker cp .\backend\dfbs-app\scripts\wipe-schema.sql dfbs-postgres:/tmp\wipe-schema.sql
-```
-
-```powershell
-cd .   # 【清 public】在容器内执行
-docker exec -i dfbs-postgres psql -U dfbs -d dfbs -f /tmp/wipe-schema.sql
+npm run dev   # 【启动前端】启动本机前端开发服务器
 ```
 
 ---
 
-## 八、危险操作（仅本地、会清库，慎用）
+## 【清库】方法一：停服务并删掉本机数据（数据库+文件存储等全部清空）
 
-### WipeSchemaMain（Maven 执行类，会清库）
+说明：只影响这台电脑上的本机数据库、本机测试数据、本机文件存储等，不影响 GitHub 上的代码。
 
-```powershell
-cd .\backend\dfbs-app   # 【危险】执行 WipeSchemaMain，会清库，只对本地
-.\mvnw.cmd -q exec:java -Dexec.mainClass="com.dfbs.app.scripts.WipeSchemaMain" -Dexec.classpathScope=test
+```
+cd .   # 【清库-方法一】在仓库根
 ```
 
-### Spring 启动时清业务表（cleanup 配置）
+```
+docker compose -f ".\infra\docker-compose.yml" down -v   # 【清库-方法一】停服务并删掉本机数据（卷删掉=数据库和 MinIO 存的数据全没）
+```
 
-```powershell
-cd .\backend\dfbs-app   # 【危险】带 cleanup 配置启动，启动时清：work_order、platform_account_applications、platform_org、md_customer、contracts
-.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=cleanup
+```
+cd .   # 【清库-方法一】在仓库根
+```
+
+```
+docker compose -f ".\infra\docker-compose.yml" up -d   # 【清库-方法一】重新启动本机服务（库是空的）
 ```
 
 ---
 
-## 九、环境检查（任意目录可执行）
+## 【清库】方法二：只清业务表（不动库结构）
 
-以下命令不依赖当前目录，可在任意目录执行；注释中标明“任意目录可执行”。
+说明：执行仓库里的 `truncate-business-data.sql`，清空这些表里的数据：work_order（及级联子表）、platform_account_applications、platform_org、md_customer、contracts。库结构还在。
 
-```powershell
-pwsh -v   # 任意目录可执行
+```
+cd .   # 【清库-方法二】在仓库根
 ```
 
-```powershell
-git --version   # 任意目录可执行
+```
+docker cp .\backend\dfbs-app\truncate-business-data.sql dfbs-postgres:/tmp/truncate-business-data.sql   # 【清库-方法二】把 SQL 文件拷进数据库容器
 ```
 
-```powershell
-docker version   # 任意目录可执行
+```
+cd .   # 【清库-方法二】在仓库根
 ```
 
-```powershell
-docker compose version   # 任意目录可执行
+```
+docker compose -f ".\infra\docker-compose.yml" exec -T postgres psql -U dfbs -d dfbs -f /tmp/truncate-business-data.sql   # 【清库-方法二】在容器里执行 SQL，清空业务表数据
 ```
 
-```powershell
-node -v   # 任意目录可执行
+---
+
+## 【清库】方法三：清空 public 里所有对象（本机数据库从零开始）
+
+说明：执行仓库里的 `wipe-schema.sql`，删掉并重建 public，等于本机数据库里 public 下所有表、数据都没了，从零开始。
+
+```
+cd .   # 【清库-方法三】在仓库根
 ```
 
-```powershell
-npm -v   # 任意目录可执行
+```
+docker cp .\backend\dfbs-app\scripts\wipe-schema.sql dfbs-postgres:/tmp/wipe-schema.sql   # 【清库-方法三】把 SQL 拷进数据库容器
 ```
 
-```powershell
-java -version   # 任意目录可执行
+```
+cd .   # 【清库-方法三】在仓库根
 ```
 
-```powershell
-cd .\backend\dfbs-app   # Maven 版本需在后端目录
-.\mvnw.cmd -v
+```
+docker compose -f ".\infra\docker-compose.yml" exec -T postgres psql -U dfbs -d dfbs -f /tmp/wipe-schema.sql   # 【清库-方法三】在容器里执行，清空 public 里所有对象
 ```
 
-```powershell
-wsl --status   # 任意目录可执行（仅当已装 WSL）
+---
+
+## 【环境检查】每行检查一项（任意目录也能执行的已标出）
+
+```
+cd .   # 【环境检查】在仓库根；任意目录也能执行
 ```
 
-```powershell
-wsl -l -v   # 任意目录可执行（仅当已装 WSL）
+```
+pwsh -v   # 【环境检查】看 PowerShell 版本；任意目录也能执行
+```
+
+```
+cd .   # 【环境检查】在仓库根；任意目录也能执行
+```
+
+```
+git --version   # 【环境检查】看 Git 是否装好；任意目录也能执行
+```
+
+```
+cd .   # 【环境检查】在仓库根；任意目录也能执行
+```
+
+```
+docker version   # 【环境检查】看 Docker 是否装好、能否连上引擎；任意目录也能执行
+```
+
+```
+cd .   # 【环境检查】在仓库根；任意目录也能执行
+```
+
+```
+docker compose version   # 【环境检查】看 Compose 是否可用；任意目录也能执行
+```
+
+```
+cd .   # 【环境检查】在仓库根；任意目录也能执行
+```
+
+```
+node -v   # 【环境检查】看 Node 版本；任意目录也能执行
+```
+
+```
+cd .   # 【环境检查】在仓库根；任意目录也能执行
+```
+
+```
+npm -v   # 【环境检查】看 npm 版本；任意目录也能执行
+```
+
+```
+cd .   # 【环境检查】在仓库根；任意目录也能执行
+```
+
+```
+java -version   # 【环境检查】看 Java 是否装好；任意目录也能执行
+```
+
+```
+cd .\backend\dfbs-app   # 【环境检查】必须在后端目录看 Maven 版本
+```
+
+```
+.\mvnw.cmd -v   # 【环境检查】看 Maven（mvnw）版本
+```
+
+```
+cd .   # 【环境检查】在仓库根；任意目录也能执行（仅当已装 WSL）
+```
+
+```
+wsl --status   # 【环境检查】看 WSL 状态；任意目录也能执行（仅当已装 WSL）
+```
+
+```
+cd .   # 【环境检查】在仓库根；任意目录也能执行（仅当已装 WSL）
+```
+
+```
+wsl -l -v   # 【环境检查】看 WSL 里的发行版；任意目录也能执行（仅当已装 WSL）
 ```
