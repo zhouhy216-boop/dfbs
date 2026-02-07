@@ -78,16 +78,24 @@ try {
     }
     Write-Ok "  [$step/$total] Staging done"
 
-    # [4/5] git commit -m "sync" (allow failure when nothing to commit)
+    # [4/5] git commit -m "sync" (skip when nothing staged; no red failure card)
     $step++; Write-Step "[$step/$total] Committing (git commit -m ""sync"")..."
-    $commitSucceeded = $false
-    try {
-        Invoke-External -StepName "git commit -m sync" -CommandLine "git commit -m ""sync""" -LogFile $logFile -WorkingDirectory $root
-        $commitSucceeded = $true
-    } catch {
-        Write-Warn "  [$step/$total] Commit skipped (no changes or other reason). Push will still run."
+    $null = & git -C $root diff --cached --quiet 2>&1
+    $cachedExit = $LASTEXITCODE
+    if ($cachedExit -eq 0) {
+        Write-Ok "  [$step/$total] No changes to commit, skipping commit. Push will still run."
+    } elseif ($cachedExit -eq 1) {
+        try {
+            Invoke-External -StepName "git commit -m sync" -CommandLine "git commit -m ""sync""" -LogFile $logFile -WorkingDirectory $root
+            Write-Ok "  [$step/$total] Committed"
+        } catch {
+            Write-Warn "  [$step/$total] Commit failed. Push will still run."
+            Write-Host $_.Exception.Message
+        }
+    } else {
+        Write-Fail "  [$step/$total] git diff --cached failed (exit $cachedExit). Check repo state."
+        throw "Pre-check failed: git diff --cached (exit $cachedExit)"
     }
-    if ($commitSucceeded) { Write-Ok "  [$step/$total] Committed" }
 
     # [5/5] git push (interactive so credential/passphrase prompts are visible)
     $step++; Write-Step "[$step/$total] Pushing to remote (git push --progress)..."
