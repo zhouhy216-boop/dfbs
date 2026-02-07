@@ -22,8 +22,8 @@ import {
   AuditOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
-import { getStoredToken } from '@/utils/request';
-import { useAuthStore } from '@/stores/useAuthStore';
+import { getStoredToken } from '@/shared/utils/request';
+import { useAuthStore } from '@/shared/stores/useAuthStore';
 
 /** Static menu config: guaranteed array to avoid "spread non-iterable" in ProLayout. */
 const MENU_ROUTES = [

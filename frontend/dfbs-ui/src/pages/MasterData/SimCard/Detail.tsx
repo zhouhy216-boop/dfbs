@@ -3,8 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ProDescriptions, ProTable } from '@ant-design/pro-components';
 import type { ProColumns } from '@ant-design/pro-components';
 import { Card, Tabs, Button } from 'antd';
-import request from '@/utils/request';
-import type { SpringPage } from '@/utils/adapters';
+import request from '@/shared/utils/request';
+import type { SpringPage } from '@/shared/utils/adapters';
 
 interface SimCardDetail {
   id: number;

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Drawer, Table, Button, Input, Radio, Space, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import request from '@/utils/request';
+import request from '@/shared/utils/request';
 
 export interface BomConflictRow {
   id: number;

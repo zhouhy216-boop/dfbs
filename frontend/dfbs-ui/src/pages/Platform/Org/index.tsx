@@ -4,14 +4,15 @@ import type { FormInstance } from 'antd/es/form';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable, ProDescriptions } from '@ant-design/pro-components';
 import type { AxiosError } from 'axios';
-import request from '@/utils/request';
-import SmartReferenceSelect from '@/components/SmartReferenceSelect';
-import SmartInput from '@/components/SmartInput';
-import DuplicateCheckModal from '@/components/Business/DuplicateCheckModal';
-import type { DuplicateMatchItem } from '@/components/Business/DuplicateCheckModal';
-import type { SpringPage } from '@/utils/adapters';
-import { PhoneRule, EmailRule, OrgCodeRule, OrgCodeUppercaseRule } from '@/utils/validators';
-import { getPlatformConfigs, type PlatformConfigItem } from '@/services/platformConfig';
+import request from '@/shared/utils/request';
+import SmartReferenceSelect from '@/shared/components/SmartReferenceSelect';
+import SmartInput from '@/shared/components/SmartInput';
+import DuplicateCheckModal from '@/features/platform/components/DuplicateCheckModal';
+import type { DuplicateMatchItem } from '@/features/platform/components/DuplicateCheckModal';
+import type { SpringPage } from '@/shared/utils/adapters';
+import { PhoneRule, EmailRule } from '@/shared/utils/validators/common';
+import { OrgCodeRule, OrgCodeUppercaseRule } from '@/features/platform/utils/validators';
+import { getPlatformConfigs, type PlatformConfigItem } from '@/features/platform/services/platformConfig';
 
 type PlatformType = 'INHAND' | 'HENDONG' | 'JINGPIN' | 'OTHER';
 

@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { Card, Form, Input, Button, DatePicker, Select, Result, message } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import type { Dayjs } from 'dayjs';
-import request from '@/utils/request';
-import SmartReferenceSelect from '@/components/SmartReferenceSelect';
+import request from '@/shared/utils/request';
+import SmartReferenceSelect from '@/shared/components/SmartReferenceSelect';
 
 function CustomerSmartSelect({ form }: { form: FormInstance }) {
   const customerName = Form.useWatch('customerName', form);

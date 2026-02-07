@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AutoComplete, Tag } from 'antd';
 import type { DefaultOptionType } from 'antd/es/select';
-import request from '@/utils/request';
+import request from '@/shared/utils/request';
 
 export type EntityType = 'CUSTOMER' | 'MACHINE' | 'PART' | 'CONTRACT' | 'SIM' | 'MODEL';
 
@@ -137,20 +137,20 @@ export default function SmartReferenceSelect({
     [onChange, search]
   );
 
-  return (
-    <AutoComplete
-      value={inputValue}
-      onChange={handleSearch}
-      onSelect={handleSelect}
-      onBlur={handleBlur}
-      placeholder={partNeedsModel ? '请先选择型号' : placeholder ?? '输入关键词搜索或直接输入新名称'}
-      options={options}
-      loading={loading}
-      disabled={effectiveDisabled}
-      style={{ width: '100%', ...style }}
-      allowClear={allowClear}
-      notFoundContent={loading ? '搜索中...' : undefined}
-      filterOption={false}
-    />
-  );
+  const autoCompleteProps = {
+    value: inputValue,
+    onChange: handleSearch,
+    onSelect: handleSelect,
+    onBlur: handleBlur,
+    placeholder: partNeedsModel ? '请先选择型号' : placeholder ?? '输入关键词搜索或直接输入新名称',
+    options,
+    loading,
+    disabled: effectiveDisabled,
+    style: { width: '100%', ...style },
+    allowClear,
+    notFoundContent: loading ? '搜索中...' : undefined,
+    filterOption: false,
+  };
+  // AutoComplete types omit 'loading'; rc-select accepts it at runtime
+  return <AutoComplete {...(autoCompleteProps as React.ComponentProps<typeof AutoComplete> & { loading?: boolean })} />;
 }

@@ -1,4 +1,4 @@
-import request from '@/utils/request';
+import request from '@/shared/utils/request';
 
 /** Matches backend PlatformConfigResponse. */
 export interface PlatformConfigItem {

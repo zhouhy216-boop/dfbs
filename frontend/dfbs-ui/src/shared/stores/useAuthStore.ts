@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getStoredToken, setStoredToken, clearStoredToken } from '@/utils/request';
+import { getStoredToken, setStoredToken, clearStoredToken } from '@/shared/utils/request';
 
 export interface UserInfo {
   id?: number;

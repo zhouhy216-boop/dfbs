@@ -14,8 +14,8 @@ import {
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable, ModalForm, ProFormText, ProFormDatePicker, ProFormList, ProFormDigit, ProFormGroup } from '@ant-design/pro-components';
 import type { ActionType } from '@ant-design/pro-components';
-import request from '@/utils/request';
-import { toProTableResult, type SpringPage } from '@/utils/adapters';
+import request from '@/shared/utils/request';
+import { toProTableResult, type SpringPage } from '@/shared/utils/adapters';
 import ConflictDrawer from './components/ConflictDrawer';
 
 interface ModelDetail {

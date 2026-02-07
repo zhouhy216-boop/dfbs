@@ -8,8 +8,8 @@ import {
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import { Button, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import request from '@/utils/request';
-import { toProTableResult, type SpringPage } from '@/utils/adapters';
+import request from '@/shared/utils/request';
+import { toProTableResult, type SpringPage } from '@/shared/utils/adapters';
 
 interface MachineRow {
   id: number;

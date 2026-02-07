@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Form, Input, Button, Card, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import request from '@/utils/request';
-import { useAuthStore } from '@/stores/useAuthStore';
+import request from '@/shared/utils/request';
+import { useAuthStore } from '@/shared/stores/useAuthStore';
 
 export default function Login() {
   const navigate = useNavigate();

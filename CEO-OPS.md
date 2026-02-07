@@ -281,23 +281,26 @@ cd .   # 【环境检查】在仓库根（仅当已装 WSL）
 wsl -l -v   # 【环境检查】看 WSL 里的发行版
 ```
 
+
+##  阶段对齐工单
 ```
-阶段对齐工单
 [TICKET]
-ID: VNX-YYYYMMDD-###
-Title: Handover Sync — Refresh evidence/handover snapshot to CURRENT reality
+ID: VNX-20260207-016
+Title: Handover Sync — Refresh evidence/handover snapshot to CURRENT repo reality
 Priority: P2
 Risk: LOW
 Status: CURRENT
 Owner: Cursor
 Language: EN (Questions to Delivery PM only)
+Wheel: NO
+Arch: LOCAL
 
 1) Goal
-- Refresh the handover pack so PM/Gemini/Cursor can align on CURRENT repo reality.
+- Refresh the handover pack so PM/Gemini/Cursor align on CURRENT repo reality.
 - Facts only. No new requirements. No planning. No guesses.
 
-2) Scope (documentation only)
-Update these files under evidence/handover/ (overwrite/update in place):
+2) Scope (documentation only; overwrite/update in place)
+Update these files under `evidence/handover/`:
 - STATE_SNAPSHOT.md
 - UI_ENTRYPOINTS.md
 - API_SURFACE.md
@@ -308,23 +311,34 @@ Update these files under evidence/handover/ (overwrite/update in place):
 - REUSABLE_BLOCKS_ZH.md
 
 3) Hard rules
-- Facts only: derive from repo code, routes, controllers, migrations, package.json, etc.
-- If not verified, write "Not verified" (do NOT invent).
-- Remove vague words like "etc.", "likely", "maybe".
-- REUSABLE_BLOCKS_ZH.md must describe “current usage location” in page/flow wording (no code paths).
+- Facts only: derive from repo code and config (routes, controllers, migrations, package.json, scripts, etc.).
+- If not verified in repo, write exactly: `Not verified` (do NOT invent).
+- Remove vague words: `etc.`, `likely`, `maybe`, `approximately`.
+- `REUSABLE_BLOCKS_ZH.md` must describe “current usage location” in page/flow wording (NO code paths).
 
 4) What to include (minimum)
 - STATE_SNAPSHOT: what works now / known limitations (facts)
 - UI_ENTRYPOINTS: main pages/flows and where to enter them (facts)
-- API_SURFACE: enumerate existing endpoints (method + path) with controller grouping (facts)
-- DATA_BASELINE: list Flyway filenames and key tables/entities touched by migrations (facts)
-- TEST_BASELINE: how to run tests/build (backend + frontend) and what counts as BUILD SUCCESS (facts)
+- API_SURFACE: enumerate existing endpoints (METHOD + PATH), grouped by controller (facts)
+- DATA_BASELINE: list Flyway migration filenames + key tables/entities touched by each (facts)
+- TEST_BASELINE: how to run tests/build (backend + frontend) + what counts as BUILD SUCCESS (facts)
 - REPO_MAP: key folders and entry points (facts)
 - REUSABLE_BLOCKS (EN/ZH): list reusable blocks and their current usage sites (facts)
 
-5) Output to Delivery PM when done (short)
-- "DONE: <Ticket ID> — Handover Sync"
-- 3–6 bullets: what changed in handover pack + any "Not verified" items needing PM follow-up
+5) Non-goals
+- Do not change application code, scripts, infra, or behavior.
+- Do not add new requirements or design proposals.
 
+6) Constraints
+- Prefer direct citations to concrete repo evidence (file names, paths, command lines) inside the docs.
+- Keep each file concise and structured; do not paste huge code blocks.
+
+7) Unknowns
+- Any item that cannot be verified from repo sources must be marked `Not verified` and listed in the final “Not verified” bullet list.
+
+8) Output to Delivery PM when done (short)
+- `DONE: VNX-20260207-016 — Handover Sync`
+- 3–6 bullets: what changed in handover pack + any `Not verified` items needing PM follow-up
 [/TICKET]
+
 ```

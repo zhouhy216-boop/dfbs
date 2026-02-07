@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Descriptions, Button, Steps, message, Upload } from 'antd';
 import type { UploadFile } from 'antd';
-import request from '@/utils/request';
+import request from '@/shared/utils/request';
 import dayjs from 'dayjs';
 
 interface AfterSalesDetail {

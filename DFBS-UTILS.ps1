@@ -94,7 +94,8 @@ function Get-ComposeCommand {
 
 function Get-RepoStatusSummary {
     param([string]$RepoRoot = (Resolve-RepoRoot))
-    $porcelain = & git -C $RepoRoot status --porcelain 2>&1 | Out-String
+    # Use core.quotepath=false so non-ASCII (e.g. Chinese) paths are not C-escaped
+    $porcelain = & git -c core.quotepath=false -C $RepoRoot status --porcelain 2>&1 | Out-String
     $lines = @($porcelain -split "`n" | Where-Object { $_.Trim() -ne "" })
     $trackedCount = 0
     $untrackedPaths = [System.Collections.ArrayList]@()
@@ -134,31 +135,150 @@ function Get-RepoStatusSummary {
     }
 }
 
+# --- Untracked path discovery and staging (NUL-safe for Chinese/non-ASCII) ---
+# Uses git -c core.quotepath=false ls-files -z and git add -z --pathspec-from-file to avoid
+# C-escaped paths (e.g. \346\231\272...) becoming fake path components (exit 128).
+
+function Get-UntrackedPathsNulRaw {
+    param([string]$RepoRoot = (Resolve-RepoRoot))
+    try {
+        # Read stdout as raw bytes (NUL preserved); file redirect on Windows may use text mode and drop NULs
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = "git"
+        $psi.Arguments = @("-c", "core.quotepath=false", "-C", $RepoRoot, "ls-files", "--others", "--exclude-standard", "-z") -join " "
+        $psi.WorkingDirectory = $RepoRoot
+        $psi.RedirectStandardOutput = $true
+        $psi.UseShellExecute = $false
+        $psi.CreateNoWindow = $true
+        $proc = [System.Diagnostics.Process]::Start($psi)
+        $ms = New-Object System.IO.MemoryStream
+        $buf = New-Object byte[] 65536
+        do {
+            $read = $proc.StandardOutput.BaseStream.Read($buf, 0, $buf.Length)
+            if ($read -gt 0) { $ms.Write($buf, 0, $read) }
+        } while ($read -gt 0)
+        $proc.WaitForExit(30000)
+        if (-not $proc.HasExited) { try { $proc.Kill() } catch { } }
+        $bytes = $ms.ToArray()
+        $ms.Dispose()
+        $pathList = [System.Collections.Generic.List[string]]::new()
+        $utf8 = [System.Text.Encoding]::UTF8
+        $excludeDirs = $script:DFBS_AddExcludeDirs
+        $excludeFiles = $script:DFBS_AddExcludeFiles
+        $start = 0
+        for ($i = 0; $i -le $bytes.Length; $i++) {
+            if ($i -eq $bytes.Length -or $bytes[$i] -eq 0) {
+                if ($i -gt $start) {
+                    $segment = $utf8.GetString($bytes, $start, $i - $start).Trim()
+                    if ($segment.Length -gt 0) {
+                        $path = $segment -replace '\\', '/'
+                        $top = $path.Split('/')[0]
+                        if ($excludeDirs -contains $top) { $start = $i + 1; continue }
+                        if ($excludeFiles -contains $path -or $excludeFiles -contains $top) { $start = $i + 1; continue }
+                        $pathList.Add($path)
+                    }
+                }
+                $start = $i + 1
+            }
+        }
+        return $pathList.ToArray()
+    } finally { }
+}
+
 function Get-SafeUntrackedPathListFile {
     param(
         [string]$RepoRoot = (Resolve-RepoRoot),
         [string]$OutputFile = ""
     )
-    $others = & git -C $RepoRoot ls-files --others --exclude-standard 2>&1
-    if (-not $others) { return $null }
-    $excludeDirs = $script:DFBS_AddExcludeDirs
-    $excludeFiles = $script:DFBS_AddExcludeFiles
-    $safe = [System.Collections.ArrayList]@()
-    foreach ($line in $others) {
-        $path = ($line -replace '\\', '/').Trim()
-        if (-not $path) { continue }
-        $top = $path.Split('/')[0]
-        if ($excludeDirs -contains $top) { continue }
-        if ($excludeFiles -contains $path -or $excludeFiles -contains $top) { continue }
-        [void]$safe.Add($path)
-    }
-    if ($safe.Count -eq 0) { return $null }
+    # Ensure we get a string[] (PowerShell may unwrap single-element arrays)
+    [string[]]$rawPaths = @(Get-UntrackedPathsNulRaw -RepoRoot $RepoRoot)
+    # Only include paths that exist on disk (avoids bogus pathspecs like "True" from parsing/encoding)
+    $paths = @($rawPaths | Where-Object { $_ -is [string] -and $_.Length -gt 0 -and (Test-Path -LiteralPath (Join-Path $RepoRoot $_)) })
+    if (-not $paths -or $paths.Length -eq 0) { return $null }
     if (-not $OutputFile) {
         $logDir = Get-LogDir
-        $OutputFile = Join-Path $logDir ("safe-add-paths_{0}.txt" -f (Get-Date -Format "yyyyMMdd_HHmmss"))
+        $OutputFile = Join-Path $logDir ("safe-add-paths_{0}.nul" -f (Get-Date -Format "yyyyMMdd_HHmmss"))
     }
-    $safe | Out-File -FilePath $OutputFile -Encoding utf8
+    $utf8 = [System.Text.Encoding]::UTF8
+    $list = New-Object System.Collections.Generic.List[byte]
+    for ($i = 0; $i -lt $paths.Length; $i++) {
+        $pathStr = $paths[$i]
+        $list.AddRange([byte[]]$utf8.GetBytes($pathStr))
+        $list.Add(0)
+    }
+    [System.IO.File]::WriteAllBytes($OutputFile, $list.ToArray())
     return $OutputFile
+}
+
+function Invoke-GitAddPathspecNul {
+    param(
+        [Parameter(Mandatory=$true)][string]$RepoRoot,
+        [Parameter(Mandatory=$true)][string]$PathspecFile,
+        [Parameter(Mandatory=$true)][string]$LogFile,
+        [hashtable]$StatusCounts = $null,
+        [int]$HeartbeatSec = 10,
+        [int]$TimeoutSec = 120
+    )
+    $stepName = "git add new files"
+    $displayCmd = "git add --pathspec-from-file=... --pathspec-file-nul"
+    Write-Host "  Running: $displayCmd"
+    $logDir = Get-LogDir
+    $procId = [System.Diagnostics.Process]::GetCurrentProcess().Id
+    $ts = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+    $outFile = Join-Path $logDir ("_out_$procId`_$ts.txt")
+    $errFile = Join-Path $logDir ("_err_$procId`_$ts.txt")
+    $argList = @("-C", $RepoRoot, "add", "--pathspec-from-file", $PathspecFile, "--pathspec-file-nul")
+    try {
+        $proc = Start-Process -FilePath "git" -ArgumentList $argList -WorkingDirectory $RepoRoot -PassThru -NoNewWindow -RedirectStandardOutput $outFile -RedirectStandardError $errFile
+    } catch {
+        Write-Fail "Failed to start git add: $($_.Exception.Message)"
+        throw "Invoke-GitAddPathspecNul: start failed."
+    }
+    $elapsed = 0
+    $lastHeartbeat = 0
+    $useTimeout = $TimeoutSec -gt 0
+    $useHeartbeat = $HeartbeatSec -gt 0
+    while (-not $proc.HasExited) {
+        Start-Sleep -Seconds 1
+        $elapsed++
+        if ($useHeartbeat -and ($elapsed - $lastHeartbeat) -ge $HeartbeatSec) {
+            Write-Host "  Still working… $stepName … elapsed $elapsed s (Ctrl+C to abort)" -ForegroundColor Gray
+            $lastHeartbeat = $elapsed
+        }
+        if ($useTimeout -and $elapsed -ge $TimeoutSec) {
+            try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch { }
+            $proc.WaitForExit(5000) | Out-Null
+            $all = ""
+            try {
+                if (Test-Path -LiteralPath $outFile) { $all = Get-Content -LiteralPath $outFile -Raw -ErrorAction SilentlyContinue }
+                if (Test-Path -LiteralPath $errFile) { $err = Get-Content -LiteralPath $errFile -Raw -ErrorAction SilentlyContinue; if ($err) { $all += "`n" + $err } }
+            } catch { }
+            try { $all | Out-File -FilePath $LogFile -Encoding UTF8 -Append } catch { }
+            $counts = if ($StatusCounts) { $StatusCounts } else { @{} }
+            Write-FailureCard -StepName $stepName -CommandLine $displayCmd -ElapsedSec $TimeoutSec -IsTimeout $true -LogFile $LogFile -StatusCounts $counts -SuggestedCommands @("git add -u", "git commit -m ""sync""", "git push")
+            try { Remove-Item -LiteralPath $outFile, $errFile -Force -ErrorAction SilentlyContinue } catch { }
+            throw "Command timed out after ${TimeoutSec}s: $stepName"
+        }
+    }
+    $all = ""
+    try {
+        if (Test-Path -LiteralPath $outFile) { $all = Get-Content -LiteralPath $outFile -Raw -ErrorAction SilentlyContinue }
+        if (Test-Path -LiteralPath $errFile) { $err = Get-Content -LiteralPath $errFile -Raw -ErrorAction SilentlyContinue; if ($err) { $all += "`n" + $err } }
+    } catch { }
+    try { $all | Out-File -FilePath $LogFile -Encoding UTF8 -Append } catch { }
+    try { Remove-Item -LiteralPath $outFile, $errFile -Force -ErrorAction SilentlyContinue } catch { }
+    $exitCode = $proc.ExitCode
+    if ($exitCode -ne 0) {
+        $lines = @(($all -split "`n" | Where-Object { $_.Trim() -ne "" }))
+        $tail = if ($lines.Count -gt 40) { $lines[-40..-1] } else { $lines }
+        Write-Host ""
+        Write-Fail "Step failed: $stepName (exit code $exitCode)"
+        Write-Host "Last lines:" -ForegroundColor Yellow
+        Write-Host ($tail -join "`n")
+        $counts = if ($StatusCounts) { $StatusCounts } else { @{} }
+        Write-FailureCard -StepName $stepName -CommandLine $displayCmd -ElapsedSec $elapsed -IsTimeout $false -LogFile $LogFile -StatusCounts $counts -SuggestedCommands @("git add -u", "git commit -m ""sync""", "git push")
+        throw ("Command failed with exit code " + $exitCode + " — " + $stepName)
+    }
 }
 
 function Get-GitAddFailureReasons {
@@ -393,6 +513,9 @@ function Get-FailureHint {
     }
     if ($o -match "compose.*not found|docker-compose.*not found") {
         return "Docker Compose is not available. Install Docker Desktop (includes Compose) or install docker-compose separately."
+    }
+    if ($o -match "pathspec.*did not match|exit code 128.*add") {
+        return "Pathspec error (often with Chinese/non-ASCII filenames). This script uses NUL-safe staging; if you see fake paths like 346/231/272, ensure you have the latest DFBS-UTILS.ps1 (VNX-20260207-003)."
     }
     return $null
 }

@@ -9,7 +9,7 @@ import {
 } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import { Button, message } from 'antd';
-import request from '@/utils/request';
+import request from '@/shared/utils/request';
 
 /** 库存行（与 WhInventoryEntity 对应） */
 interface WhInventoryRow {

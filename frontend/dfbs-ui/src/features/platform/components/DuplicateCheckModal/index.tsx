@@ -1,6 +1,6 @@
 import { Modal } from 'antd';
 import type { ReactNode } from 'react';
-import HitAnalysisPanel, { type DuplicateMatchItem } from '@/components/Business/HitAnalysisPanel';
+import HitAnalysisPanel, { type DuplicateMatchItem } from '@/features/platform/components/HitAnalysisPanel';
 
 export type { DuplicateMatchItem };
 

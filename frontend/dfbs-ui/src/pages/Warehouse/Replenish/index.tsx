@@ -9,7 +9,7 @@ import {
 } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import { Tabs, Button, Modal, Form, Input, Radio, message } from 'antd';
-import request from '@/utils/request';
+import request from '@/shared/utils/request';
 
 /** 补货申请行（与 WhReplenishRequestEntity 对应） */
 interface ReplenishRequestRow {

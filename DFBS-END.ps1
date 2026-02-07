@@ -67,8 +67,7 @@ try {
         Write-Host "  [3B] Stage new files (excluding build/deps/junk)..."
         $pathListFile = Get-SafeUntrackedPathListFile -RepoRoot $root
         if ($pathListFile) {
-            $addCmd = "git add --pathspec-from-file=`"$pathListFile`""
-            Invoke-External -StepName "git add new files" -CommandLine $addCmd -LogFile $logFile -WorkingDirectory $root -HeartbeatSec 10 -TimeoutSec 120 -StatusCounts $statusCounts
+            Invoke-GitAddPathspecNul -RepoRoot $root -PathspecFile $pathListFile -LogFile $logFile -StatusCounts $statusCounts -HeartbeatSec 10 -TimeoutSec 120
             Write-Ok "  [3B] New files staged (safe list)"
         } else {
             Write-Host "  [3B] No new files to add (after exclusions)." -ForegroundColor Gray

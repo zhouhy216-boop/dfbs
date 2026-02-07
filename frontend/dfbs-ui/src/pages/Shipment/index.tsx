@@ -3,10 +3,10 @@ import { ProTable, ModalForm, ProFormSelect, ProFormText } from '@ant-design/pro
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import { Drawer, Descriptions, Button, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import request from '@/utils/request';
+import request from '@/shared/utils/request';
 import dayjs from 'dayjs';
-import { AttachmentList } from '@/components/AttachmentList';
-import { toProTableResult, type SpringPage } from '@/utils/adapters';
+import { AttachmentList } from '@/shared/components/AttachmentList';
+import { toProTableResult, type SpringPage } from '@/shared/utils/adapters';
 
 interface ShipmentMachineItem {
   id: number;

@@ -4,8 +4,8 @@ import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import { Tabs, Button, Modal, Form, Input, InputNumber, DatePicker, Select, message } from 'antd';
 import type { Dayjs } from 'dayjs';
 import { useNavigate } from 'react-router-dom';
-import request from '@/utils/request';
-import SmartReferenceSelect from '@/components/SmartReferenceSelect';
+import request from '@/shared/utils/request';
+import SmartReferenceSelect from '@/shared/components/SmartReferenceSelect';
 
 function CustomerSmartSelectInternal() {
   const form = Form.useFormInstance();

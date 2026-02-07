@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Card, Spin } from 'antd';
-import request from '@/utils/request';
+import request from '@/shared/utils/request';
 
 export interface DuplicateMatchItem {
   orgCodeShort?: string;

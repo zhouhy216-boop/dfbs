@@ -9,7 +9,7 @@ import {
   togglePlatformActive,
   type PlatformConfigItem,
   type PlatformConfigRequest,
-} from '@/services/platformConfig';
+} from '@/features/platform/services/platformConfig';
 
 const CODE_VALIDATOR_LABELS: Record<string, string> = {
   UPPERCASE: '仅大写字母',

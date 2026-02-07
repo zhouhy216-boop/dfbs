@@ -2,8 +2,8 @@ import { useRef } from 'react';
 import { ProTable } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import { message } from 'antd';
-import request from '@/utils/request';
-import { toProTableResult, type SpringPage } from '@/utils/adapters';
+import request from '@/shared/utils/request';
+import { toProTableResult, type SpringPage } from '@/shared/utils/adapters';
 
 function showError(e: unknown) {
   const status = (e as { response?: { status?: number } })?.response?.status;

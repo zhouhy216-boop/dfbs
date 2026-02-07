@@ -17,7 +17,7 @@ import type { UploadFile, UploadProps } from 'antd';
 import { ProCard } from '@ant-design/pro-components';
 import type { ColumnsType } from 'antd/es/table';
 import { InboxOutlined, CheckCircleOutlined, CloseCircleOutlined, WarningOutlined } from '@ant-design/icons';
-import request from '@/utils/request';
+import request from '@/shared/utils/request';
 
 const { Dragger } = Upload;
 

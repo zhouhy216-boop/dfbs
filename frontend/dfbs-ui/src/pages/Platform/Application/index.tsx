@@ -3,14 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { ProTable, ModalForm, ProFormMoney, ProFormDigit } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import { Alert, Button, Card, Col, Modal, Form, Input, InputNumber, Row, Select, Spin, Tag, message } from 'antd';
-import request from '@/utils/request';
-import SmartReferenceSelect from '@/components/SmartReferenceSelect';
-import SmartInput from '@/components/SmartInput';
-import DuplicateCheckModal from '@/components/Business/DuplicateCheckModal';
-import HitAnalysisPanel from '@/components/Business/HitAnalysisPanel';
-import type { DuplicateMatchItem } from '@/components/Business/HitAnalysisPanel';
-import { PhoneRule, EmailRule, ContractRule, OrgCodeRule, OrgCodeUppercaseRule } from '@/utils/validators';
-import { getPlatformConfigs, type PlatformConfigItem } from '@/services/platformConfig';
+import request from '@/shared/utils/request';
+import SmartReferenceSelect from '@/shared/components/SmartReferenceSelect';
+import SmartInput from '@/shared/components/SmartInput';
+import DuplicateCheckModal from '@/features/platform/components/DuplicateCheckModal';
+import HitAnalysisPanel from '@/features/platform/components/HitAnalysisPanel';
+import type { DuplicateMatchItem } from '@/features/platform/components/HitAnalysisPanel';
+import { PhoneRule, EmailRule } from '@/shared/utils/validators/common';
+import { ContractRule, OrgCodeRule, OrgCodeUppercaseRule } from '@/features/platform/utils/validators';
+import { getPlatformConfigs, type PlatformConfigItem } from '@/features/platform/services/platformConfig';
 
 const SOURCE_TYPE_OPTIONS = [
   { label: '销售渠道', value: 'FACTORY' },

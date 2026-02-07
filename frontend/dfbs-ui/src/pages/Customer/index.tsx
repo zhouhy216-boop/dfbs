@@ -2,9 +2,9 @@ import { useRef, useState } from 'react';
 import { ProTable, ModalForm, ProFormText } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import { Drawer, Descriptions, Button, message } from 'antd';
-import request from '@/utils/request';
+import request from '@/shared/utils/request';
 import dayjs from 'dayjs';
-import { toProTableResult, type SpringPage } from '@/utils/adapters';
+import { toProTableResult, type SpringPage } from '@/shared/utils/adapters';
 
 interface CustomerItem {
   id: number;

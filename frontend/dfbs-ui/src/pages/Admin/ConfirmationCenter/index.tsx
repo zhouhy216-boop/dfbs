@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Tabs, Table, Button, Modal, Form, Tag, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import request from '@/utils/request';
-import SmartReferenceSelect from '@/components/SmartReferenceSelect';
-import type { EntityType } from '@/components/SmartReferenceSelect';
+import request from '@/shared/utils/request';
+import SmartReferenceSelect from '@/shared/components/SmartReferenceSelect';
+import type { EntityType } from '@/shared/components/SmartReferenceSelect';
 
 interface TempPoolItem {
   id: number;

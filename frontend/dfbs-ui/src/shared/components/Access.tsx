@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useAuthStore } from '@/stores/useAuthStore';
+import { useAuthStore } from '@/shared/stores/useAuthStore';
 
 interface AccessProps {
   accessible: boolean;

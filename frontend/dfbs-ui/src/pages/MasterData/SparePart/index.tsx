@@ -7,8 +7,8 @@ import {
 } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import { Drawer, Descriptions, Button, message } from 'antd';
-import request from '@/utils/request';
-import { toProTableResult, type SpringPage } from '@/utils/adapters';
+import request from '@/shared/utils/request';
+import { toProTableResult, type SpringPage } from '@/shared/utils/adapters';
 
 interface SparePartRow {
   id: number;

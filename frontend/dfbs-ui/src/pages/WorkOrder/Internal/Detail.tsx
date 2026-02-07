@@ -16,8 +16,8 @@ import {
   Space,
 } from 'antd';
 import { ArrowLeftOutlined, EnvironmentOutlined } from '@ant-design/icons';
-import request from '@/utils/request';
-import { useAuthStore } from '@/stores/useAuthStore';
+import request from '@/shared/utils/request';
+import { useAuthStore } from '@/shared/stores/useAuthStore';
 import dayjs from 'dayjs';
 
 interface WorkOrder {
