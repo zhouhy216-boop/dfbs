@@ -89,9 +89,9 @@ try {
     }
     if ($commitSucceeded) { Write-Ok "  [$step/$total] Committed" }
 
-    # [5/5] git push
-    $step++; Write-Step "[$step/$total] Pushing to remote (git push)..."
-    Invoke-External -StepName "git push" -CommandLine "git push" -LogFile $logFile -WorkingDirectory $root
+    # [5/5] git push (interactive so credential/passphrase prompts are visible)
+    $step++; Write-Step "[$step/$total] Pushing to remote (git push --progress)..."
+    Invoke-External -StepName "git push" -CommandLine "git push --progress" -LogFile $logFile -WorkingDirectory $root -InteractiveConsole -HeartbeatSec 10 -TimeoutSec 600
     Write-Ok "  [$step/$total] Pushed"
 
     $sw.Stop()

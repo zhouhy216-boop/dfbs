@@ -223,18 +223,80 @@ function Invoke-External {
         [string]$WorkingDirectory = (Resolve-RepoRoot),
         [int]$TimeoutSec = 0,
         [int]$HeartbeatSec = 0,
-        [hashtable]$StatusCounts = $null
+        [hashtable]$StatusCounts = $null,
+        [switch]$InteractiveConsole
     )
     $displayCmd = if ($CommandLine.Length -gt 70) { $CommandLine.Substring(0, 67) + "..." } else { $CommandLine }
     Write-Host "  Running: $displayCmd"
 
+    $useTimeout = $TimeoutSec -gt 0
+    $useHeartbeat = $HeartbeatSec -gt 0
+
+    if ($InteractiveConsole) {
+        # Run in same console (no redirection) so credential/passphrase prompts are visible.
+        # Parse "exe arg1 arg2" -> FilePath exe, ArgumentList array
+        $idx = $CommandLine.IndexOf(' ')
+        if ($idx -lt 0) { $exe = $CommandLine; $argArray = @() } else { $exe = $CommandLine.Substring(0, $idx).Trim(); $argArray = @($CommandLine.Substring($idx + 1).Trim() -split ' ') }
+        try {
+            if ($argArray.Count -gt 0) {
+                $proc = Start-Process -FilePath $exe -ArgumentList $argArray -WorkingDirectory $WorkingDirectory -PassThru -NoNewWindow
+            } else {
+                $proc = Start-Process -FilePath $exe -WorkingDirectory $WorkingDirectory -PassThru -NoNewWindow
+            }
+        } catch {
+            Write-Fail "Failed to start command: $($_.Exception.Message)"
+            throw "Invoke-External: start failed."
+        }
+        try { Start-Transcript -Path $LogFile -Append -ErrorAction SilentlyContinue } catch { }
+        $elapsed = 0
+        $lastHeartbeat = 0
+        $credentialHintShown = $false
+        while (-not $proc.HasExited) {
+            Start-Sleep -Seconds 1
+            $elapsed++
+            if ($elapsed -ge 30 -and -not $credentialHintShown) {
+                $credentialHintShown = $true
+                Write-Host "  If this is waiting for credentials/passphrase, you should see a prompt in this window. If not, press Ctrl+C and run: git push --progress manually once to authenticate." -ForegroundColor DarkYellow
+            }
+            if ($useHeartbeat -and $HeartbeatSec -gt 0 -and ($elapsed - $lastHeartbeat) -ge $HeartbeatSec) {
+                Write-Host "  Still working… $StepName … elapsed $elapsed s (Ctrl+C to abort)" -ForegroundColor Gray
+                $lastHeartbeat = $elapsed
+            }
+            if ($useTimeout -and $TimeoutSec -gt 0 -and $elapsed -ge $TimeoutSec) {
+                try { Stop-Transcript -ErrorAction SilentlyContinue } catch { }
+                try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch { }
+                $proc.WaitForExit(5000) | Out-Null
+                $counts = if ($StatusCounts) { $StatusCounts } else { @{} }
+                Write-FailureCard -StepName $StepName -CommandLine $CommandLine -ElapsedSec $TimeoutSec -IsTimeout $true -LogFile $LogFile -StatusCounts $counts -SuggestedCommands @(
+                    "git push --progress",
+                    "git push -u origin <branch>"
+                )
+                throw ("Command timed out after " + $TimeoutSec + "s: " + $StepName)
+            }
+        }
+        try { Stop-Transcript -ErrorAction SilentlyContinue } catch { }
+        $exitCode = $proc.ExitCode
+        if ($exitCode -ne 0) {
+            Write-Host ""
+            Write-Fail "Step failed: $StepName (exit code $exitCode)"
+            $hint = Get-FailureHint -CommandLine $CommandLine -Output "" -ExitCode $exitCode
+            if ($hint) { Write-Warn "What to try:"; Write-Host $hint }
+            $counts = if ($StatusCounts) { $StatusCounts } else { @{} }
+            Write-FailureCard -StepName $StepName -CommandLine $CommandLine -ElapsedSec $elapsed -IsTimeout $false -LogFile $LogFile -StatusCounts $counts -SuggestedCommands @(
+                "git push --progress",
+                "git push -u origin <branch>"
+            )
+            throw ("Command failed with exit code " + $exitCode + " — " + $StepName)
+        }
+        return
+    }
+
+    # Non-interactive: redirect stdout/stderr to temp files
     $logDir = Get-LogDir
     $procId = [System.Diagnostics.Process]::GetCurrentProcess().Id
     $ts = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
     $outFile = Join-Path $logDir ("_out_$procId`_$ts.txt")
     $errFile = Join-Path $logDir ("_err_$procId`_$ts.txt")
-    $useTimeout = $TimeoutSec -gt 0
-    $useHeartbeat = $HeartbeatSec -gt 0
 
     try {
         $proc = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", $CommandLine -WorkingDirectory $WorkingDirectory -PassThru -NoNewWindow -RedirectStandardOutput $outFile -RedirectStandardError $errFile
