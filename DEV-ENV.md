@@ -18,7 +18,7 @@
 | Maven（mvnw -v） | 3.9.12 |
 | Docker Client | 29.1.3 |
 | Docker Compose | v5.0.0-desktop.1 |
-| Docker 引擎 | 采集时未连通（failed to connect … dockerDesktopLinuxEngine）；仅作事实记录。 |
+| Docker 引擎 | 采集时连接失败（failed to connect … dockerDesktopLinuxEngine … file specified）；仅作事实记录。 |
 
 ---
 
