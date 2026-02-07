@@ -1,406 +1,657 @@
-# API_SURFACE — Important API endpoints
+# API_SURFACE — REST endpoints by controller
 
-**Facts only.** METHOD PATH → controller (class path). Base path for backend: `/api` (frontend `request` uses `baseURL: '/api'`). No guesswork; where not verified: "Unknown (not verified)" and path to controller file.
-
----
-
-## Coverage boundary
-
-- **How endpoints were enumerated**: Scanned all `*Controller.java` under `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/` (and subpackages) for `@RequestMapping`, `@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping`, `@PatchMapping`; combined class-level path with method-level path to produce METHOD + PATH.
-- **Controller classes scanned**: 56 controller classes (as of enumeration).
-- **Date of enumeration**: 2026-01-28.
-- **Rule**: If new controllers or endpoints are added, this file must be updated via Evidence Update Ticket (after CEO acceptance + CEO BUILD SUCCESS). Do not assume this document is complete without re-scanning the interfaces tree.
+**Facts only.** Enumerated from `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/` (all *Controller.java). Base: frontend uses `baseURL: '/api'`.
 
 ---
 
-## Auth
+## AuthController — `interfaces/auth/AuthController.java`
 
-| Method | Path | Controller |
-|--------|------|------------|
-| POST | `/api/auth/login` | AuthController — `com.dfbs.app.interfaces.auth.AuthController` |
-
-Verify: `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/auth/AuthController.java`
+| Method | Path |
+|--------|------|
+| POST | /api/auth/login |
 
 ---
 
-## Platform (orgs, applications, config)
+## PlatformOrgController — `interfaces/platformorg/PlatformOrgController.java`
 
-| Method | Path | Controller |
-|--------|------|------------|
-| GET | `/api/v1/platform-orgs` | PlatformOrgController |
-| GET | `/api/v1/platform-orgs/{id}` | PlatformOrgController |
-| GET | `/api/v1/platform-orgs/platform/{platform}/customer/{customerId}` | PlatformOrgController |
-| POST | `/api/v1/platform-orgs` | PlatformOrgController |
-| PUT | `/api/v1/platform-orgs/{id}` | PlatformOrgController |
-| POST | `/api/v1/platform-account-applications/create` | PlatformAccountApplicationController |
-| GET | `/api/v1/platform-account-applications/page` | PlatformAccountApplicationController |
-| GET | `/api/v1/platform-account-applications/{id}` | PlatformAccountApplicationController |
-| GET | `/api/v1/platform-account-applications/check-customer-name` | PlatformAccountApplicationController |
-| POST | `/api/v1/platform-account-applications/check-duplicates` | PlatformAccountApplicationController |
-| GET | `/api/v1/platform-account-applications/check-org-match` | PlatformAccountApplicationController |
-| PUT | `/api/v1/platform-account-applications/{id}/planner-submit` | PlatformAccountApplicationController |
-| POST | `/api/v1/platform-account-applications/{id}/approve` | PlatformAccountApplicationController |
-| POST | `/api/v1/platform-account-applications/{id}/reject` | PlatformAccountApplicationController |
-| POST | `/api/v1/platform-account-applications/{id}/close` | PlatformAccountApplicationController |
-| GET | `/api/v1/platform-configs/options` | PlatformConfigController |
-| GET | `/api/v1/platform-configs/{code}/rules` | PlatformConfigController |
-| GET | `/api/v1/platform-configs` | PlatformConfigController |
-| GET | `/api/v1/platform-configs/{id}` | PlatformConfigController |
-| POST | `/api/v1/platform-configs` | PlatformConfigController |
-| PUT | `/api/v1/platform-configs/{id}` | PlatformConfigController |
-| PATCH | `/api/v1/platform-configs/{id}/toggle` | PlatformConfigController |
-
-Controller paths: `interfaces/platformorg/PlatformOrgController.java`, `interfaces/platformaccount/PlatformAccountApplicationController.java`, `interfaces/platformconfig/PlatformConfigController.java`.
+| Method | Path |
+|--------|------|
+| GET | /api/v1/platform-orgs |
+| GET | /api/v1/platform-orgs/{id} |
+| GET | /api/v1/platform-orgs/platform/{platform}/customer/{customerId} |
+| POST | /api/v1/platform-orgs |
+| PUT | /api/v1/platform-orgs/{id} |
 
 ---
 
-## Quotes (CRUD, workflow, items, payment, void, export, dictionary)
+## PlatformAccountApplicationController — `interfaces/platformaccount/PlatformAccountApplicationController.java`
 
-| Method | Path | Controller |
-|--------|------|------------|
-| POST | `/api/v1/quotes` | QuoteController |
-| PUT | `/api/v1/quotes/{id}` | QuoteController |
-| POST | `/api/v1/quotes/{id}/confirm` | QuoteController |
-| POST | `/api/v1/quotes/{id}/cancel` | QuoteController |
-| POST | `/api/v1/quotes/{id}/submit` | QuoteController |
-| GET | `/api/v1/quotes` | QuoteController |
-| GET | `/api/v1/quotes/{id}` | QuoteController |
-| GET | `/api/v1/quotes/my-pending` | QuoteController |
-| POST | `/api/v1/quotes/{quoteId}/items` | QuoteItemController |
-| PUT | `/api/v1/quotes/items/{itemId}` | QuoteItemController |
-| DELETE | `/api/v1/quotes/items/{itemId}` | QuoteItemController |
-| GET | `/api/v1/quotes/{quoteId}/items` | QuoteItemController |
-| POST | `/api/v1/quotes/workflow/{quoteId}/submit` | QuoteWorkflowController |
-| POST | `/api/v1/quotes/workflow/{quoteId}/audit` | QuoteWorkflowController |
-| POST | `/api/v1/quotes/workflow/{quoteId}/assign-collector` | QuoteWorkflowController |
-| GET | `/api/v1/quotes/workflow/{quoteId}/history` | QuoteWorkflowController |
-| POST | `/api/v1/quotes/workflow/fallback` | QuoteWorkflowController |
-| POST | `/api/v1/quotes/void/apply` | QuoteVoidController |
-| POST | `/api/v1/quotes/void/audit` | QuoteVoidController |
-| POST | `/api/v1/quotes/void/direct` | QuoteVoidController |
-| POST | `/api/v1/quotes/void/direct-void` | QuoteVoidController |
-| GET | `/api/v1/quotes/void/history/{quoteId}` | QuoteVoidController |
-| GET | `/api/v1/quotes/void/requests/{quoteId}` | QuoteVoidController |
-| POST | `/api/v1/payments/submit` | quote.payment.PaymentController |
-| POST | `/api/v1/payments/{paymentId}/confirm` | quote.payment.PaymentController |
-| POST | `/api/v1/payments/batch` | quote.payment.PaymentController |
-| GET | `/api/v1/payments` | quote.payment.PaymentController |
-| GET | `/api/v1/payments/quote/{quoteId}` | quote.payment.PaymentController |
-| GET | `/api/v1/payments/{paymentId}` | quote.payment.PaymentController |
-| GET | `/api/v1/dictionary` | DictionaryController |
-
-More quote-related endpoints: see `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/quote/` (QuoteExportController, QuoteVersionController, WorkOrderQuoteController, payment/PaymentMethodController).
+| Method | Path |
+|--------|------|
+| POST | /api/v1/platform-account-applications/create |
+| GET | /api/v1/platform-account-applications/page |
+| GET | /api/v1/platform-account-applications/{id} |
+| GET | /api/v1/platform-account-applications/check-customer-name |
+| POST | /api/v1/platform-account-applications/check-duplicates |
+| GET | /api/v1/platform-account-applications/check-org-match |
+| PUT | /api/v1/platform-account-applications/{id}/planner-submit |
+| POST | /api/v1/platform-account-applications/{id}/approve |
+| POST | /api/v1/platform-account-applications/{id}/reject |
+| POST | /api/v1/platform-account-applications/{id}/close |
 
 ---
 
-## Shipments
+## PlatformConfigController — `interfaces/platformconfig/PlatformConfigController.java`
 
-| Method | Path | Controller |
-|--------|------|------------|
-| POST | `/api/v1/shipments` | ShipmentController |
-| POST | `/api/v1/shipments/create-normal` | ShipmentController |
-| POST | `/api/v1/shipments/create-entrust` | ShipmentController |
-| POST | `/api/v1/shipments/{id}/machines` | ShipmentController |
-| POST | `/api/v1/shipments/parse-text` | ShipmentController |
-| POST | `/api/v1/shipments/infer-type` | ShipmentController |
-| GET | `/api/v1/shipments/{id}/export-ticket` | ShipmentController |
-| GET | `/api/v1/shipments/{id}/export-receipt` | ShipmentController |
-| POST | `/api/v1/shipments/create-from-quote` | ShipmentController |
-| GET | `/api/v1/shipments` | ShipmentController |
-| GET | `/api/v1/shipments/{id}` | ShipmentController |
-| GET | `/api/v1/shipments/{id}/machines` | ShipmentController |
-| POST | `/api/v1/shipments/{id}/accept` | ShipmentController |
-| POST | `/api/v1/shipments/{id}/ship` | ShipmentController |
-| POST | `/api/v1/shipments/{id}/complete` | ShipmentController |
-| POST | `/api/v1/shipments/{id}/exception` | ShipmentController |
-| POST | `/api/v1/shipments/{id}/cancel` | ShipmentController |
-
-DamageController (no class-level RequestMapping; full path on each method):
-
-| Method | Path | Controller |
-|--------|------|------------|
-| POST | `/api/v1/damages` | DamageController |
-| GET | `/api/v1/shipments/{shipmentId}/damages` | DamageController |
-| PUT | `/api/v1/damages/{id}/repair-stage` | DamageController |
-| PUT | `/api/v1/damages/{id}/compensation` | DamageController |
-| GET | `/api/v1/damages/config/types` | DamageController |
-| GET | `/api/v1/damages/config/treatments` | DamageController |
-
-Verify: `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/shipment/ShipmentController.java`, `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/damage/DamageController.java`.
+| Method | Path |
+|--------|------|
+| GET | /api/v1/platform-configs/options |
+| GET | /api/v1/platform-configs/{code}/rules |
+| GET | /api/v1/platform-configs |
+| GET | /api/v1/platform-configs/{id} |
+| POST | /api/v1/platform-configs |
+| PUT | /api/v1/platform-configs/{id} |
 
 ---
 
-## After-sales, work orders (internal + public)
+## QuoteController, QuoteItemController — `interfaces/quote/QuoteController.java`, QuoteItemController.java
 
-| Method | Path | Controller |
-|--------|------|------------|
-| POST | `/api/v1/after-sales` | AfterSalesController |
-| PUT | `/api/v1/after-sales/{id}` | AfterSalesController |
-| POST | `/api/v1/after-sales/{id}/submit` | AfterSalesController |
-| POST | `/api/v1/after-sales/{id}/receive` | AfterSalesController |
-| POST | `/api/v1/after-sales/{id}/process` | AfterSalesController |
-| POST | `/api/v1/after-sales/{id}/send-back` | AfterSalesController |
-| POST | `/api/v1/after-sales/{id}/complete` | AfterSalesController |
-| GET | `/api/v1/after-sales` | AfterSalesController |
-| GET | `/api/v1/after-sales/{id}` | AfterSalesController |
-| POST | `/api/v1/work-orders/create-from-quote` | WorkOrderController |
-| POST | `/api/v1/work-orders/create` | WorkOrderController |
-| POST | `/api/v1/work-orders/reject` | WorkOrderController |
-| POST | `/api/v1/work-orders/accept-by-dispatcher` | WorkOrderController |
-| POST | `/api/v1/work-orders/dispatch` | WorkOrderController |
-| POST | `/api/v1/work-orders/accept` | WorkOrderController |
-| POST | `/api/v1/work-orders/record` | WorkOrderController |
-| POST | `/api/v1/work-orders/parts/add` | WorkOrderController |
-| POST | `/api/v1/work-orders/parts/consume` | WorkOrderController |
-| POST | `/api/v1/work-orders/sign` | WorkOrderController |
-| POST | `/api/v1/work-orders/complete` | WorkOrderController |
-| GET | `/api/v1/work-orders/pool` | WorkOrderController |
-| GET | `/api/v1/work-orders/my-orders` | WorkOrderController |
-| GET | `/api/v1/work-orders/{id}` | WorkOrderController |
-| POST | `/api/v1/public/work-orders/create` | WorkOrderPublicController |
-
-Verify: `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/aftersales/AfterSalesController.java`, `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/workorder/WorkOrderController.java`, `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/workorder/WorkOrderPublicController.java`.
+| Method | Path |
+|--------|------|
+| POST | /api/v1/quotes |
+| PUT | /api/v1/quotes/{id} |
+| POST | /api/v1/quotes/{id}/confirm |
+| POST | /api/v1/quotes/{id}/cancel |
+| POST | /api/v1/quotes/{id}/submit |
+| GET | /api/v1/quotes |
+| GET | /api/v1/quotes/{id} |
+| GET | /api/v1/quotes/my-pending |
+| POST | /api/v1/quotes/{quoteId}/items |
+| PUT | /api/v1/quotes/items/{itemId} |
+| DELETE | /api/v1/quotes/items/{itemId} |
+| GET | /api/v1/quotes/{quoteId}/items |
 
 ---
 
-## Master data (contracts, machines, models, spare parts, sim cards, model-part-lists, parts, BOM)
+## QuoteWorkflowController — `interfaces/quote/workflow/QuoteWorkflowController.java`
 
-| Method | Path | Controller |
-|--------|------|------------|
-| GET | `/api/v1/masterdata/contracts` | ContractController |
-| GET | `/api/v1/masterdata/contracts/{id}` | ContractController |
-| POST | `/api/v1/masterdata/contracts` | ContractController |
-| PUT | `/api/v1/masterdata/contracts/{id}` | ContractController |
-| POST | `/api/v1/masterdata/contracts/{id}/disable` | ContractController |
-| GET | `/api/v1/masterdata/machine-models` | MachineModelController |
-| GET | `/api/v1/masterdata/machine-models/{id}` | MachineModelController |
-| POST | `/api/v1/masterdata/machine-models` | MachineModelController |
-| PUT | `/api/v1/masterdata/machine-models/{id}` | MachineModelController |
-| POST | `/api/v1/masterdata/machine-models/{id}/disable` | MachineModelController |
-| GET | `/api/v1/masterdata/spare-parts` | SparePartController |
-| GET | `/api/v1/masterdata/spare-parts/{id}` | SparePartController |
-| POST | `/api/v1/masterdata/spare-parts` | SparePartController |
-| PUT | `/api/v1/masterdata/spare-parts/{id}` | SparePartController |
-| POST | `/api/v1/masterdata/spare-parts/{id}/disable` | SparePartController |
-| GET | `/api/v1/masterdata/machines` | MachineController |
-| GET | `/api/v1/masterdata/machines/{id}` | MachineController |
-| GET | `/api/v1/masterdata/machines/{id}/history` | MachineController |
-| POST | `/api/v1/masterdata/machines` | MachineController |
-| PUT | `/api/v1/masterdata/machines/{id}` | MachineController |
-| POST | `/api/v1/masterdata/machines/{id}/disable` | MachineController |
-| GET | `/api/v1/masterdata/sim-cards` | SimCardController |
-| GET | `/api/v1/masterdata/sim-cards/{id}` | SimCardController |
-| GET | `/api/v1/masterdata/sim-cards/{id}/history` | SimCardController |
-| POST | `/api/v1/masterdata/sim-cards` | SimCardController |
-| PUT | `/api/v1/masterdata/sim-cards/{id}` | SimCardController |
-| POST | `/api/v1/masterdata/sim-cards/{id}/disable` | SimCardController |
-| GET | `/api/v1/masterdata/model-part-lists` | ModelPartListController |
-| GET | `/api/v1/masterdata/model-part-lists/{id}` | ModelPartListController |
-| POST | `/api/v1/masterdata/model-part-lists` | ModelPartListController |
-| PUT | `/api/v1/masterdata/model-part-lists/{id}` | ModelPartListController |
-| POST | `/api/v1/masterdata/model-part-lists/{id}/disable` | ModelPartListController |
-| POST | `/api/v1/masterdata/model-part-lists/draft` | ModelPartListController |
-| POST | `/api/v1/masterdata/model-part-lists/{id}/publish` | ModelPartListController |
-| GET | `/api/v1/masterdata/model-part-lists/{id}/conflicts` | ModelPartListController |
-| POST | `/api/v1/masterdata/model-part-lists/conflicts/{conflictId}/resolve` | ModelPartListController |
-| GET | `/api/v1/parts` | PartController |
-| GET | `/api/v1/parts/active` | PartController |
-| GET | `/api/v1/parts/search` | PartController |
-| POST | `/api/v1/parts/import` | PartController |
-| GET | `/api/v1/parts/bom/{productId}` | PartController |
-| POST | `/api/v1/bom/import` | BomController |
-| GET | `/api/v1/bom/machine/{machineId}/active` | BomController |
-| GET | `/api/v1/bom/machine/{machineId}/history` | BomController |
-| GET | `/api/v1/bom/version/{versionId}/items` | BomController |
-
-Customer/product/ICCID (different base paths):
-
-| Method | Path | Controller |
-|--------|------|------------|
-| POST | `/api/masterdata/customers` | CustomerMasterDataController |
-| GET | `/api/masterdata/customers/{id}` | CustomerMasterDataController |
-| PATCH | `/api/masterdata/customers/{id}` | CustomerMasterDataController |
-| DELETE | `/api/masterdata/customers/{id}` | CustomerMasterDataController |
-| POST | `/api/masterdata/customers/merge` | CustomerMasterDataController |
-| POST | `/api/masterdata/customers/merge/{logId}/undo` | CustomerMasterDataController |
-| GET | `/api/v1/customers` | CustomerMasterDataController |
-| GET | `/api/masterdata/iccid` | IccidMasterDataController |
-| POST | `/api/masterdata/iccid` | IccidMasterDataController |
-| POST | `/api/masterdata/products` | ProductMasterDataController |
-| GET | `/api/v1/products` | ProductMasterDataController |
-
-Verify: `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/masterdata/*.java`, `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/bom/BomController.java`, `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/customer/CustomerMasterDataController.java`, `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/iccid/IccidMasterDataController.java`, `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/product/ProductMasterDataController.java`.
+| Method | Path |
+|--------|------|
+| POST | /api/v1/quotes/workflow/{quoteId}/submit |
+| POST | /api/v1/quotes/workflow/{quoteId}/audit |
+| POST | /api/v1/quotes/workflow/{quoteId}/assign-collector |
+| GET | /api/v1/quotes/workflow/{quoteId}/history |
+| POST | /api/v1/quotes/workflow/fallback |
 
 ---
 
-## Smart-select and temp-pool (confirmation)
+## QuoteVoidController — `interfaces/quote/void/QuoteVoidController.java`
 
-| Method | Path | Controller |
-|--------|------|------------|
-| GET | `/api/v1/smart-select/search` | SmartSelectController |
-| POST | `/api/v1/smart-select/get-or-create-temp` | SmartSelectController |
-| GET | `/api/v1/temp-pool` | ConfirmationController |
-| POST | `/api/v1/temp-pool/confirm` | ConfirmationController |
-| POST | `/api/v1/temp-pool/reject` | ConfirmationController |
-
-Verify: `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/smartselect/SmartSelectController.java`, `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/smartselect/ConfirmationController.java`.
+| Method | Path |
+|--------|------|
+| POST | /api/v1/quotes/void/apply |
+| POST | /api/v1/quotes/void/audit |
+| POST | /api/v1/quotes/void/direct, /api/v1/quotes/void/direct-void |
+| GET | /api/v1/quotes/void/history/{quoteId} |
+| GET | /api/v1/quotes/void/requests/{quoteId} |
 
 ---
 
-## Imports (bulk upload + resolve)
+## PaymentController (quote) — `interfaces/quote/payment/PaymentController.java`
 
-| Method | Path | Controller |
-|--------|------|------------|
-| POST | `/api/v1/imports/customers` (multipart/form-data) | ImportController |
-| POST | `/api/v1/imports/customers/resolve` | ImportController |
-| POST | `/api/v1/imports/contracts` (multipart/form-data) | ImportController |
-| POST | `/api/v1/imports/contracts/resolve` | ImportController |
-| POST | `/api/v1/imports/models` (multipart/form-data) | ImportController |
-| POST | `/api/v1/imports/models/resolve` | ImportController |
-| POST | `/api/v1/imports/spare-parts` (multipart/form-data) | ImportController |
-| POST | `/api/v1/imports/spare-parts/resolve` | ImportController |
-| POST | `/api/v1/imports/machines` (multipart/form-data) | ImportController |
-| POST | `/api/v1/imports/machines/resolve` | ImportController |
-| POST | `/api/v1/imports/sim-cards` (multipart/form-data) | ImportController |
-| POST | `/api/v1/imports/sim-cards/resolve` | ImportController |
-| POST | `/api/v1/imports/model-part-lists` (multipart/form-data) | ImportController |
-| POST | `/api/v1/imports/model-part-lists/resolve` | ImportController |
-
-Verify: `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/importdata/ImportController.java`.
+| Method | Path |
+|--------|------|
+| POST | /api/v1/payments/submit |
+| POST | /api/v1/payments/{paymentId}/confirm |
+| POST | /api/v1/payments/batch |
+| GET | /api/v1/payments |
+| GET | /api/v1/payments/quote/{quoteId} |
+| GET | /api/v1/payments/{paymentId} |
 
 ---
 
-## Inventory, warehouse, outbound, transfer, replenish
+## PermissionRequestController — `interfaces/permission/PermissionRequestController.java`
 
-| Method | Path | Controller |
-|--------|------|------------|
-| GET | `/api/v1/inventory/stock` | InventoryController |
-| POST | `/api/v1/inventory/inbound` | InventoryController |
-| POST | `/api/v1/inventory/return` | InventoryController |
-| GET | `/api/v1/inventory/logs` | InventoryController |
-| GET | `/api/v1/warehouse/warehouses` | WhStockController |
-| POST | `/api/v1/warehouse/inbound` | WhStockController |
-| POST | `/api/v1/warehouse/outbound` | WhStockController |
-| GET | `/api/v1/warehouse/inventory` | WhStockController |
-| POST | `/api/v1/outbound/wo` | OutboundController |
-| POST | `/api/v1/outbound/quote` | OutboundController |
-| POST | `/api/v1/outbound/special/apply` | OutboundController |
-| POST | `/api/v1/outbound/special/approve` | OutboundController |
-| POST | `/api/v1/outbound/special/confirm` | OutboundController |
-| GET | `/api/v1/outbound/validate-warehouse` | OutboundController |
-| POST | `/api/v1/transfer/apply` | TransferController |
-| POST | `/api/v1/transfer/ship` | TransferController |
-| POST | `/api/v1/transfer/receive` | TransferController |
-| POST | `/api/v1/warehouse/replenish/create` | WhReplenishController |
-| POST | `/api/v1/warehouse/replenish/approve-l1` | WhReplenishController |
-| POST | `/api/v1/warehouse/replenish/approve-l2` | WhReplenishController |
-| GET | `/api/v1/warehouse/replenish/my-pending` | WhReplenishController |
-| GET | `/api/v1/warehouse/replenish/my-requests` | WhReplenishController |
-
-Verify: `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/inventory/*.java`, `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/warehouse/*.java`.
+| Method | Path |
+|--------|------|
+| POST | /api/v1/permission-requests/apply |
+| POST | /api/v1/permission-requests/{id}/resubmit |
+| POST | /api/v1/permission-requests/{id}/return |
+| POST | /api/v1/permission-requests/{id}/reject |
+| POST | /api/v1/permission-requests/{id}/approve |
+| GET | /api/v1/permission-requests/my-requests |
+| GET | /api/v1/permission-requests/pending |
 
 ---
 
-## Payments (general), statements, freight, expenses, claims, trip requests, corrections
+## WorkOrderPublicController — `interfaces/workorder/WorkOrderPublicController.java`
 
-| Method | Path | Controller |
-|--------|------|------------|
-| POST | `/api/v1/general-payments` | payment.PaymentController |
-| POST | `/api/v1/general-payments/{id}/confirm` | payment.PaymentController |
-| POST | `/api/v1/general-payments/{id}/cancel` | payment.PaymentController |
-| POST | `/api/v1/statements/generate` | AccountStatementController |
-| DELETE | `/api/v1/statements/{id}/items/{quoteId}` | AccountStatementController |
-| GET | `/api/v1/statements/{id}/export` | AccountStatementController |
-| GET | `/api/v1/statements/list` | AccountStatementController |
-| GET | `/api/v1/statements/{id}` | AccountStatementController |
-| POST | `/api/v1/statements/{id}/bind-payments` | StatementReconcileController |
-| GET | `/api/v1/freight-bills/available-shipments` | FreightBillController |
-| POST | `/api/v1/freight-bills/create` | FreightBillController |
-| POST | `/api/v1/freight-bills/create-by-period` | FreightBillController |
-| POST | `/api/v1/freight-bills/export` | FreightBillController |
-| PUT | `/api/v1/freight-bills/{id}/items` | FreightBillController |
-| POST | `/api/v1/freight-bills/{id}/remove-shipment/{shipmentId}` | FreightBillController |
-| POST | `/api/v1/freight-bills/{id}/confirm` | FreightBillController |
-| POST | `/api/v1/freight-bills/{id}/settle` | FreightBillController |
-| GET | `/api/v1/freight-bills/{id}/export` | FreightBillController |
-| POST | `/api/v1/expenses` | ExpenseController |
-| PUT | `/api/v1/expenses/{id}` | ExpenseController |
-| POST | `/api/v1/expenses/{id}/void` | ExpenseController |
-| GET | `/api/v1/expenses` | ExpenseController |
-| POST | `/api/v1/stats/expenses` | ExpenseStatsController |
-| GET | `/api/v1/stats/expenses/export` | ExpenseStatsController |
-| POST | `/api/v1/claims` | ClaimController |
-| POST | `/api/v1/claims/{id}/submit` | ClaimController |
-| POST | `/api/v1/claims/{id}/return` | ClaimController |
-| POST | `/api/v1/claims/{id}/reject` | ClaimController |
-| POST | `/api/v1/claims/{id}/approve` | ClaimController |
-| POST | `/api/v1/claims/{id}/pay` | ClaimController |
-| GET | `/api/v1/claims` | ClaimController |
-| POST | `/api/v1/trip-requests` | TripRequestController |
-| PUT | `/api/v1/trip-requests/{id}` | TripRequestController |
-| POST | `/api/v1/trip-requests/{id}/submit` | TripRequestController |
-| POST | `/api/v1/trip-requests/{id}/withdraw` | TripRequestController |
-| POST | `/api/v1/trip-requests/{id}/leader-approve` | TripRequestController |
-| POST | `/api/v1/trip-requests/{id}/finance-approve` | TripRequestController |
-| POST | `/api/v1/trip-requests/{id}/return` | TripRequestController |
-| POST | `/api/v1/trip-requests/{id}/reject` | TripRequestController |
-| POST | `/api/v1/trip-requests/{id}/cancel-request` | TripRequestController |
-| POST | `/api/v1/trip-requests/{id}/cancel-approve` | TripRequestController |
-| POST | `/api/v1/trip-requests/{id}/cancel-reject` | TripRequestController |
-| GET | `/api/v1/trip-requests` | TripRequestController |
-| POST | `/api/v1/corrections` | CorrectionController |
-| POST | `/api/v1/corrections/{id}/submit` | CorrectionController |
-| POST | `/api/v1/corrections/{id}/approve` | CorrectionController |
-| POST | `/api/v1/corrections/{id}/reject` | CorrectionController |
-| GET | `/api/v1/corrections/{id}` | CorrectionController |
-
-Verify: `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/payment/PaymentController.java`, `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/statement/*.java`, `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/freightbill/FreightBillController.java`, `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/expense/*.java`, `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/triprequest/TripRequestController.java`, `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/correction/CorrectionController.java`.
+| Method | Path |
+|--------|------|
+| POST | /api/v1/public/work-orders/create |
 
 ---
 
-## Attachments, notifications, permission-requests, carriers, contract-prices, invoice-applications, repair, warehouse-config, business-lines, payment-methods
+## ExpenseStatsController — `interfaces/expense/ExpenseStatsController.java`
 
-| Method | Path | Controller |
-|--------|------|------------|
-| POST | `/api/v1/attachments/upload` | AttachmentController |
-| GET | `/api/v1/notifications` | NotificationController |
-| GET | `/api/v1/notifications/my` | NotificationController |
-| GET | `/api/v1/notifications/my/unread` | NotificationController |
-| GET | `/api/v1/notifications/my/unread-count` | NotificationController |
-| POST | `/api/v1/notifications/{id}/read` | NotificationController |
-| POST | `/api/v1/notifications/read-all` | NotificationController |
-| PUT | `/api/v1/notifications/preference` | NotificationController |
-| POST | `/api/v1/permission-requests/apply` | PermissionRequestController |
-| POST | `/api/v1/permission-requests/{id}/resubmit` | PermissionRequestController |
-| POST | `/api/v1/permission-requests/{id}/return` | PermissionRequestController |
-| POST | `/api/v1/permission-requests/{id}/reject` | PermissionRequestController |
-| POST | `/api/v1/permission-requests/{id}/approve` | PermissionRequestController |
-| GET | `/api/v1/permission-requests/my-requests` | PermissionRequestController |
-| GET | `/api/v1/permission-requests/pending` | PermissionRequestController |
-| GET | `/api/v1/carriers` | CarrierController |
-| GET | `/api/v1/carriers/recommend` | CarrierController |
-| GET | `/api/v1/carriers/{id}` | CarrierController |
-| POST | `/api/v1/carriers` | CarrierController |
-| PUT | `/api/v1/carriers/{id}` | CarrierController |
-| DELETE | `/api/v1/carriers/{id}` | CarrierController |
-| POST | `/api/v1/contract-prices` | ContractPriceController |
-| PUT | `/api/v1/contract-prices/{id}` | ContractPriceController |
-| POST | `/api/v1/contract-prices/{id}/deactivate` | ContractPriceController |
-| POST | `/api/v1/invoice-applications/submit` | InvoiceApplicationController |
-| POST | `/api/v1/invoice-applications/audit` | InvoiceApplicationController |
-| GET | `/api/v1/invoice-applications/my-applications` | InvoiceApplicationController |
-| GET | `/api/v1/invoice-applications/{applicationId}` | InvoiceApplicationController |
-| POST | `/api/v1/repair-records/import` | RepairRecordController |
-| GET | `/api/v1/repair-records` | RepairRecordController |
-| GET | `/api/v1/repair-records/template` | RepairRecordController |
-| GET | `/api/v1/warehouse-config/user-ids` | WarehouseConfigController |
-| PUT | `/api/v1/warehouse-config/user-ids` | WarehouseConfigController |
-| POST | `/api/v1/business-lines` | BusinessLineController |
-| PUT | `/api/v1/business-lines/{id}` | BusinessLineController |
-| GET | `/api/v1/business-lines` | BusinessLineController |
-| GET | `/api/v1/business-lines/active` | BusinessLineController |
-| GET | `/api/v1/business-lines/{id}` | BusinessLineController |
-| GET | `/api/v1/payment-methods` | PaymentMethodController |
-| GET | `/api/v1/payment-methods/active` | PaymentMethodController |
+| Method | Path |
+|--------|------|
+| POST | /api/v1/stats/expenses |
+| GET | /api/v1/stats/expenses/export |
 
-Full list of controller classes: `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/` (enumerate .java files there).
+---
+
+## SparePartController — `interfaces/masterdata/SparePartController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/masterdata/spare-parts |
+| GET | /api/v1/masterdata/spare-parts/{id} |
+| POST | /api/v1/masterdata/spare-parts |
+| PUT | /api/v1/masterdata/spare-parts/{id} |
+| POST | /api/v1/masterdata/spare-parts/{id}/disable |
+
+---
+
+## NotificationController — `interfaces/notification/NotificationController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/notifications |
+| GET | /api/v1/notifications/my |
+| GET | /api/v1/notifications/my/unread |
+| GET | /api/v1/notifications/my/unread-count |
+| POST | /api/v1/notifications/{id}/read |
+| POST | /api/v1/notifications/read-all |
+| PUT | /api/v1/notifications/preference |
+
+---
+
+## CorrectionController — `interfaces/correction/CorrectionController.java`
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/corrections |
+| POST | /api/v1/corrections/{id}/submit |
+| POST | /api/v1/corrections/{id}/approve |
+| POST | /api/v1/corrections/{id}/reject |
+| GET | /api/v1/corrections/{id} |
+
+---
+
+## ExpenseController — `interfaces/expense/ExpenseController.java`
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/expenses |
+| PUT | /api/v1/expenses/{id} |
+| POST | /api/v1/expenses/{id}/void |
+| GET | /api/v1/expenses |
+
+---
+
+## InventoryController — `interfaces/inventory/InventoryController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/inventory/stock |
+| POST | /api/v1/inventory/inbound |
+| POST | /api/v1/inventory/return |
+| GET | /api/v1/inventory/logs |
+
+---
+
+## TransferController — `interfaces/inventory/TransferController.java`
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/transfer/apply |
+| POST | /api/v1/transfer/ship |
+| POST | /api/v1/transfer/receive |
+
+---
+
+## CarrierController — `interfaces/carrier/CarrierController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/carriers |
+| GET | /api/v1/carriers/recommend |
+| GET | /api/v1/carriers/{id} |
+| POST | /api/v1/carriers |
+| PUT | /api/v1/carriers/{id} |
+| DELETE | /api/v1/carriers/{id} |
+
+---
+
+## InvoiceApplicationController — `interfaces/invoice/InvoiceApplicationController.java`
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/invoice-applications/submit |
+| POST | /api/v1/invoice-applications/audit |
+| GET | /api/v1/invoice-applications/my-applications |
+| GET | /api/v1/invoice-applications/{applicationId} |
+
+---
+
+## DamageController — `interfaces/damage/DamageController.java` (method-level paths)
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/damages |
+| GET | /api/v1/shipments/{shipmentId}/damages |
+| PUT | /api/v1/damages/{id}/repair-stage |
+| PUT | /api/v1/damages/{id}/compensation |
+| GET | /api/v1/damages/config/types |
+| GET | /api/v1/damages/config/treatments |
+
+---
+
+## IccidMasterDataController — `interfaces/iccid/IccidMasterDataController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/masterdata/iccid |
+| POST | /api/masterdata/iccid |
+
+---
+
+## MachineModelController — `interfaces/masterdata/MachineModelController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/masterdata/machine-models |
+| GET | /api/v1/masterdata/machine-models/{id} |
+| POST | /api/v1/masterdata/machine-models |
+| PUT | /api/v1/masterdata/machine-models/{id} |
+| POST | /api/v1/masterdata/machine-models/{id}/disable |
+
+---
+
+## ContractPriceController — `interfaces/contractprice/ContractPriceController.java`
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/contract-prices |
+| PUT | /api/v1/contract-prices/{id} |
+| POST | /api/v1/contract-prices/{id}/deactivate |
+
+---
+
+## RepairRecordController — `interfaces/repair/RepairRecordController.java`
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/repair-records/import |
+| GET | /api/v1/repair-records |
+| GET | /api/v1/repair-records/template |
+
+---
+
+## OutboundController — `interfaces/inventory/OutboundController.java`
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/outbound/wo |
+| POST | /api/v1/outbound/quote |
+| POST | /api/v1/outbound/special/apply |
+| POST | /api/v1/outbound/special/approve |
+| POST | /api/v1/outbound/special/confirm |
+| GET | /api/v1/outbound/validate-warehouse |
+
+---
+
+## PartController — `interfaces/masterdata/PartController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/parts |
+| GET | /api/v1/parts/active |
+| GET | /api/v1/parts/search |
+| POST | /api/v1/parts/import |
+| GET | /api/v1/parts/bom/{productId} |
+
+---
+
+## WhStockController — `interfaces/warehouse/WhStockController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/warehouse/warehouses |
+| POST | /api/v1/warehouse/inbound |
+| POST | /api/v1/warehouse/outbound |
+| GET | /api/v1/warehouse/inventory |
+
+---
+
+## ContractController — `interfaces/masterdata/ContractController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/masterdata/contracts |
+| GET | /api/v1/masterdata/contracts/{id} |
+| POST | /api/v1/masterdata/contracts |
+| PUT | /api/v1/masterdata/contracts/{id} |
+| POST | /api/v1/masterdata/contracts/{id}/disable |
+
+---
+
+## ProductMasterDataController — `interfaces/product/ProductMasterDataController.java` (method-level paths)
+
+| Method | Path |
+|--------|------|
+| POST | /api/masterdata/products |
+| GET | /api/v1/products |
+
+---
+
+## BomController — `interfaces/bom/BomController.java`
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/bom/import |
+| GET | /api/v1/bom/machine/{machineId}/active |
+| GET | /api/v1/bom/machine/{machineId}/history |
+| GET | /api/v1/bom/version/{versionId}/items |
+
+---
+
+## AfterSalesController — `interfaces/aftersales/AfterSalesController.java`
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/after-sales |
+| PUT | /api/v1/after-sales/{id} |
+| POST | /api/v1/after-sales/{id}/submit |
+| POST | /api/v1/after-sales/{id}/receive |
+| POST | /api/v1/after-sales/{id}/process |
+| POST | /api/v1/after-sales/{id}/send-back |
+| POST | /api/v1/after-sales/{id}/complete |
+| GET | /api/v1/after-sales |
+| GET | /api/v1/after-sales/{id} |
+
+---
+
+## ImportController — `interfaces/importdata/ImportController.java`
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/imports/customers (multipart/form-data) |
+| POST | /api/v1/imports/customers/resolve |
+| POST | /api/v1/imports/contracts (multipart/form-data) |
+| POST | /api/v1/imports/contracts/resolve |
+| POST | /api/v1/imports/models (multipart/form-data) |
+| POST | /api/v1/imports/models/resolve |
+| POST | /api/v1/imports/spare-parts (multipart/form-data) |
+| POST | /api/v1/imports/spare-parts/resolve |
+| POST | /api/v1/imports/machines (multipart/form-data) |
+| POST | /api/v1/imports/machines/resolve |
+| POST | /api/v1/imports/sim-cards (multipart/form-data) |
+| POST | /api/v1/imports/sim-cards/resolve |
+| POST | /api/v1/imports/model-part-lists (multipart/form-data) |
+| POST | /api/v1/imports/model-part-lists/resolve |
+
+---
+
+## PaymentController (general) — `interfaces/payment/PaymentController.java`
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/general-payments |
+| POST | /api/v1/general-payments/{id}/confirm |
+| POST | /api/v1/general-payments/{id}/cancel |
+
+---
+
+## WhReplenishController — `interfaces/warehouse/WhReplenishController.java`
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/warehouse/replenish/create |
+| POST | /api/v1/warehouse/replenish/approve-l1 |
+| POST | /api/v1/warehouse/replenish/approve-l2 |
+| GET | /api/v1/warehouse/replenish/my-pending |
+| GET | /api/v1/warehouse/replenish/my-requests |
+
+---
+
+## TripRequestController — `interfaces/triprequest/TripRequestController.java`
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/trip-requests |
+| PUT | /api/v1/trip-requests/{id} |
+| POST | /api/v1/trip-requests/{id}/submit |
+| POST | /api/v1/trip-requests/{id}/withdraw |
+| POST | /api/v1/trip-requests/{id}/leader-approve |
+| POST | /api/v1/trip-requests/{id}/finance-approve |
+| POST | /api/v1/trip-requests/{id}/return |
+| POST | /api/v1/trip-requests/{id}/reject |
+| POST | /api/v1/trip-requests/{id}/cancel-request |
+| POST | /api/v1/trip-requests/{id}/cancel-approve |
+| POST | /api/v1/trip-requests/{id}/cancel-reject |
+| GET | /api/v1/trip-requests |
+
+---
+
+## ShipmentController — `interfaces/shipment/ShipmentController.java`
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/shipments |
+| POST | /api/v1/shipments/create-normal |
+| POST | /api/v1/shipments/create-entrust |
+| POST | /api/v1/shipments/{id}/machines |
+| POST | /api/v1/shipments/parse-text |
+| POST | /api/v1/shipments/infer-type |
+| GET | /api/v1/shipments/{id}/export-ticket |
+| GET | /api/v1/shipments/{id}/export-receipt |
+| POST | /api/v1/shipments/create-from-quote |
+| GET | /api/v1/shipments |
+| GET | /api/v1/shipments/{id} |
+| GET | /api/v1/shipments/{id}/machines |
+| POST | /api/v1/shipments/{id}/accept |
+| POST | /api/v1/shipments/{id}/ship |
+| POST | /api/v1/shipments/{id}/complete |
+| POST | /api/v1/shipments/{id}/exception |
+| POST | /api/v1/shipments/{id}/cancel |
+
+---
+
+## AccountStatementController, StatementReconcileController — `interfaces/statement/`
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/statements/generate |
+| DELETE | /api/v1/statements/{id}/items/{quoteId} |
+| GET | /api/v1/statements/{id}/export |
+| GET | /api/v1/statements/list |
+| GET | /api/v1/statements/{id} |
+| POST | /api/v1/statements/{id}/bind-payments |
+
+---
+
+## FreightBillController — `interfaces/freightbill/FreightBillController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/freight-bills/available-shipments |
+| POST | /api/v1/freight-bills/create |
+| POST | /api/v1/freight-bills/create-by-period |
+| POST | /api/v1/freight-bills/export |
+| PUT | /api/v1/freight-bills/{id}/items |
+| POST | /api/v1/freight-bills/{id}/remove-shipment/{shipmentId} |
+| POST | /api/v1/freight-bills/{id}/confirm |
+| POST | /api/v1/freight-bills/{id}/settle |
+| GET | /api/v1/freight-bills/{id}/export |
+
+---
+
+## AttachmentController — `interfaces/attachment/AttachmentController.java`
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/attachments/upload |
+
+---
+
+## ModelPartListController — `interfaces/masterdata/ModelPartListController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/masterdata/model-part-lists |
+| GET | /api/v1/masterdata/model-part-lists/{id} |
+| POST | /api/v1/masterdata/model-part-lists |
+| PUT | /api/v1/masterdata/model-part-lists/{id} |
+| POST | /api/v1/masterdata/model-part-lists/{id}/disable |
+| POST | /api/v1/masterdata/model-part-lists/draft |
+| POST | /api/v1/masterdata/model-part-lists/{id}/publish |
+| GET | /api/v1/masterdata/model-part-lists/{id}/conflicts |
+| POST | /api/v1/masterdata/model-part-lists/conflicts/{conflictId}/resolve |
+
+---
+
+## SimCardController — `interfaces/masterdata/SimCardController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/masterdata/sim-cards |
+| GET | /api/v1/masterdata/sim-cards/{id} |
+| GET | /api/v1/masterdata/sim-cards/{id}/history |
+| POST | /api/v1/masterdata/sim-cards |
+| PUT | /api/v1/masterdata/sim-cards/{id} |
+| POST | /api/v1/masterdata/sim-cards/{id}/disable |
+
+---
+
+## MachineController — `interfaces/masterdata/MachineController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/masterdata/machines |
+| GET | /api/v1/masterdata/machines/{id} |
+| GET | /api/v1/masterdata/machines/{id}/history |
+| POST | /api/v1/masterdata/machines |
+| PUT | /api/v1/masterdata/machines/{id} |
+| POST | /api/v1/masterdata/machines/{id}/disable |
+
+---
+
+## CustomerMasterDataController — `interfaces/customer/CustomerMasterDataController.java` (method-level paths)
+
+| Method | Path |
+|--------|------|
+| POST | /api/masterdata/customers |
+| GET | /api/masterdata/customers/{id} |
+| DELETE | /api/masterdata/customers/{id} |
+| POST | /api/masterdata/customers/merge |
+| POST | /api/masterdata/customers/merge/{logId}/undo |
+| GET | /api/v1/customers |
+
+---
+
+## SmartSelectController — `interfaces/smartselect/SmartSelectController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/smart-select/search |
+| POST | /api/v1/smart-select/get-or-create-temp |
+
+---
+
+## ConfirmationController — `interfaces/smartselect/ConfirmationController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/temp-pool |
+| POST | /api/v1/temp-pool/confirm |
+| POST | /api/v1/temp-pool/reject |
+
+---
+
+## WarehouseConfigController — `interfaces/settings/WarehouseConfigController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/warehouse-config/user-ids |
+| PUT | /api/v1/warehouse-config/user-ids |
+
+---
+
+## BusinessLineController — `interfaces/settings/BusinessLineController.java`
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/business-lines |
+| PUT | /api/v1/business-lines/{id} |
+| GET | /api/v1/business-lines |
+| GET | /api/v1/business-lines/active |
+| GET | /api/v1/business-lines/{id} |
+
+---
+
+## PaymentMethodController — `interfaces/quote/payment/PaymentMethodController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/payment-methods |
+| GET | /api/v1/payment-methods/active |
+
+---
+
+## DictionaryController — `interfaces/quote/dictionary/DictionaryController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/dictionary/categories |
+| GET | /api/v1/dictionary/fee-types |
+| GET | /api/v1/dictionary/fee-types/active |
+| GET | /api/v1/dictionary/units |
+
+---
+
+## WorkOrderQuoteController — `interfaces/quote/WorkOrderQuoteController.java`
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/quotes/from-workorder |
+
+---
+
+## QuoteExportController — `interfaces/quote/QuoteExportController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/quotes/{id}/export |
+
+---
+
+## QuoteVersionController — `interfaces/quote/QuoteVersionController.java`
+
+| Method | Path |
+|--------|------|
+| POST | /api/quote-versions/activate |
+
+---
+
+## WorkOrderController — `interfaces/workorder/WorkOrderController.java`
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/work-orders/create-from-quote |
+| POST | /api/v1/work-orders/create |
+| POST | /api/v1/work-orders/reject |
+| POST | /api/v1/work-orders/accept-by-dispatcher |
+| POST | /api/v1/work-orders/dispatch |
+| POST | /api/v1/work-orders/accept |
+| POST | /api/v1/work-orders/record |
+| POST | /api/v1/work-orders/parts/add |
+| POST | /api/v1/work-orders/parts/consume |
+| POST | /api/v1/work-orders/sign |
+| POST | /api/v1/work-orders/complete |
+| GET | /api/v1/work-orders/pool |
+| GET | /api/v1/work-orders/my-orders |
+| GET | /api/v1/work-orders/{id} |
+
+Controller file paths: `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/` + subpackages. Rescan when controllers change.

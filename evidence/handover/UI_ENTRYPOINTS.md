@@ -1,8 +1,6 @@
-# UI_ENTRYPOINTS — Page/route list and key user flows
+# UI_ENTRYPOINTS — Pages and where to enter them
 
-**Facts only.** Paths relative to `frontend/dfbs-ui/src/`.
-
-**Authoritative source for routes:** If routes drift from this document, the authoritative source of truth for routes is the route config in `frontend/dfbs-ui/src/App.tsx`.
+**Facts only.** Authoritative routes: `frontend/dfbs-ui/src/App.tsx`.
 
 ---
 
@@ -40,25 +38,14 @@
 | `/admin/confirmation-center` | `pages/Admin/ConfirmationCenter/index.tsx` | Confirmation center. |
 | `/system/platform-config` | `pages/System/PlatformConfig/index.tsx` | Platform config. |
 
-Redirects: `/logistics` → `/shipments`; `/after-sales-service` → `/work-orders`; `/master-data` → `/master-data/contracts`; `/platform` → `/platform/applications`; `/admin` → `/admin/confirmation-center`.
-
----
-
-## Key user flows (facts: click steps/behaviors)
-
-- **Login**: Open `/login` → enter credentials → submit → token stored → redirect to `/dashboard`.
-- **Platform application**: Go to `/platform/applications` → create (sales/service) or open row → planner confirm or admin approve/reject; duplicate check modal may show; org code validation by platform (INHAND/JINGPIN vs HENDONG).
-- **Quote**: `/quotes` → create/edit quote, add items, submit workflow, payment/void as per UI.
-- **Shipment**: `/shipments` → create, add machines, ship, complete; export ticket/receipt.
-
-(Other flows follow from route and page responsibilities above.)
+Redirects (from `App.tsx`): `/logistics` → `/shipments`; `/after-sales-service` → `/work-orders`; `/master-data` → `/master-data/contracts`; `/platform` → `/platform/applications`; `/admin` → `/admin/confirmation-center`.
 
 ---
 
 ## Where UI logic lives
 
-- **Routes**: `App.tsx`.
-- **Layout/menu**: `layouts/BasicLayout.tsx`.
-- **Pages**: `pages/<Area>/<Page>/index.tsx` or `Detail.tsx`.
-- **Shared components**: `components/SmartInput`, `components/SmartReferenceSelect`, `components/Business/DuplicateCheckModal`, `components/Business/HitAnalysisPanel`, `components/AttachmentList`, `components/Access`.
-- **API calls**: `utils/request.ts` (axios instance with baseURL `/api`); `utils/adapters.ts` (toProTableResult); `stores/useAuthStore.ts`; `services/platformConfig.ts`.
+- Routes: `App.tsx`.
+- Layout/menu: `layouts/BasicLayout.tsx`.
+- Pages: `pages/<Area>/<Page>/index.tsx` or `Detail.tsx`.
+- Shared components: `components/SmartInput`, `components/SmartReferenceSelect`, `components/Business/DuplicateCheckModal`, `components/Business/HitAnalysisPanel`, `components/AttachmentList`, `components/Access`.
+- API: `utils/request.ts` (axios, baseURL `/api`); `utils/adapters.ts` (toProTableResult); `stores/useAuthStore.ts`; `services/platformConfig.ts`.

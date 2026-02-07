@@ -1,12 +1,10 @@
-# DATA_BASELINE — DB migrations and core entities
+# DATA_BASELINE — Flyway migrations and key tables
 
-**Facts only.** Unknowns marked "Unknown (not verified)".
+**Facts only.** Location: `backend/dfbs-app/src/main/resources/db/migration/`. Format: `Vxxxx__<name>.sql`.
 
 ---
 
-## DB migrations list (ids / Flyway filenames / location)
-
-Location: `backend/dfbs-app/src/main/resources/db/migration/`. Filenames are as on disk (Flyway format `Vxxxx__<name>.sql`).
+## Migration filenames (V0001–V0060)
 
 | Id | Flyway filename |
 |----|-----------------|
@@ -70,21 +68,25 @@ Location: `backend/dfbs-app/src/main/resources/db/migration/`. Filenames are as 
 | V0059 | V0059__platform_org_status.sql |
 | V0060 | V0060__create_md_platform.sql |
 
-(No V0056 in repo — gap present. Verify by listing `backend/dfbs-app/src/main/resources/db/migration/`.)
+(No V0056 in repo.)
 
 ---
 
-## Core entities/tables overview
+## Key tables/entities by migration (from filenames)
 
-Derived from module package names and migration names; key fields/relations not fully enumerated here.
-
-- **Quote**: quote version, quote header, quote item, quote workflow, payment, void, part link, downstream, cc (leadership/warehouse).
-- **Shipment**: shipment workflow, panorama, damage record.
-- **Master data**: customers, contracts, machines, machine models, spare parts, sim cards, model-part-lists, BOM, ICCID, products.
-- **Platform**: platform_org, platform_account_applications, platform config (code/options).
-- **Warehouse**: inventory, stock records, replenish requests, outbound.
-- **Work order**: work order, work order part, work order record.
-- **Finance/ops**: payment record, invoice workflow, account statement, freight bill, expense/claim, trip request, correction.
-- **Other**: permission_request, notification_center, attachment (Unknown (not verified) table name), app_user.
-
-Exact table names and key columns: see migration SQL files and `com.dfbs.app.modules.*` entities.
+- V0001: init (base schema).
+- V0002–V0003: quote_version.
+- V0004: masterdata init.
+- V0005–V0017: quote_item, quote_header, payment, void, cc, downstream.
+- V0018–V0019: shipment_workflow, shipment_panorama.
+- V0020–V0021: damage_record, freight_bill.
+- V0022: inventory.
+- V0023: repair_ledger.
+- V0024: permission_request.
+- V0025: notification_center.
+- V0026: account_statement.
+- V0027–V0028: bom_versioning, quote_part_link.
+- V0029: machine_iccid.
+- V0030–V0042: quote_standardization, customer_merge, expense_claim, trip_request, payment_allocation, contract_pricing, carrier_freight_bill, correction, after_sales, masterdata_six_pack, bom_conflicts, quote_payment_created_at, warehouse_mvp.
+- V0043–V0048: work_order (service_flow, cancellation_reason, refinement), app_user (username, seed_admin), smart_select_infrastructure.
+- V0049–V0060: platform_org, platform_account_applications, refactor_platform_org, platform_application_source, relax_application_constraints, enforce_org_uniqueness, org_source_tracking, drop_data_governance_task, add_reject_reason, platform_org_status, create_md_platform.
