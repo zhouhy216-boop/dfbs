@@ -27,6 +27,7 @@ target/
 *.log
 logs/
 **/logs/
+.logs/
 
 # OS / IDE
 .DS_Store
