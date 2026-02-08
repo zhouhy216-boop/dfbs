@@ -27,10 +27,19 @@ import WorkOrderPublic from '@/pages/WorkOrder/Public';
 import WorkOrderInternal from '@/pages/WorkOrder/Internal';
 import WorkOrderInternalDetail from '@/pages/WorkOrder/Internal/Detail';
 import ConfirmationCenter from '@/pages/Admin/ConfirmationCenter';
+import OrgLevelConfig from '@/pages/Admin/OrgLevelConfig';
+import OrgTree from '@/pages/Admin/OrgTree';
+import OrgChangeLog from '@/pages/Admin/OrgChangeLog';
+import { SuperAdminGuard } from '@/shared/components/SuperAdminGuard';
 import PlatformConfig from '@/pages/System/PlatformConfig';
 import PlatformApplication from '@/pages/Platform/Application';
 import PlatformOrg from '@/pages/Platform/Org';
 import PlatformSimApplication from '@/pages/Platform/SimApplication';
+import ApplicationsHistory from '@/pages/Platform/applications/History';
+import PlatformApply from '@/pages/Platform/applications/Apply';
+import ReusePlaceholder from '@/pages/Platform/applications/Reuse';
+import VerificationPlaceholder from '@/pages/Platform/applications/Verification';
+import SimActivationPlaceholder from '@/pages/Platform/applications/SimActivation';
 
 function App() {
   return (
@@ -71,9 +80,18 @@ function App() {
             <Route path="platform" element={<Navigate to="/platform/applications" replace />} />
             <Route path="platform/orgs" element={<PlatformOrg />} />
             <Route path="platform/applications" element={<PlatformApplication />} />
+            <Route path="platform/applications/history" element={<ApplicationsHistory />} />
+            <Route path="platform/apply" element={<PlatformApply />} />
+            <Route path="platform/applications/reuse" element={<ReusePlaceholder />} />
+            <Route path="platform/applications/verification" element={<VerificationPlaceholder />} />
+            <Route path="platform/applications/sim-activation" element={<SimActivationPlaceholder />} />
+            <Route path="platform/applications/enterprise-direct" element={<Navigate to="/platform/apply?source=enterprise" replace />} />
             <Route path="platform/sim-applications" element={<PlatformSimApplication />} />
             <Route path="admin" element={<Navigate to="/admin/confirmation-center" replace />} />
             <Route path="admin/confirmation-center" element={<ConfirmationCenter />} />
+            <Route path="admin/org-levels" element={<SuperAdminGuard><OrgLevelConfig /></SuperAdminGuard>} />
+            <Route path="admin/org-tree" element={<SuperAdminGuard><OrgTree /></SuperAdminGuard>} />
+            <Route path="admin/org-change-logs" element={<SuperAdminGuard><OrgChangeLog /></SuperAdminGuard>} />
             <Route path="system/platform-config" element={<PlatformConfig />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

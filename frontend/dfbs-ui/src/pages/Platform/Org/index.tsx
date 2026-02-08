@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Alert, Button, Form, Input, message, Modal, Popconfirm, Select, Switch, Tag } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
@@ -9,10 +10,21 @@ import SmartReferenceSelect from '@/shared/components/SmartReferenceSelect';
 import SmartInput from '@/shared/components/SmartInput';
 import DuplicateCheckModal from '@/features/platform/components/DuplicateCheckModal';
 import type { DuplicateMatchItem } from '@/features/platform/components/DuplicateCheckModal';
+import { getPlatformStatusLabelForOrg } from '@/features/platform/components/HitAnalysisPanel';
 import type { SpringPage } from '@/shared/utils/adapters';
 import { PhoneRule, EmailRule } from '@/shared/utils/validators/common';
 import { OrgCodeRule, OrgCodeUppercaseRule } from '@/features/platform/utils/validators';
 import { getPlatformConfigs, type PlatformConfigItem } from '@/features/platform/services/platformConfig';
+import { useDraftForm } from '@/shared/hooks/useDraftForm';
+
+/** Region options for create/edit org (same as Platform Application flow). */
+const REGION_OPTIONS = [
+  { label: '华东', value: '华东' },
+  { label: '华北', value: '华北' },
+  { label: '华南', value: '华南' },
+  { label: '西部', value: '西部' },
+  { label: '海外', value: '海外' },
+];
 
 type PlatformType = 'INHAND' | 'HENDONG' | 'JINGPIN' | 'OTHER';
 
@@ -25,7 +37,9 @@ interface PlatformOrgRow {
   id: number;
   platform: PlatformType;
   orgCodeShort: string;
+  orgCode?: string;
   orgFullName: string;
+  orgName?: string;
   customerIds?: number[];
   linkedCustomers?: LinkedCustomer[];
   customerId?: number;
@@ -92,12 +106,21 @@ async function fetchCustomerNameMap(ids: number[]) {
   return Object.fromEntries(entries) as Record<number, string>;
 }
 
+/**
+ * Customer select with orgFullName auto-fill (parity with Application create flow).
+ * When customer changes: set orgFullName to customer name only if orgFullName is empty
+ * or still equals the previous auto-filled value (do not overwrite manual edits).
+ */
 function CustomerSelectField({
   form,
   disabled,
+  lastAutofillOrgFullName,
+  setLastAutofillOrgFullName,
 }: {
   form: FormInstance<PlatformOrgFormValues>;
   disabled?: boolean;
+  lastAutofillOrgFullName?: string;
+  setLastAutofillOrgFullName?: (v: string) => void;
 }) {
   const name = Form.useWatch('customerName', form) ?? '';
   return (
@@ -114,6 +137,12 @@ function CustomerSelectField({
           onChange={(ref) => {
             form.setFieldValue('customerId', ref.id);
             form.setFieldValue('customerName', ref.name);
+            const customerName = ref.name ?? '';
+            const currentOrgFullName = form.getFieldValue('orgFullName') ?? '';
+            if (currentOrgFullName === '' || currentOrgFullName === lastAutofillOrgFullName) {
+              form.setFieldValue('orgFullName', customerName);
+              setLastAutofillOrgFullName?.(customerName);
+            }
           }}
           disabled={disabled}
           placeholder="选择或输入客户名称"
@@ -137,6 +166,9 @@ export default function PlatformOrg() {
   const [createForm] = Form.useForm<PlatformOrgFormValues>();
   const [editForm] = Form.useForm<PlatformOrgFormValues>();
   const createPlatform = Form.useWatch('platform', createForm) as string | undefined;
+  const [lastAutofillOrgFullName, setLastAutofillOrgFullName] = useState('');
+
+  const { saveDraft, loadDraft, clearDraft, hasDraft } = useDraftForm<PlatformOrgFormValues>('platform-org-create-admin');
 
   const [platformConfigs, setPlatformConfigs] = useState<PlatformConfigItem[]>([]);
   useEffect(() => {
@@ -250,6 +282,7 @@ export default function PlatformOrg() {
   const openCreateModal = () => {
     createForm.resetFields();
     createForm.setFieldsValue({ isActive: true });
+    setLastAutofillOrgFullName('');
     setCreateOpen(true);
   };
 
@@ -293,6 +326,7 @@ export default function PlatformOrg() {
         return;
       }
       await doCreateOrg(values);
+      clearDraft();
       message.success('创建成功');
       setCreateOpen(false);
       createForm.resetFields();
@@ -315,6 +349,7 @@ export default function PlatformOrg() {
     if (!pendingOrgValues) return;
     try {
       await doCreateOrg(pendingOrgValues);
+      clearDraft();
       message.success('创建成功');
       setPendingOrgValues(null);
       setDuplicateVisible(false);
@@ -326,14 +361,6 @@ export default function PlatformOrg() {
     } catch (e) {
       showError(e);
     }
-  };
-
-  const handleDuplicateCancel = () => {
-    setDuplicateVisible(false);
-    setDuplicateMatches([]);
-    setDuplicateCurrentInput(null);
-    setPendingOrgValues(null);
-    setCreateOpen(false);
   };
 
   const handleEdit = async () => {
@@ -475,14 +502,14 @@ export default function PlatformOrg() {
       width: 120,
       valueType: 'select',
       valueEnum: {
-        ACTIVE: { text: '启用', status: 'Success' },
-        ARREARS: { text: '欠费', status: 'Warning' },
+        ACTIVE: { text: '已启用', status: 'Success' },
+        ARREARS: { text: '已欠费', status: 'Warning' },
         DELETED: { text: '已删除', status: 'Error' },
       },
       render: (_, row) => {
-        const s = row.status ?? 'ACTIVE';
-        const map: Record<string, string> = { ACTIVE: '启用', ARREARS: '欠费', DELETED: '已删除' };
-        return <Tag color={s === 'DELETED' ? 'error' : s === 'ARREARS' ? 'warning' : 'green'}>{map[s] ?? s}</Tag>;
+        const label = getPlatformStatusLabelForOrg(row);
+        const color = label === '已删除' ? 'error' : label === '已欠费' ? 'warning' : label === '已禁用' ? 'default' : 'green';
+        return <Tag color={color}>{label}</Tag>;
       },
     },
     {
@@ -543,12 +570,18 @@ export default function PlatformOrg() {
           onClick={() => {
             setCurrentRow(row);
             editForm.setFieldsValue({
-              ...row,
+              platform: row.platform,
               orgCodeShort: row.orgCodeShort ?? row.orgCode,
               orgFullName: row.orgFullName ?? row.orgName,
               customerIds: row.customerIds ?? (row.customerId != null ? [row.customerId] : []),
               isActive: row.isActive ?? true,
               status: row.status ?? 'ACTIVE',
+              contactPerson: row.contactPerson ?? undefined,
+              contactPhone: row.contactPhone ?? undefined,
+              contactEmail: row.contactEmail ?? undefined,
+              salesPerson: row.salesPerson ?? undefined,
+              region: row.region ?? undefined,
+              remark: row.remark ?? undefined,
             });
             setEditOpen(true);
           }}
@@ -575,8 +608,8 @@ export default function PlatformOrg() {
       title: '客户筛选',
       dataIndex: 'customerId',
       hideInTable: true,
-      renderFormItem: (_, { form }) => {
-        const formInstance = form as FormInstance<PlatformOrgFormValues & { customerNameSearch?: string }>;
+      renderFormItem: (_, config) => {
+        const formInstance = (config as { form?: FormInstance }).form as FormInstance<PlatformOrgFormValues & { customerNameSearch?: string }> | undefined;
         return (
           <>
             <Form.Item name="customerNameSearch" hidden>
@@ -600,6 +633,8 @@ export default function PlatformOrg() {
     },
   ];
 
+  const navigate = useNavigate();
+
   return (
     <div>
       <ProTable<PlatformOrgRow>
@@ -611,12 +646,22 @@ export default function PlatformOrg() {
         pagination={{ pageSize: 10 }}
         scroll={{ x: 1200 }}
         toolBarRender={() => [
-          <Button key="create" type="primary" onClick={openCreateModal}>
+          <Button key="sales" type="primary" onClick={() => navigate('/platform/apply?source=sales')}>
+            销售申请
+          </Button>,
+          <Button key="service" onClick={() => navigate('/platform/apply?source=service')}>
+            服务申请
+          </Button>,
+          <Button key="enterprise" onClick={() => navigate('/platform/apply?source=enterprise')}>
+            营企申请
+          </Button>,
+          <Button key="create" onClick={openCreateModal}>
             新建机构
           </Button>,
         ]}
       />
 
+      {/* Parity with standard create-org: draft (platform-org-create-admin), customerName→orgFullName autofill, region dropdown, duplicate-check, required fields, isActive default true. */}
       <Modal
         title="新建平台机构"
         open={createOpen}
@@ -624,8 +669,55 @@ export default function PlatformOrg() {
         onCancel={() => setCreateOpen(false)}
         onOk={handleCreate}
         okText="提交"
+        footer={[
+          <Button key="cancel" onClick={() => setCreateOpen(false)}>
+            取消
+          </Button>,
+          <Button
+            key="draft"
+            onClick={() => {
+              const values = createForm.getFieldsValue();
+              saveDraft(values);
+              message.success('草稿已保存');
+              setCreateOpen(false);
+            }}
+          >
+            保存草稿
+          </Button>,
+          <Button key="submit" type="primary" onClick={() => handleCreate()}>
+            提交
+          </Button>,
+        ]}
       >
         <Form form={createForm} layout="vertical">
+          {hasDraft && (
+            <Alert
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+              message={
+                <>
+                  您有未提交的草稿。
+                  <Button
+                    type="link"
+                    size="small"
+                    onClick={() => {
+                      const v = loadDraft();
+                      if (v && typeof v === 'object') {
+                        createForm.setFieldsValue(v);
+                        setLastAutofillOrgFullName((v as PlatformOrgFormValues).orgFullName ?? '');
+                      }
+                    }}
+                  >
+                    恢复草稿
+                  </Button>
+                  <Button type="link" size="small" onClick={clearDraft}>
+                    清除草稿
+                  </Button>
+                </>
+              }
+            />
+          )}
           <Form.Item
             name="platform"
             label="平台"
@@ -633,7 +725,11 @@ export default function PlatformOrg() {
           >
             <Select options={platformOptions} placeholder="选择平台" />
           </Form.Item>
-          <CustomerSelectField form={createForm} />
+          <CustomerSelectField
+            form={createForm}
+            lastAutofillOrgFullName={lastAutofillOrgFullName}
+            setLastAutofillOrgFullName={setLastAutofillOrgFullName}
+          />
           {(() => {
             const config = getConfig(createPlatform ?? '');
             const validatorType = config?.codeValidatorType ?? 'NONE';
@@ -684,7 +780,7 @@ export default function PlatformOrg() {
             <SmartInput name="contactEmail" type="email" noSpaces placeholder="联系邮箱" />
           </Form.Item>
           <Form.Item name="region" label="地区">
-            <Input placeholder="地区" />
+            <Select options={REGION_OPTIONS} placeholder="请选择地区" allowClear />
           </Form.Item>
           <Form.Item
             name="salesPerson"
@@ -705,20 +801,36 @@ export default function PlatformOrg() {
       <DuplicateCheckModal
         visible={duplicateVisible}
         matches={duplicateMatches}
+        platform={pendingOrgValues?.platform ?? ''}
+        platformLabel={pendingOrgValues?.platform ? getConfig(pendingOrgValues.platform)?.platformName : undefined}
         currentInput={duplicateCurrentInput ?? undefined}
         title="重复提醒"
+        stage="enterprise_direct"
+        violatesHouseRules={(() => {
+          const platformCode = pendingOrgValues?.platform ?? '';
+          const config = getConfig(platformCode);
+          const reason = (h: DuplicateMatchItem) => h.matchReason ?? '';
+          const violationEmail = !!config?.ruleUniqueEmail && duplicateMatches.some((h) => reason(h).includes('邮箱'));
+          const violationPhone = !!config?.ruleUniquePhone && duplicateMatches.some((h) => reason(h).includes('电话'));
+          const violationName = !!config?.ruleUniqueOrgName && duplicateMatches.some((h) => reason(h).includes('全称'));
+          return violationEmail || violationPhone || violationName;
+        })()}
         onCancel={handleDuplicateReturn}
-        renderFooter={() => [
+        renderFooter={(_close, ctx) => [
           <Button key="return" onClick={handleDuplicateReturn}>
             返回编辑
           </Button>,
-          <Button key="confirm" type="primary" onClick={handleDuplicateConfirmAdd}>
-            确认新增
-          </Button>,
-          <Button key="cancel" onClick={handleDuplicateCancel}>
-            取消
-          </Button>,
-        ]}
+          !ctx.violatesHouseRules && (
+            <Button key="confirm" type="primary" onClick={handleDuplicateConfirmAdd} style={{ marginLeft: 8 }}>
+              确认新增
+            </Button>
+          ),
+          ctx.selectedHitCanReuse && (
+            <Button key="reuse" onClick={() => message.info('功能暂留：申请复用')} style={{ marginLeft: 8 }}>
+              申请复用
+            </Button>
+          ),
+        ].filter(Boolean)}
       />
 
       <Modal
@@ -732,14 +844,15 @@ export default function PlatformOrg() {
         onOk={handleEdit}
         okText="保存"
       >
-        {currentRow && (
-          <div style={{ marginBottom: 16 }}>
-            当前状态：{' '}
-            <Tag color={currentRow.status === 'DELETED' ? 'error' : currentRow.status === 'ARREARS' ? 'warning' : 'green'}>
-              {currentRow.status === 'ACTIVE' ? '启用' : currentRow.status === 'ARREARS' ? '欠费' : currentRow.status === 'DELETED' ? '已删除' : (currentRow.status ?? '启用')}
-            </Tag>
-          </div>
-        )}
+        {currentRow && (() => {
+          const statusLabel = getPlatformStatusLabelForOrg(currentRow);
+          const color = statusLabel === '已删除' ? 'error' : statusLabel === '已欠费' ? 'warning' : statusLabel === '已禁用' ? 'default' : 'green';
+          return (
+            <div style={{ marginBottom: 16 }}>
+              当前状态： <Tag color={color}>{statusLabel}</Tag>
+            </div>
+          );
+        })()}
         <Form form={editForm} layout="vertical">
           <Form.Item name="platform" label="平台" rules={[{ required: true }]}>
             <Select options={platformOptions} disabled />
@@ -777,7 +890,7 @@ export default function PlatformOrg() {
             <Input placeholder="联系邮箱" />
           </Form.Item>
           <Form.Item name="region" label="地区">
-            <Input placeholder="地区" />
+            <Select options={REGION_OPTIONS} placeholder="请选择地区" allowClear />
           </Form.Item>
           <Form.Item name="salesPerson" label="销售负责人">
             <Input placeholder="销售负责人" />
@@ -829,14 +942,9 @@ export default function PlatformOrg() {
               dataIndex="status"
               label="状态"
               render={() => {
-                const s = currentRow.status ?? 'ACTIVE';
-                const map: Record<string, { text: string; color: string }> = {
-                  ACTIVE: { text: '启用', color: 'green' },
-                  ARREARS: { text: '欠费', color: 'orange' },
-                  DELETED: { text: '已删除', color: 'red' },
-                };
-                const cfg = map[s] ?? { text: s, color: 'default' };
-                return <Tag color={cfg.color}>{cfg.text}</Tag>;
+                const label = getPlatformStatusLabelForOrg(currentRow);
+                const color = label === '已删除' ? 'red' : label === '已欠费' ? 'orange' : label === '已禁用' ? 'default' : 'green';
+                return <Tag color={color}>{label}</Tag>;
               }}
             />
             <ProDescriptions.Item dataIndex="remark" label="备注" render={(_, __) => currentRow.remark ?? '—'} />

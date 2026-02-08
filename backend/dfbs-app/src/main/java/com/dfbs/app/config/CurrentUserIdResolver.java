@@ -43,4 +43,11 @@ public class CurrentUserIdResolver {
         String auth = user.getAuthorities();
         return auth != null && (auth.contains("ROLE_ADMIN") || auth.contains("ROLE_FINANCE"));
     }
+
+    /** True if user has ROLE_SUPER_ADMIN (org structure, level config, people directory, change log). */
+    public boolean isSuperAdmin() {
+        UserEntity user = getCurrentUserEntity();
+        String auth = user.getAuthorities();
+        return auth != null && auth.contains("ROLE_SUPER_ADMIN");
+    }
 }

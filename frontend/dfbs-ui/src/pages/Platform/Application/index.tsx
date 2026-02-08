@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ProTable, ModalForm, ProFormMoney, ProFormDigit } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
-import { Alert, Button, Card, Col, Modal, Form, Input, InputNumber, Row, Select, Spin, Tag, message } from 'antd';
+import { Alert, Button, Col, Modal, Form, Input, InputNumber, Row, Select, Tabs, Tag, message } from 'antd';
 import request from '@/shared/utils/request';
 import SmartReferenceSelect from '@/shared/components/SmartReferenceSelect';
 import SmartInput from '@/shared/components/SmartInput';
@@ -12,6 +12,8 @@ import type { DuplicateMatchItem } from '@/features/platform/components/HitAnaly
 import { PhoneRule, EmailRule } from '@/shared/utils/validators/common';
 import { ContractRule, OrgCodeRule, OrgCodeUppercaseRule } from '@/features/platform/utils/validators';
 import { getPlatformConfigs, type PlatformConfigItem } from '@/features/platform/services/platformConfig';
+import { useDraftForm } from '@/shared/hooks/useDraftForm';
+import ApplicationsHistory from '@/pages/Platform/applications/History';
 
 const SOURCE_TYPE_OPTIONS = [
   { label: '销售渠道', value: 'FACTORY' },
@@ -144,10 +146,34 @@ function PlannerContractSelect() {
   );
 }
 
-export default function PlatformApplication() {
+/** Application status → 待处理 vs 申请历史. Frontend mapping only. */
+export const APPLICATION_STATUS_PARTITION = {
+  PENDING: ['DRAFT', 'PENDING', 'PENDING_PLANNER', 'PENDING_CONFIRM', 'PENDING_ADMIN', 'REJECTED'],
+  HISTORY: ['APPROVED', 'CLOSED'],
+} as const;
+
+interface PlatformApplicationProps {
+  /** When true, open create modal on mount (Enterprise Direct Apply entry). Sales owner remains optional. */
+  enterpriseDirect?: boolean;
+  /** When true, render only the create form (no table). Used by /platform/apply. */
+  createModalOnly?: boolean;
+  open?: boolean;
+  onCancel?: () => void;
+  onSuccess?: () => void;
+  initialSourceType?: 'FACTORY' | 'SERVICE';
+}
+
+export default function PlatformApplication({
+  enterpriseDirect = false,
+  createModalOnly = false,
+  open: createModalOnlyOpen = true,
+  onCancel: createModalOnlyOnCancel,
+  onSuccess: createModalOnlyOnSuccess,
+  initialSourceType: createModalOnlySource = 'FACTORY',
+}: PlatformApplicationProps) {
   const navigate = useNavigate();
   const actionRef = useRef<ActionType>(null);
-  const [createOpen, setCreateOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(createModalOnly ? createModalOnlyOpen : false);
   const [plannerModalOpen, setPlannerModalOpen] = useState(false);
   const [adminModalOpen, setAdminModalOpen] = useState(false);
   const [adminHitMatches, setAdminHitMatches] = useState<DuplicateMatchItem[]>([]);
@@ -155,7 +181,7 @@ export default function PlatformApplication() {
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [currentRow, setCurrentRow] = useState<ApplicationRow | null>(null);
-  const [createSourceType, setCreateSourceType] = useState<'FACTORY' | 'SERVICE'>('FACTORY');
+  const [createSourceType, setCreateSourceType] = useState<'FACTORY' | 'SERVICE'>(createModalOnly ? createModalOnlySource : 'FACTORY');
   const [plannerCustomerExists, setPlannerCustomerExists] = useState<boolean | null>(null);
   const [duplicateMatches, setDuplicateMatches] = useState<DuplicateMatchItem[]>([]);
   const [duplicateCurrentInput, setDuplicateCurrentInput] = useState<{ customerName: string; email: string; phone: string } | null>(null);
@@ -165,13 +191,25 @@ export default function PlatformApplication() {
   const [duplicateModalPlatformLabel, setDuplicateModalPlatformLabel] = useState('');
   /** When non-null, duplicate modal was opened from Create flow; "确认新增" will call create with this. */
   const [pendingCreateValues, setPendingCreateValues] = useState<Record<string, unknown> | null>(null);
-  const [plannerForm] = Form.useForm<ApplicationRow & { customerName?: string }>();
+  const [plannerForm] = Form.useForm<ApplicationRow & { customerName?: string; ccPlanner?: string }>();
   const [adminForm] = Form.useForm<ApplicationRow>();
 
   const [platformConfigs, setPlatformConfigs] = useState<PlatformConfigItem[]>([]);
+  const createFormRef = useRef<{ getFieldsValue: () => Record<string, unknown>; setFieldsValue: (v: Record<string, unknown>) => void } | null>(null);
+  const draftKey = `platform-apply-${createSourceType}${enterpriseDirect ? '-enterprise' : ''}`;
+  const { saveDraft, loadDraft, clearDraft, hasDraft } = useDraftForm(draftKey);
+  const plannerDraftKey = 'platform-apply-enterprise-confirm';
+  const { saveDraft: savePlannerDraft, loadDraft: loadPlannerDraft, clearDraft: clearPlannerDraft, hasDraft: hasPlannerDraft } = useDraftForm(plannerDraftKey);
+
   useEffect(() => {
     getPlatformConfigs().then(setPlatformConfigs).catch(() => setPlatformConfigs([]));
   }, []);
+  useEffect(() => {
+    if (enterpriseDirect) setCreateOpen(true);
+  }, [enterpriseDirect]);
+  useEffect(() => {
+    if (createModalOnly) setCreateOpen(createModalOnlyOpen);
+  }, [createModalOnly, createModalOnlyOpen]);
   const platformOptions = useMemo(
     () => (platformConfigs?.filter((p) => p.isActive) ?? []).map((p) => ({ label: p.platformName, value: p.platformCode })),
     [platformConfigs]
@@ -287,9 +325,11 @@ export default function PlatformApplication() {
         return false;
       }
       await doCreate(values);
+      clearDraft();
       message.success('申请已提交');
       setCreateOpen(false);
-      actionRef.current?.reload();
+      if (createModalOnly) createModalOnlyOnSuccess?.();
+      else actionRef.current?.reload();
       return true;
     } catch (e) {
       showError(e);
@@ -318,6 +358,7 @@ export default function PlatformApplication() {
         isCcPlanner: !!values.ccPlanner,
       });
       message.success('已提交至管理员审核');
+      clearPlannerDraft();
       setPlannerModalOpen(false);
       setCurrentRow(null);
       setPlannerCustomerExists(null);
@@ -380,42 +421,21 @@ export default function PlatformApplication() {
     if (pendingCreateValues) {
       try {
         await doCreate(pendingCreateValues);
+        clearDraft();
         message.success('申请已提交');
         setPendingCreateValues(null);
         setShowDuplicateModal(false);
         setDuplicateMatches([]);
         setDuplicateCurrentInput(null);
         setCreateOpen(false);
-        actionRef.current?.reload();
+        if (createModalOnly) createModalOnlyOnSuccess?.();
+        else actionRef.current?.reload();
       } catch (e) {
         showError(e);
       }
     } else {
       await handleDuplicateConfirmNew();
     }
-  };
-
-  const handleDuplicateGoSim = () => {
-    setShowDuplicateModal(false);
-    setDuplicateMatches([]);
-    setDuplicateCurrentInput(null);
-    setPlannerModalOpen(false);
-    setCurrentRow(null);
-    plannerForm.resetFields();
-    navigate('/platform/sim-applications');
-    actionRef.current?.reload();
-  };
-
-  /** Close duplicate modal and parent modal(s) — full exit. */
-  const handleDuplicateCancel = () => {
-    setShowDuplicateModal(false);
-    setDuplicateMatches([]);
-    setDuplicateCurrentInput(null);
-    setPendingCreateValues(null);
-    setPlannerModalOpen(false);
-    setCurrentRow(null);
-    setCreateOpen(false);
-    plannerForm.resetFields();
   };
 
   const handlePlannerCloseApp = () => {
@@ -502,49 +522,203 @@ export default function PlatformApplication() {
     }
   };
 
+  const [activeTab, setActiveTab] = useState<string>('pending');
+  const tableRequest = async (params: Record<string, unknown>) => {
+    try {
+      const page = ((params.current as number) ?? 1) - 1;
+      const size = (params.pageSize as number) ?? 20;
+      const statuses = activeTab === 'history' ? APPLICATION_STATUS_PARTITION.HISTORY : APPLICATION_STATUS_PARTITION.PENDING;
+      const { data } = await request.get<{ content: ApplicationRow[]; totalElements: number }>(
+        '/v1/platform-account-applications/page',
+        { params: { page, size, status: params.status, platform: params.platform, customerId: params.customerId, statusIn: statuses.join(',') } }
+      );
+      const content = Array.isArray(data?.content) ? data.content : [];
+      const total = data?.totalElements ?? 0;
+      return { data: content, total, success: true };
+    } catch {
+      return { data: [], total: 0, success: true };
+    }
+  };
+
+  if (createModalOnly) {
+    return (
+      <div style={{ padding: 24 }}>
+        <ModalForm
+          key={`create-${createSourceType}`}
+          formRef={createFormRef as React.RefObject<unknown>}
+          title={createSourceType === 'FACTORY' ? (enterpriseDirect ? '申请平台' : '销售申请') : '服务申请'}
+          open={createOpen}
+          onOpenChange={(open) => {
+            setCreateOpen(open);
+            if (!open) {
+              setCreateSourceType('FACTORY');
+              createModalOnlyOnCancel?.();
+            }
+          }}
+          onFinish={handleCreate}
+          layout="vertical"
+          modalProps={{ destroyOnClose: true }}
+          submitter={{
+            render: (_props, doms) => (
+              <>
+                {doms}
+                <Button key="draft" onClick={() => { const values = createFormRef.current?.getFieldsValue?.() ?? {}; saveDraft(values); message.success('草稿已保存'); setCreateOpen(false); setCreateSourceType('FACTORY'); createModalOnlyOnCancel?.(); }} style={{ marginLeft: 8 }}>保存草稿</Button>
+              </>
+            ),
+          }}
+        >
+          {hasDraft && (
+            <Alert type="info" showIcon style={{ marginBottom: 16 }} message={<>{'您有未提交的草稿。 '}<Button type="link" size="small" onClick={() => { const v = loadDraft(); if (v && createFormRef.current?.setFieldsValue) createFormRef.current.setFieldsValue(v as Record<string, unknown>); }}>恢复草稿</Button><Button type="link" size="small" onClick={clearDraft}>清除草稿</Button></>} />
+          )}
+          <Form.Item name="platform" label="平台" rules={[{ required: true }]}>
+            <Select options={platformOptions} placeholder="选择平台" />
+          </Form.Item>
+          <Form.Item name="sourceType" hidden initialValue={createSourceType}><Input type="hidden" /></Form.Item>
+          <CustomerFieldCreate />
+          <Form.Item name="orgFullName" label="机构全称" rules={[{ required: true, message: '请输入机构全称' }]}>
+            <Input placeholder="机构全称（默认同客户名称，可修改）" />
+          </Form.Item>
+          <Form.Item name="contactPerson" label="联系人" rules={[{ required: true, message: '此项必填' }]}>
+            <SmartInput name="contactPerson" trim placeholder="联系人" />
+          </Form.Item>
+          <Form.Item name="phone" label="联系电话" rules={[{ required: true, message: '此项必填' }, PhoneRule]}>
+            <SmartInput name="phone" noSpaces placeholder="11位手机号或区号-号码" />
+          </Form.Item>
+          <Form.Item name="email" label="邮箱" rules={[{ required: true, message: '此项必填' }, EmailRule]}>
+            <SmartInput name="email" type="email" noSpaces placeholder="邮箱" />
+          </Form.Item>
+          {createSourceType === 'FACTORY' && (
+            <Form.Item name="contractNo" label="合同号" rules={enterpriseDirect ? [] : [{ required: true, message: '请输入合同号' }, ContractRule]}>
+              <SmartInput name="contractNo" uppercase noSpaces placeholder="合同号（英文/数字/符号）" />
+            </Form.Item>
+          )}
+          {createSourceType === 'SERVICE' && (
+            <>
+              <Alert type="warning" message="首次开通必须交满1年（12个月），特殊情况请单独联系管理员" showIcon style={{ marginBottom: 16 }} />
+              <ProFormMoney name="price" label="单价（元/点）" initialValue={25} rules={[{ required: true, message: '请填写单价' }]} fieldProps={{ min: 0, precision: 2, step: 0.01, moneySymbol: false, addonAfter: '元/点', formatter: (v) => (v != null && String(v) !== '' ? Number(v).toFixed(2) : ''), parser: (v) => (v ? parseFloat(String(v).replace(/,/g, '')) : 0) }} />
+              <ProFormDigit name="quantity" label="台数" initialValue={1} rules={[{ required: true, message: '请填写台数' }]} fieldProps={{ min: 1, precision: 0, addonAfter: '台' }} />
+              <Form.Item name="reason" label="原因" rules={[{ required: true, message: '请填写原因' }]}>
+                <Input.TextArea rows={2} placeholder="原因" />
+              </Form.Item>
+            </>
+          )}
+        </ModalForm>
+        <DuplicateCheckModal
+          visible={showDuplicateModal}
+          matches={duplicateMatches}
+          platform={duplicateModalPlatform}
+          platformLabel={duplicateModalPlatformLabel}
+          currentInput={duplicateCurrentInput ?? undefined}
+          title="重复提醒"
+          stage={pendingCreateValues != null ? (pendingCreateValues.sourceType === 'SERVICE' ? 'service' : 'sales') : 'enterprise_confirm'}
+          violatesHouseRules={(() => {
+            const config = getConfig((pendingCreateValues?.platform as string) ?? duplicateModalPlatform);
+            const reason = (h: DuplicateMatchItem) => h.matchReason ?? '';
+            const violationEmail = !!config?.ruleUniqueEmail && duplicateMatches.some((h) => reason(h).includes('邮箱'));
+            const violationPhone = !!config?.ruleUniquePhone && duplicateMatches.some((h) => reason(h).includes('电话'));
+            const violationName = !!config?.ruleUniqueOrgName && duplicateMatches.some((h) => reason(h).includes('全称'));
+            return violationEmail || violationPhone || violationName;
+          })()}
+          onCancel={handleDuplicateReturn}
+          renderFooter={(close, ctx) => {
+            const isBlocked = ctx.violatesHouseRules;
+            const showConfirmCreate = !isBlocked;
+            const showApplyReuse = ctx.selectedHitCanReuse;
+            const isService = pendingCreateValues != null && pendingCreateValues.sourceType === 'SERVICE';
+            const isEnterpriseConfirm = pendingCreateValues == null;
+            const buttons: React.ReactNode[] = [
+              <Button key="return" onClick={handleDuplicateReturn}>返回编辑</Button>,
+            ];
+            if (showConfirmCreate) buttons.push(<Button key="confirm" type="primary" onClick={handleDuplicateConfirmAdd} style={{ marginLeft: 8 }}>确认新增</Button>);
+            if (showApplyReuse) buttons.push(<Button key="reuse" onClick={() => message.info('功能暂留：申请复用')} style={{ marginLeft: 8 }}>申请复用</Button>);
+            if (isEnterpriseConfirm && isBlocked) buttons.push(<Button key="simActivation" type="primary" onClick={() => { close(); navigate('/platform/applications/sim-activation'); }} style={{ marginLeft: 8 }}>开卡申请</Button>);
+            if (isService && isBlocked) buttons.push(<Button key="requestVerify" type="primary" onClick={() => message.info('功能暂留：申请核查')} style={{ marginLeft: 8 }}>申请核查</Button>);
+            return <div><span>{buttons}</span></div>;
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: 24 }}>
-      <ProTable<ApplicationRow>
-        actionRef={actionRef}
-        columns={columns}
-        request={async (params) => {
-          try {
-            const page = (params.current ?? 1) - 1;
-            const size = params.pageSize ?? 20;
-            const { data } = await request.get<{ content: ApplicationRow[]; totalElements: number }>(
-              '/v1/platform-account-applications/page',
-              { params: { page, size, status: params.status, platform: params.platform, customerId: params.customerId } }
-            );
-            const content = Array.isArray(data?.content) ? data.content : [];
-            const total = data?.totalElements ?? 0;
-            return { data: content, total, success: true };
-          } catch {
-            return { data: [], total: 0, success: true };
-          }
-        }}
-        rowKey="id"
-        search={{ labelWidth: 'auto' }}
-        pagination={{ pageSize: 20 }}
-        headerTitle="平台开户申请"
-        toolBarRender={() => [
-          <Button key="factory" type="primary" onClick={() => { setCreateSourceType('FACTORY'); setCreateOpen(true); }}>
-            销售申请
-          </Button>,
-          <Button key="service" onClick={() => { setCreateSourceType('SERVICE'); setCreateOpen(true); }}>
-            服务申请
-          </Button>,
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          {
+            key: 'pending',
+            label: '待处理',
+            children: (
+              <ProTable<ApplicationRow>
+                actionRef={actionRef}
+                columns={columns}
+                request={tableRequest}
+                rowKey="id"
+                search={{ labelWidth: 'auto' }}
+                pagination={{ pageSize: 20 }}
+                headerTitle="平台开户申请"
+                toolBarRender={() => []}
+              />
+            ),
+          },
+          { key: 'history', label: '申请历史', children: <ApplicationsHistory /> },
         ]}
       />
 
       <ModalForm
         key={`create-${createSourceType}`}
-        title={createSourceType === 'FACTORY' ? '销售申请' : '服务申请'}
+        formRef={createFormRef as React.RefObject<unknown>}
+        title={createSourceType === 'FACTORY' ? (enterpriseDirect ? '申请平台' : '销售申请') : '服务申请'}
         open={createOpen}
-        onOpenChange={(open) => { setCreateOpen(open); if (!open) setCreateSourceType('FACTORY'); }}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) {
+            setCreateSourceType('FACTORY');
+            if (createModalOnly) createModalOnlyOnCancel?.();
+          }
+        }}
         onFinish={handleCreate}
         layout="vertical"
         modalProps={{ destroyOnClose: true }}
+        submitter={{
+          render: (_props, doms) => (
+            <>
+              {doms}
+              <Button
+                key="draft"
+                onClick={() => {
+                  const values = createFormRef.current?.getFieldsValue?.() ?? {};
+                  saveDraft(values);
+                  message.success('草稿已保存');
+                  setCreateOpen(false);
+                }}
+                style={{ marginLeft: 8 }}
+              >
+                保存草稿
+              </Button>
+            </>
+          ),
+        }}
       >
+        {hasDraft && (
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+            message={
+              <>
+                您有未提交的草稿。
+                <Button type="link" size="small" onClick={() => { const v = loadDraft(); if (v && createFormRef.current?.setFieldsValue) createFormRef.current.setFieldsValue(v as Record<string, unknown>); }}>
+                  恢复草稿
+                </Button>
+                <Button type="link" size="small" onClick={clearDraft}>
+                  清除草稿
+                </Button>
+              </>
+            }
+          />
+        )}
         <Form.Item name="platform" label="平台" rules={[{ required: true }]}>
           <Select options={platformOptions} placeholder="选择平台" />
         </Form.Item>
@@ -586,8 +760,8 @@ export default function PlatformApplication() {
                 step: 0.01,
                 moneySymbol: false,
                 addonAfter: '元/点',
-                formatter: (value) => (value != null && value !== '' ? Number(value).toFixed(2) : ''),
-                parser: (v) => (v ? parseFloat(String(v).replace(/,/g, '')) : undefined),
+                formatter: (value) => (value != null && String(value) !== '' ? Number(value).toFixed(2) : ''),
+                parser: (v) => (v ? parseFloat(String(v).replace(/,/g, '')) : 0),
               }}
             />
             <ProFormDigit
@@ -618,6 +792,20 @@ export default function PlatformApplication() {
           <Button key="cancel" onClick={() => { setPlannerModalOpen(false); setCurrentRow(null); setPlannerCustomerExists(null); plannerForm.resetFields(); }}>
             取消
           </Button>,
+          <Button
+            key="draft"
+            onClick={() => {
+              const values = plannerForm.getFieldsValue();
+              savePlannerDraft(values);
+              message.success('草稿已保存');
+              setPlannerModalOpen(false);
+              setCurrentRow(null);
+              setPlannerCustomerExists(null);
+              plannerForm.resetFields();
+            }}
+          >
+            保存草稿
+          </Button>,
           <Button key="submit" type="primary" onClick={() => handlePlannerConfirm()}>
             提交至管理员
           </Button>,
@@ -640,6 +828,24 @@ export default function PlatformApplication() {
             message="首次开通必须交满1年（12个月），特殊情况请单独联系管理员"
             showIcon
             style={{ marginBottom: 16 }}
+          />
+        )}
+        {hasPlannerDraft && (
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+            message={
+              <>
+                您有未提交的草稿。
+                <Button type="link" size="small" onClick={() => { const v = loadPlannerDraft(); if (v && typeof v === 'object') plannerForm.setFieldsValue(v as Parameters<typeof plannerForm.setFieldsValue>[0]); }}>
+                  恢复草稿
+                </Button>
+                <Button type="link" size="small" onClick={clearPlannerDraft}>
+                  清除草稿
+                </Button>
+              </>
+            }
           />
         )}
         <Form form={plannerForm} layout="vertical">
@@ -684,8 +890,8 @@ export default function PlatformApplication() {
                   style={{ width: '100%' }}
                   addonAfter="元/点"
                   placeholder="25.00"
-                  formatter={(value) => (value != null && value !== '' ? Number(value).toFixed(2) : '')}
-                  parser={(v) => (v ? parseFloat(String(v).replace(/,/g, '')) : undefined)}
+                  formatter={(value) => (value != null && String(value) !== '' ? Number(value).toFixed(2) : '')}
+                  parser={(v) => (v ? parseFloat(String(v).replace(/,/g, '')) : 0)}
                 />
               </Form.Item>
               <Form.Item name="quantity" label="台数" initialValue={1} rules={[{ required: true, message: '此项必填' }]}>
@@ -721,38 +927,54 @@ export default function PlatformApplication() {
         platformLabel={duplicateModalPlatformLabel}
         currentInput={duplicateCurrentInput ?? undefined}
         title="重复提醒"
-        onCancel={handleDuplicateReturn}
-        renderFooter={(close) => {
-          const isServiceFlow = pendingCreateValues?.sourceType === 'SERVICE';
-          const config = getConfig((pendingCreateValues?.platform as string) ?? '');
+        stage={pendingCreateValues != null ? (pendingCreateValues.sourceType === 'SERVICE' ? 'service' : 'sales') : 'enterprise_confirm'}
+        violatesHouseRules={(() => {
+          const config = getConfig((pendingCreateValues?.platform as string) ?? duplicateModalPlatform);
           const reason = (h: DuplicateMatchItem) => h.matchReason ?? '';
           const violationEmail = !!config?.ruleUniqueEmail && duplicateMatches.some((h) => reason(h).includes('邮箱'));
           const violationPhone = !!config?.ruleUniquePhone && duplicateMatches.some((h) => reason(h).includes('电话'));
           const violationName = !!config?.ruleUniqueOrgName && duplicateMatches.some((h) => reason(h).includes('全称'));
-          const isBlocked = violationEmail || violationPhone || violationName;
-          if (isServiceFlow) {
-            return [
-              <Button key="return" onClick={handleDuplicateReturn}>
-                返回编辑
-              </Button>,
-              <Button
-                key="requestCheck"
-                type="primary"
-                onClick={() => message.info('功能暂留：后续合并开发')}
-              >
+          return violationEmail || violationPhone || violationName;
+        })()}
+        onCancel={handleDuplicateReturn}
+        renderFooter={(close, ctx) => {
+          const isBlocked = ctx.violatesHouseRules;
+          const showConfirmCreate = !isBlocked;
+          const showApplyReuse = ctx.selectedHitCanReuse;
+          const isService = pendingCreateValues == null ? false : pendingCreateValues.sourceType === 'SERVICE';
+          const isEnterpriseConfirm = pendingCreateValues == null;
+          const buttons: React.ReactNode[] = [
+            <Button key="return" onClick={handleDuplicateReturn}>
+              返回编辑
+            </Button>,
+          ];
+          if (showConfirmCreate) {
+            buttons.push(
+              <Button key="confirm" type="primary" onClick={handleDuplicateConfirmAdd} style={{ marginLeft: 8 }}>
+                确认新增
+              </Button>
+            );
+          }
+          if (showApplyReuse) {
+            buttons.push(
+              <Button key="reuse" onClick={() => message.info('功能暂留：申请复用')} style={{ marginLeft: 8 }}>
+                申请复用
+              </Button>
+            );
+          }
+          if (isEnterpriseConfirm && isBlocked) {
+            buttons.push(
+              <Button key="simActivation" type="primary" onClick={() => { close(); navigate('/platform/applications/sim-activation'); }} style={{ marginLeft: 8 }}>
+                开卡申请
+              </Button>
+            );
+          }
+          if (isService && isBlocked) {
+            buttons.push(
+              <Button key="requestVerify" type="primary" onClick={() => message.info('功能暂留：申请核查')} style={{ marginLeft: 8 }}>
                 申请核查
-              </Button>,
-              <Button
-                key="payReuse"
-                type="primary"
-                onClick={() => message.info('功能暂留：后续合并开发')}
-              >
-                缴费复用
-              </Button>,
-              <Button key="cancel" onClick={handleDuplicateCancel}>
-                取消
-              </Button>,
-            ];
+              </Button>
+            );
           }
           return (
             <div>
@@ -761,19 +983,7 @@ export default function PlatformApplication() {
                   根据平台规则，上述字段严禁重复，无法强制提交。
                 </p>
               )}
-              <span>
-                <Button key="return" onClick={handleDuplicateReturn}>
-                  返回编辑
-                </Button>
-                {!isBlocked && (
-                  <Button key="confirm" type="primary" onClick={handleDuplicateConfirmAdd} style={{ marginLeft: 8 }}>
-                    确认新增
-                  </Button>
-                )}
-                <Button key="cancel" onClick={handleDuplicateCancel} style={{ marginLeft: 8 }}>
-                  取消
-                </Button>
-              </span>
+              <span>{buttons.filter(Boolean)}</span>
             </div>
           );
         }}

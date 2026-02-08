@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { ProLayout } from '@ant-design/pro-components';
+import { useAuthStore } from '@/shared/stores/useAuthStore';
 import {
   DashboardOutlined,
   UserOutlined,
@@ -23,10 +24,10 @@ import {
   SettingOutlined,
 } from '@ant-design/icons';
 import { getStoredToken } from '@/shared/utils/request';
-import { useAuthStore } from '@/shared/stores/useAuthStore';
+import { useIsSuperAdmin } from '@/shared/components/SuperAdminGuard';
 
 /** Static menu config: guaranteed array to avoid "spread non-iterable" in ProLayout. */
-const MENU_ROUTES = [
+const MENU_ROUTES_BASE = [
   { path: '/dashboard', name: 'Dashboard', icon: <DashboardOutlined /> },
   { path: '/quotes', name: '报价单', icon: <FileTextOutlined /> },
   {
@@ -68,13 +69,13 @@ const MENU_ROUTES = [
   },
   {
     path: '/platform',
-    name: '平台管理',
+    name: '平台&网卡管理',
     icon: <CloudOutlined />,
     key: 'platform-group',
     routes: [
-      { path: '/platform/orgs', name: '机构管理' },
-      { path: '/platform/applications', name: '开户申请' },
-      { path: '/platform/sim-applications', name: '物联网卡申请' },
+      { path: '/platform/orgs', name: '平台管理' },
+      { path: '/platform/sim-applications', name: 'SIM管理' },
+      { path: '/platform/applications', name: '申请管理' },
     ],
   },
   {
@@ -88,6 +89,23 @@ const MENU_ROUTES = [
     ],
   },
 ];
+
+/** Super Admin only: 层级配置、组织架构、变更记录（人员视图已并入组织架构右侧） */
+const ORG_STRUCTURE_MENU = [
+  { path: '/admin/org-levels', name: '层级配置' },
+  { path: '/admin/org-tree', name: '组织架构' },
+  { path: '/admin/org-change-logs', name: '变更记录' },
+];
+
+function buildMenuRoutes(isSuperAdmin: boolean) {
+  if (!isSuperAdmin) return MENU_ROUTES_BASE;
+  return MENU_ROUTES_BASE.map((r) => {
+    if (r.key === 'admin-group' && r.routes) {
+      return { ...r, routes: [...r.routes, ...ORG_STRUCTURE_MENU] };
+    }
+    return r;
+  });
+}
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -119,17 +137,17 @@ export default function BasicLayout() {
   const navigate = useNavigate();
   const logout = useAuthStore((s) => s.logout);
   const userInfo = useAuthStore((s) => s.userInfo);
+  const isSuperAdmin = useIsSuperAdmin();
   const displayName = userInfo?.username ?? userInfo?.name ?? 'User';
-
-  console.log('BasicLayout rendering', { userInfo });
+  const menuRoutes = useMemo(() => buildMenuRoutes(isSuperAdmin), [isSuperAdmin]);
 
   return (
     <div style={{ height: '100vh', minHeight: '100vh' }}>
       <ProLayout
         title="DFBS"
         layout="mix"
-        route={{ routes: MENU_ROUTES }}
-        menuDataRender={() => MENU_ROUTES}
+        route={{ routes: menuRoutes }}
+        menuDataRender={() => menuRoutes}
         menuItemRender={(item, dom) => (
           <a onClick={() => navigate(item.path ?? '/dashboard')}>{dom}</a>
         )}
