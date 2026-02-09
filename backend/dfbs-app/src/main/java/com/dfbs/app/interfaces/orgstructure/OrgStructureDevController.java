@@ -61,6 +61,17 @@ public class OrgStructureDevController {
         return devResetService.resetDev();
     }
 
+    /** Clear org-structure test data only (position bindings, enabled, affiliations, people, nodes, change logs, levels); restore default levels + root 公司 node. Body confirmText must be "RESET". */
+    @PostMapping("/reset-all")
+    public java.util.Map<String, Object> resetAll(@RequestBody(required = false) java.util.Map<String, String> body) {
+        superAdminGuard.requireSuperAdmin();
+        String confirm = body != null ? body.get("confirmText") : null;
+        if (!"RESET".equals(confirm)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请在请求体中提供 confirmText: \"RESET\"");
+        }
+        return devResetService.resetAll();
+    }
+
     private boolean isDevProfile() {
         for (String profile : environment.getActiveProfiles()) {
             if ("dev".equalsIgnoreCase(profile)) return true;

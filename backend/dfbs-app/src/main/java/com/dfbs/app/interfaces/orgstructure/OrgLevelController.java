@@ -2,6 +2,7 @@ package com.dfbs.app.interfaces.orgstructure;
 
 import com.dfbs.app.application.orgstructure.OrgLevelService;
 import com.dfbs.app.application.orgstructure.dto.OrgLevelCreateRequest;
+import com.dfbs.app.application.orgstructure.dto.OrgLevelReorderRequest;
 import com.dfbs.app.application.orgstructure.dto.OrgLevelUpdateRequest;
 import com.dfbs.app.config.SuperAdminGuard;
 import com.dfbs.app.modules.orgstructure.OrgLevelEntity;
@@ -59,6 +60,13 @@ public class OrgLevelController {
     public OrgLevelEntity create(@RequestBody OrgLevelCreateRequest request) {
         superAdminGuard.requireSuperAdmin();
         return service.create(request.orderIndex(), request.displayName());
+    }
+
+    /** Reorder configurable levels (company excluded). Must be declared before /{id} to avoid 404. */
+    @PutMapping("/reorder")
+    public List<OrgLevelEntity> reorder(@RequestBody OrgLevelReorderRequest request) {
+        superAdminGuard.requireSuperAdmin();
+        return service.reorder(request.orderedIds() != null ? request.orderedIds() : List.of());
     }
 
     @PutMapping("/{id:\\d+}")

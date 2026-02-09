@@ -13,12 +13,14 @@ import {
   Space,
   Spin,
   Table,
+  Tabs,
+  Tag,
   Tree,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { DataNode } from 'antd/es/tree';
 import type { MenuProps } from 'antd';
-import { DownOutlined, PlusOutlined } from '@ant-design/icons';
+import { CaretDownOutlined, CaretRightOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons';
 import {
   getOrgTree,
   getNode,
@@ -36,12 +38,24 @@ import {
   disablePerson,
   enablePerson,
   listJobLevels,
+  getPositionCatalog,
+  getPositionsByOrg,
+  enablePosition,
+  disablePosition,
+  putPositionBindings,
+  getPersonPositions,
+  resetOrgStructureAll,
   type OrgTreeNode,
   type OrgNodeItem,
   type OrgLevelItem,
   type OrgPersonItem,
   type JobLevelItem,
+  type PositionCatalogItem,
+  type PositionsByOrgResponse,
+  type EnabledPositionWithBindings,
 } from '@/features/orgstructure/services/orgStructure';
+import { OrgPersonSelect } from '@/features/orgstructure/components/OrgPersonSelect';
+import { TypeToConfirmModal } from '@/shared/components/TypeToConfirmModal';
 
 function showError(e: unknown) {
   const err = e as { response?: { data?: { message?: string } }; message?: string };
@@ -130,7 +144,9 @@ export default function OrgTreePage() {
   const [impact, setImpact] = useState<{ descendantNodeCount: number; personCountInSubtree: number } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm<{ levelId: number; parentId?: number; name: string; remark?: string; isEnabled?: boolean }>();
-  const [editForm] = Form.useForm<{ name: string; remark?: string }>();
+  const [editForm] = Form.useForm<{ name: string; remark?: string; isEnabled?: boolean }>();
+  const [editNodeModalOpen, setEditNodeModalOpen] = useState(false);
+  const [editNodeId, setEditNodeId] = useState<number | null>(null);
   /** Create modal: locked level/parent display (not editable). */
   const [createParentPath, setCreateParentPath] = useState<string>('');
   const [createParentId, setCreateParentId] = useState<number | null>(null);
@@ -160,6 +176,22 @@ export default function OrgTreePage() {
     primaryOrgNodeId: number;
     secondaryOrgNodeIds?: number[];
   }>();
+  /** Right panel tab: 人员 | 职位配置 */
+  const [rightTabKey, setRightTabKey] = useState<string>('people');
+  /** Position config tab */
+  const [positionsByOrg, setPositionsByOrg] = useState<PositionsByOrgResponse | null>(null);
+  const [positionsLoading, setPositionsLoading] = useState(false);
+  const [positionCatalog, setPositionCatalog] = useState<PositionCatalogItem[]>([]);
+  const [enablePositionModalOpen, setEnablePositionModalOpen] = useState(false);
+  const [enablePositionSelectedIds, setEnablePositionSelectedIds] = useState<number[]>([]);
+  const [bindingsSaving, setBindingsSaving] = useState<Record<string, boolean>>({});
+  /** Draft person ids per position (key: orgNodeId-positionId) for 职位配置 Save */
+  const [bindingDraft, setBindingDraft] = useState<Record<string, number[]>>({});
+  /** Person 任职列表 (when editing person) */
+  const [personAssignments, setPersonAssignments] = useState<{ orgNodeId: number; orgNodeNamePath: string; positionDisplayName: string; positionShortName: string | null; isPartTime: boolean }[]>([]);
+  /** 清空测试数据 modal */
+  const [resetAllModalOpen, setResetAllModalOpen] = useState(false);
+  const [resetAllSubmitting, setResetAllSubmitting] = useState(false);
 
   const fetchTree = useCallback(async () => {
     setLoading(true);
@@ -198,7 +230,31 @@ export default function OrgTreePage() {
   useEffect(() => {
     listJobLevels().then(setJobLevels).catch(() => setJobLevels([]));
     getOrgTree(false).then((t) => setOrgOptionsForPerson(flattenTreeForOrg(t))).catch(() => setOrgOptionsForPerson([]));
+    getPositionCatalog().then(setPositionCatalog).catch(() => setPositionCatalog([]));
   }, []);
+
+  /** Fetch positions when 职位配置 tab is active and detail exists */
+  const fetchPositionsByOrg = useCallback(async () => {
+    if (!detail || rightTabKey !== 'positions') return;
+    setPositionsLoading(true);
+    try {
+      const data = await getPositionsByOrg(detail.id);
+      setPositionsByOrg(data);
+    } catch (e) {
+      showError(e);
+      setPositionsByOrg(null);
+    } finally {
+      setPositionsLoading(false);
+    }
+  }, [detail, rightTabKey]);
+
+  useEffect(() => {
+    fetchPositionsByOrg();
+  }, [fetchPositionsByOrg]);
+
+  useEffect(() => {
+    setBindingDraft({});
+  }, [detail?.id]);
 
   /** Root = top-level node (parentId conceptually null; in our tree, roots are the top-level array). When selected, show all people. */
   const isSelectedRoot = detail != null && tree.length > 0 && tree.some((n) => n.id === detail.id);
@@ -324,15 +380,36 @@ export default function OrgTreePage() {
     }
   };
 
-  const handleEditSave = async () => {
-    if (detail == null) return;
+  const openEditNode = (nodeId: number) => {
+    setEditNodeId(nodeId);
+    if (detail?.id === nodeId) {
+      editForm.setFieldsValue({ name: detail.name, remark: detail.remark ?? '', isEnabled: detail.isEnabled ?? true });
+      setEditNodeModalOpen(true);
+    } else {
+      getNode(nodeId).then((n) => {
+        editForm.setFieldsValue({ name: n.name, remark: n.remark ?? '', isEnabled: n.isEnabled ?? true });
+        setEditNodeModalOpen(true);
+      }).catch(showError);
+    }
+  };
+
+  const handleEditNodeSave = async () => {
+    if (editNodeId == null) return;
     try {
       const values = await editForm.validateFields();
       setSubmitting(true);
-      await updateNode(detail.id, { name: values.name?.trim(), remark: values.remark?.trim() });
+      await updateNode(editNodeId, {
+        name: values.name?.trim(),
+        remark: values.remark?.trim(),
+        isEnabled: values.isEnabled ?? true,
+      });
       message.success('已保存');
-      setDetail({ ...detail, name: values.name, remark: values.remark });
+      setEditNodeModalOpen(false);
+      setEditNodeId(null);
       fetchTree();
+      if (selectedKey === String(editNodeId)) {
+        getNode(editNodeId).then(setDetail).catch(() => {});
+      }
     } catch (e) {
       if (e instanceof Error && e.message?.includes('validateFields')) return;
       showError(e);
@@ -407,12 +484,16 @@ export default function OrgTreePage() {
       secondaryOrgNodeIds: [],
     });
     setPersonEditingId(null);
+    setPersonAssignments([]);
     setPersonModalOpen(true);
   };
 
   const openEditPerson = async (id: number) => {
     try {
-      const row = await getPerson(id);
+      const [row, assignments] = await Promise.all([
+        getPerson(id),
+        getPersonPositions(id),
+      ]);
       personForm.setFieldsValue({
         name: row.name,
         phone: row.phone,
@@ -423,6 +504,13 @@ export default function OrgTreePage() {
         secondaryOrgNodeIds: row.secondaryOrgNodeIds ?? [],
       });
       setPersonEditingId(id);
+      setPersonAssignments(assignments.map((a) => ({
+        orgNodeId: a.orgNodeId,
+        orgNodeNamePath: a.orgNodeNamePath,
+        positionDisplayName: a.positionDisplayName,
+        positionShortName: a.positionShortName,
+        isPartTime: a.isPartTime,
+      })));
       setPersonModalOpen(true);
     } catch (e) {
       showError(e);
@@ -492,11 +580,61 @@ export default function OrgTreePage() {
     }
   };
 
+  const handleSaveBindings = async (positionId: number, personIds: number[]) => {
+    if (!detail) return;
+    const key = `${detail.id}-${positionId}`;
+    setBindingsSaving((prev) => ({ ...prev, [key]: true }));
+    try {
+      await putPositionBindings(detail.id, positionId, personIds);
+      message.success('已保存');
+      fetchPositionsByOrg();
+    } catch (e) {
+      showError(e);
+    } finally {
+      setBindingsSaving((prev) => ({ ...prev, [key]: false }));
+    }
+  };
+
+  const handleEnablePositionsConfirm = async () => {
+    if (!detail || enablePositionSelectedIds.length === 0) {
+      setEnablePositionModalOpen(false);
+      return;
+    }
+    try {
+      for (const positionId of enablePositionSelectedIds) {
+        await enablePosition(detail.id, positionId);
+      }
+      message.success('已启用 ' + enablePositionSelectedIds.length + ' 个职位');
+      setEnablePositionModalOpen(false);
+      setEnablePositionSelectedIds([]);
+      fetchPositionsByOrg();
+    } catch (e) {
+      showError(e);
+    }
+  };
+
+  const handleDisablePosition = (positionId: number) => {
+    if (!detail) return;
+    Modal.confirm({
+      title: '确认停用职位',
+      content: '若该职位已绑定人员，将无法停用，需先解除绑定。',
+      onOk: async () => {
+        try {
+          await disablePosition(detail!.id, positionId);
+          message.success('已停用');
+          fetchPositionsByOrg();
+        } catch (e) {
+          showError(e);
+        }
+      },
+    });
+  };
+
   const renderTreeNodeTitle = (nodeData: TreeDataNode) => {
     const nodeId = nodeData.nodeId ?? Number(nodeData.key);
     const levelId = nodeData.levelId;
     const menuItems: MenuProps['items'] = [
-      { key: 'edit', label: '编辑', onClick: () => setSelectedKey(nodeData.key as string) },
+      { key: 'edit', label: '编辑', onClick: () => openEditNode(nodeId) },
       { key: 'move', label: '移动', onClick: () => openMove(nodeId) },
       {
         key: 'disable',
@@ -518,9 +656,8 @@ export default function OrgTreePage() {
           icon={<PlusOutlined />}
           onClick={(e) => { e.stopPropagation(); openAddChild(nodeId, levelId); }}
           style={{ padding: '0 4px', flexShrink: 0 }}
-        >
-          添加下级
-        </Button>
+          title="添加下级"
+        />
         <Dropdown menu={{ items: menuItems }} trigger={['click']} onClick={(e) => e.stopPropagation()}>
           <Button type="text" size="small" icon={<DownOutlined />} style={{ padding: '0 2px', flexShrink: 0 }} />
         </Dropdown>
@@ -532,7 +669,6 @@ export default function OrgTreePage() {
     <div style={{ padding: 24 }}>
       <div style={{ marginBottom: 16 }}>
         <h2 style={{ margin: 0, fontSize: 18 }}>组织架构</h2>
-        <p style={{ margin: '4px 0 0', color: '#666', fontSize: 12 }}>选中组织后，右侧展示该组织及下级人员；选公司展示全部人员。</p>
       </div>
       <div style={{ display: 'flex', gap: 16, height: 'calc(100vh - 180px)' }}>
       <Card title="组织树" style={{ width: 400, flexShrink: 0 }}>
@@ -541,9 +677,7 @@ export default function OrgTreePage() {
           showIcon={false}
           message={
             <span style={{ fontSize: 12 }}>
-              1) 先在左侧树选择一个节点<br />
-              2) 点「+ 添加下级」新增组织<br />
-              3) 右侧可编辑名称/备注/启用停用；下方为人员列表
+              选中组织后右侧展示人员与职位配置；点「+」可添加下级组织；「…」菜单中可编辑、移动、停用/启用。
             </span>
           }
           style={{ marginBottom: 12 }}
@@ -571,65 +705,89 @@ export default function OrgTreePage() {
               新建根节点
             </Button>
           )}
+          <Button size="small" danger onClick={() => setResetAllModalOpen(true)}>
+            清空测试数据
+          </Button>
         </Space>
+        <TypeToConfirmModal
+          open={resetAllModalOpen}
+          onCancel={() => setResetAllModalOpen(false)}
+          title="清空组织架构测试数据"
+          description={
+            <>
+              <p style={{ marginBottom: 8 }}><strong>将清空（仅组织架构域）：</strong></p>
+              <ul style={{ marginBottom: 8, paddingLeft: 20 }}>
+                <li>职位绑定、职位启用配置</li>
+                <li>人员归属、组织人员</li>
+                <li>组织节点、变更记录、层级</li>
+              </ul>
+              <p style={{ marginBottom: 8 }}><strong>将恢复：</strong>默认层级 + 根节点「公司」。</p>
+              <p style={{ marginBottom: 0 }}><strong>不会触及：</strong>账号、权限、职级字典、职位目录等。</p>
+            </>
+          }
+          confirmText="RESET"
+          transformInput={(s) => s.toUpperCase()}
+          onConfirm={async () => {
+            setResetAllSubmitting(true);
+            try {
+              await resetOrgStructureAll({ confirmText: 'RESET' });
+              message.success('已清空组织架构测试数据');
+              setResetAllModalOpen(false);
+              setSelectedKey(null);
+              setDetail(null);
+              await fetchTree();
+              listEnabledLevels().then(setLevels);
+              getOrgTree(false).then((t) => setOrgOptionsForPerson(flattenTreeForOrg(t)));
+            } catch (e) {
+              showError(e);
+              throw e;
+            } finally {
+              setResetAllSubmitting(false);
+            }
+          }}
+          okText="确认清空"
+          danger
+          loading={resetAllSubmitting}
+        />
         <Spin spinning={loading}>
           {tree.length > 0 && (
-            <Tree
-              style={{ marginTop: 12 }}
-              treeData={treeData}
-              expandedKeys={expandedKeys}
-              onExpand={(keys) => setExpandedKeys(keys as string[])}
-              selectedKeys={selectedKey ? [selectedKey] : []}
-              onSelect={(_, { node }) => setSelectedKey(node.key as string)}
-              titleRender={(node) => renderTreeNodeTitle(node as TreeDataNode)}
-              blockNode
-            />
+            <>
+              <style>{`.org-tree-large-switcher .ant-tree-switcher { width: 24px; min-width: 24px; height: 24px; display: inline-flex !important; align-items: center; justify-content: center; }`}</style>
+              <Tree
+                className="org-tree-large-switcher"
+                style={{ marginTop: 12 }}
+                treeData={treeData}
+                expandedKeys={expandedKeys}
+                onExpand={(keys) => setExpandedKeys(keys as string[])}
+                selectedKeys={selectedKey ? [selectedKey] : []}
+                onSelect={(_, { node }) => setSelectedKey(node.key as string)}
+                titleRender={(node) => renderTreeNodeTitle(node as TreeDataNode)}
+                blockNode
+                switcherIcon={({ expanded }) => (expanded ? <CaretDownOutlined style={{ fontSize: 14 }} /> : <CaretRightOutlined style={{ fontSize: 14 }} />)}
+              />
+            </>
           )}
         </Spin>
       </Card>
-      <Card title={detail ? `节点: ${detail.name}` : '选择组织'} style={{ flex: 1, minWidth: 0 }}>
+      <Card title={detail ? `组织：${detail.name}` : '选择组织'} style={{ flex: 1, minWidth: 0 }}>
         {detailLoading && !detail && <Spin style={{ display: 'block', margin: '24px auto' }} />}
-        {detail && !detailLoading && (
-          <Form
-            form={editForm}
-            layout="vertical"
-            initialValues={{ name: detail.name, remark: detail.remark ?? '' }}
-          >
-            <Form.Item name="name" label="名称" rules={[{ required: true }]}>
-              <Input />
-            </Form.Item>
-            <Form.Item name="remark" label="备注">
-              <Input.TextArea rows={2} />
-            </Form.Item>
-            <Form.Item>
-              <Space>
-                <Button type="primary" onClick={handleEditSave} loading={submitting}>
-                  保存
-                </Button>
-                <Button onClick={() => openMove(detail.id)}>移动</Button>
-                {detail.isEnabled ? (
-                  <Button danger onClick={() => handleDisable(detail.id)}>
-                    停用
-                  </Button>
-                ) : (
-                  <Button onClick={() => handleEnable(detail.id)}>启用</Button>
-                )}
-              </Space>
-            </Form.Item>
-          </Form>
-        )}
         {!detail && !detailLoading && (
           <p style={{ color: '#666', marginBottom: 0 }}>请在左侧选择组织</p>
         )}
-
-        <div style={{ marginTop: 24, borderTop: '1px solid #f0f0f0', paddingTop: 16 }}>
-          <h4 style={{ marginBottom: 12 }}>
-            人员{detail ? (isSelectedRoot ? '（全部）' : '（本节点及下级）') : ''}
-          </h4>
-          {!detail ? (
-            <p style={{ color: '#999', fontSize: 12 }}>请在左侧选择组织后查看/添加人员</p>
-          ) : null}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+        {detail && !detailLoading && (
+          <Tabs
+            activeKey={rightTabKey}
+            onChange={setRightTabKey}
+            items={[
+              {
+                key: 'people',
+                label: '人员',
+                children: (
+                  <>
+                    <h4 style={{ marginBottom: 12 }}>
+                      {isSelectedRoot ? '全部人员' : '本节点及下级人员'}
+                    </h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
             <Card
               size="small"
               style={{
@@ -719,7 +877,63 @@ export default function OrgTreePage() {
               />
             </>
           ) : null}
-        </div>
+                  </>
+                ),
+              },
+              {
+                key: 'positions',
+                label: '职位配置',
+                children: (
+                  <>
+                    <p style={{ color: '#666', fontSize: 12, marginBottom: 12 }}>
+                      为本组织启用职位并绑定人员；主归属不在本组织的显示为「兼任」。
+                    </p>
+                    <Button type="primary" size="small" style={{ marginBottom: 16 }} onClick={() => { setEnablePositionSelectedIds([]); setEnablePositionModalOpen(true); }}>
+                      启用职位
+                    </Button>
+                    <Spin spinning={positionsLoading}>
+                      {positionsByOrg?.enabledPositions && positionsByOrg.enabledPositions.length > 0 ? (
+                        <Space direction="vertical" style={{ width: '100%' }}>
+                          {positionsByOrg.enabledPositions.map((pos: EnabledPositionWithBindings) => {
+                            const key = `${positionsByOrg.orgNodeId}-${pos.positionId}`;
+                            const saving = bindingsSaving[key];
+                            return (
+                              <Card size="small" key={key} title={<span>{pos.displayName}{pos.shortName ? ` (${pos.shortName})` : ''}</span>}>
+                                <Space direction="vertical" style={{ width: '100%' }}>
+                                  <div>
+                                    <span style={{ marginRight: 8 }}>绑定人员：</span>
+                                    <OrgPersonSelect
+                                      value={bindingDraft[key] ?? pos.boundPeople.map((p) => p.id)}
+                                      onChange={(ids) => setBindingDraft((prev) => ({ ...prev, [key]: ids }))}
+                                      placeholder="选择人员（可多选）"
+                                    />
+                                    <Button type="primary" size="small" loading={saving} style={{ marginLeft: 8 }} onClick={() => handleSaveBindings(pos.positionId, bindingDraft[key] ?? pos.boundPeople.map((p) => p.id))}>
+                                      保存
+                                    </Button>
+                                    <Button size="small" style={{ marginLeft: 8 }} onClick={() => handleDisablePosition(pos.positionId)}>停用职位</Button>
+                                  </div>
+                                  {pos.boundPeople.length > 0 && (
+                                    <div style={{ fontSize: 12, color: '#666' }}>
+                                      {pos.boundPeople.map((p) => (
+                                        <Tag key={p.id}>{p.name}{p.isPartTime ? ' 兼任' : ''}</Tag>
+                                      ))}
+                                    </div>
+                                  )}
+                                </Space>
+                              </Card>
+                            );
+                          })}
+                        </Space>
+                      ) : !positionsLoading && positionsByOrg ? (
+                        <p style={{ color: '#999' }}>暂无已启用职位，请点击「启用职位」从公司职位库中选择。</p>
+                      ) : null}
+                    </Spin>
+                  </>
+                ),
+              },
+            ]}
+          />
+        )}
       </Card>
       </div>
 
@@ -768,6 +982,27 @@ export default function OrgTreePage() {
       </Modal>
 
       <Modal
+        title="编辑组织"
+        open={editNodeModalOpen}
+        onOk={handleEditNodeSave}
+        onCancel={() => { setEditNodeModalOpen(false); setEditNodeId(null); }}
+        confirmLoading={submitting}
+        destroyOnClose
+      >
+        <Form form={editForm} layout="vertical">
+          <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="remark" label="备注">
+            <Input.TextArea rows={2} />
+          </Form.Item>
+          <Form.Item name="isEnabled" label="启用" valuePropName="checked">
+            <Checkbox />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
         title={personEditingId == null ? '新建人员' : '编辑人员'}
         open={personModalOpen}
         onOk={handlePersonSubmit}
@@ -803,7 +1038,44 @@ export default function OrgTreePage() {
           <Form.Item name="secondaryOrgNodeIds" label="次要归属（可多选）">
             <Select mode="multiple" placeholder="选填" allowClear options={orgOptionsForPerson.map((o) => ({ label: o.path, value: o.id }))} />
           </Form.Item>
+          {personEditingId != null && personAssignments.length > 0 && (
+            <Form.Item label="任职列表">
+              <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13 }}>
+                {personAssignments.map((a, i) => (
+                  <li key={i}>
+                    {a.orgNodeNamePath} — {a.positionShortName ?? a.positionDisplayName}
+                    {a.isPartTime && <Tag color="blue" style={{ marginLeft: 8 }}>兼任</Tag>}
+                  </li>
+                ))}
+              </ul>
+            </Form.Item>
+          )}
         </Form>
+      </Modal>
+
+      <Modal
+        title="启用职位"
+        open={enablePositionModalOpen}
+        onOk={handleEnablePositionsConfirm}
+        onCancel={() => { setEnablePositionModalOpen(false); setEnablePositionSelectedIds([]); }}
+        okText="确定启用"
+        destroyOnClose
+      >
+        <p style={{ marginBottom: 12, color: '#666', fontSize: 12 }}>从公司职位库中选择要在此组织启用的职位（已启用的不显示）：</p>
+        <Checkbox.Group
+          style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+          value={enablePositionSelectedIds}
+          onChange={(vals) => setEnablePositionSelectedIds(vals as number[])}
+        >
+          {(positionCatalog || []).filter((c) => !positionsByOrg?.enabledPositions?.some((p) => p.positionId === c.id)).map((c) => (
+            <Checkbox key={c.id} value={c.id}>
+              {c.displayName}{c.shortName ? ` (${c.shortName})` : ''}
+            </Checkbox>
+          ))}
+        </Checkbox.Group>
+        {positionCatalog.length > 0 && positionsByOrg?.enabledPositions && positionCatalog.filter((c) => !positionsByOrg?.enabledPositions?.some((p) => p.positionId === c.id)).length === 0 && (
+          <p style={{ marginTop: 12, color: '#999', fontSize: 12 }}>当前已启用全部职位库中的职位。</p>
+        )}
       </Modal>
 
       <Modal
@@ -816,7 +1088,7 @@ export default function OrgTreePage() {
         {impact != null && (
           <p>
             此操作将影响 <strong>{impact.descendantNodeCount}</strong> 个下级节点、
-            <strong>{impact.personCountInSubtree}</strong> 人归属。请在新位置选择上级节点（输入节点ID，0 表示根）。
+            <strong>{impact.personCountInSubtree}</strong> 名在岗/启用人员归属。请在新位置选择上级节点（输入节点ID，0 表示根）。
           </p>
         )}
         <Form

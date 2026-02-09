@@ -132,6 +132,20 @@
 
 ---
 
+## ClaimController — `interfaces/expense/ClaimController.java`
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/claims |
+| GET | /api/v1/claims |
+| POST | /api/v1/claims/{id}/submit |
+| POST | /api/v1/claims/{id}/return |
+| POST | /api/v1/claims/{id}/reject |
+| POST | /api/v1/claims/{id}/approve |
+| POST | /api/v1/claims/{id}/pay |
+
+---
+
 ## ExpenseStatsController — `interfaces/expense/ExpenseStatsController.java`
 
 | Method | Path |
@@ -653,5 +667,83 @@
 | GET | /api/v1/work-orders/pool |
 | GET | /api/v1/work-orders/my-orders |
 | GET | /api/v1/work-orders/{id} |
+
+## Org-structure (interfaces/orgstructure/)
+
+### OrgLevelController — `interfaces/orgstructure/OrgLevelController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/org-structure/levels |
+| GET | /api/v1/org-structure/levels/configurable |
+| GET | /api/v1/org-structure/levels/enabled |
+| GET | /api/v1/org-structure/levels/can-reset |
+| GET | /api/v1/org-structure/levels/{id} |
+| POST | /api/v1/org-structure/levels |
+| PUT | /api/v1/org-structure/levels/reorder |
+| PUT | /api/v1/org-structure/levels/{id} |
+| POST | /api/v1/org-structure/levels/reset-to-default |
+
+### OrgNodeController — `interfaces/orgstructure/OrgNodeController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/org-structure/nodes/tree |
+| GET | /api/v1/org-structure/nodes/children |
+| GET | /api/v1/org-structure/nodes/{id} |
+| GET | /api/v1/org-structure/nodes/{id}/impact |
+| POST | /api/v1/org-structure/nodes |
+| PUT | /api/v1/org-structure/nodes/{id} |
+| POST | /api/v1/org-structure/nodes/{id}/move |
+| POST | /api/v1/org-structure/nodes/{id}/disable |
+| POST | /api/v1/org-structure/nodes/{id}/enable |
+
+### OrgPersonController — `interfaces/orgstructure/OrgPersonController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/org-structure/people |
+| GET | /api/v1/org-structure/people/by-org |
+| GET | /api/v1/org-structure/people/options |
+| GET | /api/v1/org-structure/people/{id} |
+| GET | /api/v1/org-structure/people/{id}/positions |
+| POST | /api/v1/org-structure/people |
+| PUT | /api/v1/org-structure/people/{id} |
+| POST | /api/v1/org-structure/people/{id}/disable |
+| POST | /api/v1/org-structure/people/{id}/enable |
+
+### OrgPositionController — `interfaces/orgstructure/OrgPositionController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/org-structure/positions/catalog |
+| GET | /api/v1/org-structure/positions/by-org |
+| POST | /api/v1/org-structure/positions/by-org/enable |
+| POST | /api/v1/org-structure/positions/by-org/disable |
+| PUT | /api/v1/org-structure/positions/by-org/bindings |
+| GET | /api/v1/org-structure/positions/bindings/query |
+
+### OrgChangeLogController — `interfaces/orgstructure/OrgChangeLogController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/org-structure/change-logs |
+
+### JobLevelController — `interfaces/orgstructure/JobLevelController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/org-structure/job-levels |
+
+### OrgStructureDevController — `interfaces/orgstructure/OrgStructureDevController.java`
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/org-structure/reset-availability |
+| POST | /api/v1/org-structure/reset |
+| POST | /api/v1/org-structure/reset-dev |
+| POST | /api/v1/org-structure/reset-all |
+
+---
 
 Controller file paths: `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/` + subpackages. Rescan when controllers change.

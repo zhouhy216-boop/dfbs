@@ -2,7 +2,9 @@ package com.dfbs.app.application.orgstructure;
 
 import com.dfbs.app.application.orgstructure.dto.OrgPersonResponse;
 import com.dfbs.app.application.orgstructure.dto.PersonOptionDto;
+import com.dfbs.app.application.orgstructure.dto.PersonPositionAssignmentDto;
 import com.dfbs.app.config.CurrentUserIdResolver;
+import jakarta.persistence.EntityManager;
 import com.dfbs.app.modules.orgstructure.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,11 +27,15 @@ public class OrgPersonService {
     private final OrgChangeLogService changeLogService;
     private final CurrentUserIdResolver userIdResolver;
     private final com.dfbs.app.modules.orgstructure.JobLevelRepo jobLevelRepo;
+    private final OrgPositionConfigService positionConfigService;
+    private final EntityManager entityManager;
 
     public OrgPersonService(OrgPersonRepo personRepo, PersonAffiliationRepo affiliationRepo,
                             OrgNodeRepo nodeRepo, OrgNodeService nodeService,
                             OrgChangeLogService changeLogService, CurrentUserIdResolver userIdResolver,
-                            com.dfbs.app.modules.orgstructure.JobLevelRepo jobLevelRepo) {
+                            com.dfbs.app.modules.orgstructure.JobLevelRepo jobLevelRepo,
+                            OrgPositionConfigService positionConfigService,
+                            EntityManager entityManager) {
         this.personRepo = personRepo;
         this.affiliationRepo = affiliationRepo;
         this.nodeRepo = nodeRepo;
@@ -37,6 +43,12 @@ public class OrgPersonService {
         this.changeLogService = changeLogService;
         this.userIdResolver = userIdResolver;
         this.jobLevelRepo = jobLevelRepo;
+        this.positionConfigService = positionConfigService;
+        this.entityManager = entityManager;
+    }
+
+    public List<PersonPositionAssignmentDto> getPersonPositionAssignments(Long personId) {
+        return positionConfigService.getPersonPositions(personId);
     }
 
     public Page<OrgPersonEntity> search(String keyword, Long primaryOrgId, Pageable pageable) {
@@ -197,7 +209,8 @@ public class OrgPersonService {
                 if (nid.equals(effectivePrimary)) continue;
                 nodeRepo.findById(nid).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "次要归属组织不存在"));
             }
-            affiliationRepo.findByPersonId(id).forEach(affiliationRepo::delete);
+            affiliationRepo.deleteByPersonId(id);
+            entityManager.flush();
             if (effectivePrimary != null) {
                 PersonAffiliationEntity primary = new PersonAffiliationEntity();
                 primary.setPersonId(id);

@@ -4,7 +4,7 @@
 
 ---
 
-## Migration filenames (V0001–V0060)
+## Migration filenames (V0001–V0066)
 
 | Id | Flyway filename |
 |----|-----------------|
@@ -67,6 +67,12 @@
 | V0058 | V0058__add_reject_reason.sql |
 | V0059 | V0059__platform_org_status.sql |
 | V0060 | V0060__create_md_platform.sql |
+| V0061 | V0061__org_structure_v1.sql |
+| V0062 | V0062__org_level_default_seed.sql |
+| V0063 | V0063__org_position_config_v1.sql |
+| V0064 | V0064__org_position_catalog_and_templates_seed.sql |
+| V0065 | V0065__org_level_order_index_unique.sql |
+| V0066 | V0066__org_level_order_index_repair.sql |
 
 (No V0056 in repo.)
 
@@ -90,3 +96,9 @@
 - V0030–V0042: quote_standardization, customer_merge, expense_claim, trip_request, payment_allocation, contract_pricing, carrier_freight_bill, correction, after_sales, masterdata_six_pack, bom_conflicts, quote_payment_created_at, warehouse_mvp.
 - V0043–V0048: work_order (service_flow, cancellation_reason, refinement), app_user (username, seed_admin), smart_select_infrastructure.
 - V0049–V0060: platform_org, platform_account_applications, refactor_platform_org, platform_application_source, relax_application_constraints, enforce_org_uniqueness, org_source_tracking, drop_data_governance_task, add_reject_reason, platform_org_status, create_md_platform.
+- V0061: org_structure_v1 (org levels, nodes, people, change logs).
+- V0062: org_level_default_seed.
+- V0063: org_position_config_v1.
+- V0064: org_position_catalog_and_templates_seed.
+- V0065: org_level_order_index_unique.
+- V0066: org_level_order_index_repair.

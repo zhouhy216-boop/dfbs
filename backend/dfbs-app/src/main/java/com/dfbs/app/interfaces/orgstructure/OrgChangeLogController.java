@@ -28,6 +28,7 @@ public class OrgChangeLogController {
     @GetMapping
     public Page<OrgChangeLogEntity> list(
             @RequestParam(required = false) String objectType,
+            @RequestParam(required = false) Long objectId,
             @RequestParam(required = false) Long operatorId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
@@ -35,6 +36,6 @@ public class OrgChangeLogController {
         superAdminGuard.requireSuperAdmin();
         Instant fromInst = from == null ? null : from.atStartOfDay(ZoneId.systemDefault()).toInstant();
         Instant toInst = to == null ? null : to.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
-        return service.list(objectType, operatorId, fromInst, toInst, pageable);
+        return service.list(objectType, objectId, operatorId, fromInst, toInst, pageable);
     }
 }

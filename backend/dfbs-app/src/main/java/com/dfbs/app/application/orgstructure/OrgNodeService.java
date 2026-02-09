@@ -26,16 +26,19 @@ public class OrgNodeService {
     private final PersonAffiliationRepo affiliationRepo;
     private final OrgChangeLogService changeLogService;
     private final CurrentUserIdResolver userIdResolver;
+    private final OrgPositionConfigService positionConfigService;
 
     public OrgNodeService(OrgNodeRepo nodeRepo, OrgLevelRepo levelRepo,
                           PersonAffiliationRepo affiliationRepo,
                           OrgChangeLogService changeLogService,
-                          CurrentUserIdResolver userIdResolver) {
+                          CurrentUserIdResolver userIdResolver,
+                          OrgPositionConfigService positionConfigService) {
         this.nodeRepo = nodeRepo;
         this.levelRepo = levelRepo;
         this.affiliationRepo = affiliationRepo;
         this.changeLogService = changeLogService;
         this.userIdResolver = userIdResolver;
+        this.positionConfigService = positionConfigService;
     }
 
     /** All descendant node IDs (children, grandchildren, ...). */
@@ -63,11 +66,11 @@ public class OrgNodeService {
         return ids;
     }
 
-    /** Impact summary for move/disable: descendant node count (active + disabled) and person count in subtree. */
+    /** Impact summary for move/disable: descendant node count and active-person count in subtree (在岗/启用人员). */
     public ImpactSummary getImpactSummary(Long nodeId) {
         List<Long> subtreeIds = getSubtreeNodeIds(nodeId);
         long nodeCount = subtreeIds.size() - 1; // exclude self
-        long personCount = subtreeIds.isEmpty() ? 0 : affiliationRepo.countDistinctPersonIdByOrgNodeIdIn(subtreeIds);
+        long personCount = subtreeIds.isEmpty() ? 0 : affiliationRepo.countDistinctActivePersonIdByOrgNodeIdIn(subtreeIds);
         return new ImpactSummary(nodeCount, personCount);
     }
 
@@ -117,6 +120,19 @@ public class OrgNodeService {
         return OrgNodeDto.from(getById(id));
     }
 
+    /** Name path from root to node (e.g. "公司 / 本部 / 研发部"). */
+    public String getNodeNamePath(Long nodeId) {
+        List<String> names = new ArrayList<>();
+        Long currentId = nodeId;
+        while (currentId != null) {
+            OrgNodeEntity node = nodeRepo.findById(currentId).orElse(null);
+            if (node == null) break;
+            names.add(0, node.getName());
+            currentId = node.getParentId();
+        }
+        return String.join(" / ", names);
+    }
+
     /** Children as DTOs for API. */
     public List<OrgNodeDto> getChildrenAsDtos(Long parentId, boolean includeDisabled) {
         return getChildren(parentId, includeDisabled).stream().map(OrgNodeDto::from).toList();
@@ -152,6 +168,7 @@ public class OrgNodeService {
         e = nodeRepo.save(e);
         changeLogService.log("ORG_NODE", e.getId(), "CREATE", uid, uname,
                 "新建组织节点: " + e.getName(), null);
+        positionConfigService.applyTemplateForNewNode(e.getId(), e.getLevelId());
         return OrgNodeDto.from(e);
     }
 
@@ -206,10 +223,10 @@ public class OrgNodeService {
                     "该节点下存在 " + activeChildren + " 个启用中的下级节点，请先迁移或停用下级后再停用本节点");
         }
         List<Long> subtreeIds = getSubtreeNodeIds(id);
-        long personCount = affiliationRepo.countDistinctPersonIdByOrgNodeIdIn(subtreeIds);
+        long personCount = affiliationRepo.countDistinctActivePersonIdByOrgNodeIdIn(subtreeIds);
         if (personCount > 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "该节点及其下级下关联 " + personCount + " 人，请先迁移人员归属再停用");
+                    "该节点及其下级下关联 " + personCount + " 名在岗/启用人员，请先迁移人员归属再停用");
         }
         Long uid = userIdResolver.getCurrentUserId();
         String uname = userIdResolver.getCurrentUserEntity().getNickname();

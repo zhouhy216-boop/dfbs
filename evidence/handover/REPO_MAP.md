@@ -24,8 +24,8 @@
 
 - **Frontend routing**: `frontend/dfbs-ui/src/main.tsx` → `App.tsx` (routes in `App.tsx`).
 - **Frontend layout/sidebar**: `frontend/dfbs-ui/src/layouts/BasicLayout.tsx`.
-- **Pages**: `frontend/dfbs-ui/src/pages/` (Dashboard, Customer, Quote, Shipment, Finance, AfterSales, WorkOrder, Warehouse, ImportCenter, MasterData/*, Platform/*, Admin, System).
-- **Backend REST**: `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/` — controller classes per domain.
+- **Pages**: `frontend/dfbs-ui/src/pages/` (Dashboard, Customer, Quote, Shipment, Finance, AfterSales, WorkOrder, Warehouse, ImportCenter, MasterData/*, Platform/*, Admin [ConfirmationCenter, OrgLevelConfig, OrgTree, OrgChangeLog], System).
+- **Backend REST**: `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/` — controller classes per domain (auth, platformorg, platformaccount, platformconfig, quote, workorder, expense, orgstructure, masterdata, shipment, etc.).
 - **Backend application**: `backend/dfbs-app/src/main/java/com/dfbs/app/DfbsAppApplication.java`.
 - **Tests**: `backend/dfbs-app/src/test/java/com/dfbs/app/`.
 

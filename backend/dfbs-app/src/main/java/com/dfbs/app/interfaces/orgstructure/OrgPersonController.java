@@ -5,6 +5,7 @@ import com.dfbs.app.application.orgstructure.dto.OrgPersonCreateRequest;
 import com.dfbs.app.application.orgstructure.dto.OrgPersonResponse;
 import com.dfbs.app.application.orgstructure.dto.OrgPersonUpdateRequest;
 import com.dfbs.app.application.orgstructure.dto.PersonOptionDto;
+import com.dfbs.app.application.orgstructure.dto.PersonPositionAssignmentDto;
 import com.dfbs.app.config.SuperAdminGuard;
 import com.dfbs.app.modules.orgstructure.OrgPersonEntity;
 import org.springframework.data.domain.Page;
@@ -70,6 +71,13 @@ public class OrgPersonController {
     public OrgPersonResponse get(@PathVariable Long id) {
         superAdminGuard.requireSuperAdmin();
         return service.getResponseById(id);
+    }
+
+    /** Person's position assignments (org path + position name + isPartTime). */
+    @GetMapping("/{id}/positions")
+    public List<PersonPositionAssignmentDto> getPersonPositions(@PathVariable Long id) {
+        superAdminGuard.requireSuperAdmin();
+        return service.getPersonPositionAssignments(id);
     }
 
     @PostMapping

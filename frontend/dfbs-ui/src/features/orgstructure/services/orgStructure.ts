@@ -42,6 +42,12 @@ export async function updateLevel(id: number, body: { orderIndex?: number; displ
   return data;
 }
 
+/** Reorder configurable levels (company excluded). Returns new ordered list. */
+export async function reorderLevels(orderedIds: number[]): Promise<OrgLevelItem[]> {
+  const { data } = await request.put<OrgLevelItem[]>(`${BASE}/levels/reorder`, { orderedIds });
+  return data ?? [];
+}
+
 export interface CanResetLevelsResult {
   canReset: boolean;
   message?: string | null;
@@ -83,6 +89,23 @@ export async function getResetAvailability(): Promise<ResetAvailabilityResult> {
 export async function resetOrgStructureTooling(body: { confirmText: string }): Promise<OrgLevelItem[]> {
   const { data } = await request.post<OrgLevelItem[]>(`${BASE}/reset`, body);
   return data ?? [];
+}
+
+/** Reset all org-structure test data (position bindings, enabled, affiliations, people, nodes, change logs, levels); restore default levels + root 公司 node. Requires confirmText: "RESET". Does NOT touch accounts/permissions/templates. */
+export interface ResetAllResult {
+  positionBindingCleared?: number;
+  positionEnabledCleared?: number;
+  affiliationCleared?: number;
+  personCleared?: number;
+  nodeCleared?: number;
+  changeLogCleared?: number;
+  levelCleared?: number;
+  levelsRestored?: number;
+  rootNodeCreated?: boolean;
+}
+export async function resetOrgStructureAll(body: { confirmText: string }): Promise<ResetAllResult> {
+  const { data } = await request.post<ResetAllResult>(`${BASE}/reset-all`, body);
+  return data ?? {};
 }
 
 // ----- Tree -----
@@ -290,6 +313,83 @@ export async function enablePerson(id: number): Promise<OrgPersonItem> {
   return data;
 }
 
+// ----- Position catalog & config -----
+export interface PositionCatalogItem {
+  id: number;
+  baseName: string;
+  grade: string;
+  displayName: string;
+  shortName: string | null;
+  isEnabled: boolean;
+}
+
+export interface PositionBoundPerson {
+  id: number;
+  name: string;
+  phone: string;
+  email: string | null;
+  primaryOrgNodeId: number | null;
+  primaryOrgNamePath: string | null;
+  isPartTime: boolean;
+}
+
+export interface EnabledPositionWithBindings {
+  positionId: number;
+  baseName: string;
+  grade: string;
+  displayName: string;
+  shortName: string | null;
+  boundPeople: PositionBoundPerson[];
+}
+
+export interface PositionsByOrgResponse {
+  orgNodeId: number;
+  orgNodeName: string;
+  enabledPositions: EnabledPositionWithBindings[];
+}
+
+export interface PersonPositionAssignment {
+  orgNodeId: number;
+  orgNodeNamePath: string;
+  positionId: number;
+  positionDisplayName: string;
+  positionShortName: string | null;
+  isPartTime: boolean;
+}
+
+export async function getPositionCatalog(): Promise<PositionCatalogItem[]> {
+  const { data } = await request.get<PositionCatalogItem[]>(`${BASE}/positions/catalog`);
+  return data ?? [];
+}
+
+export async function getPositionsByOrg(orgNodeId: number): Promise<PositionsByOrgResponse> {
+  const { data } = await request.get<PositionsByOrgResponse>(`${BASE}/positions/by-org`, { params: { orgNodeId } });
+  if (!data) throw new Error('No data');
+  return data;
+}
+
+export async function enablePosition(orgNodeId: number, positionId: number): Promise<void> {
+  await request.post(`${BASE}/positions/by-org/enable`, { orgNodeId, positionId });
+}
+
+export async function disablePosition(orgNodeId: number, positionId: number): Promise<void> {
+  await request.post(`${BASE}/positions/by-org/disable`, { orgNodeId, positionId });
+}
+
+export async function putPositionBindings(orgNodeId: number, positionId: number, personIds: number[]): Promise<void> {
+  await request.put(`${BASE}/positions/by-org/bindings`, { orgNodeId, positionId, personIds });
+}
+
+export async function queryPositionBindings(orgNodeId: number, positionId: number): Promise<{ id: number; name: string; phone: string; email: string | null; isPartTime: boolean }[]> {
+  const { data } = await request.get(`${BASE}/positions/bindings/query`, { params: { orgNodeId, positionId } });
+  return data ?? [];
+}
+
+export async function getPersonPositions(personId: number): Promise<PersonPositionAssignment[]> {
+  const { data } = await request.get<PersonPositionAssignment[]>(`${BASE}/people/${personId}/positions`);
+  return data ?? [];
+}
+
 // ----- Change log -----
 export interface ChangeLogItem {
   id: number;
@@ -305,6 +405,7 @@ export interface ChangeLogItem {
 
 export async function listChangeLogs(params: {
   objectType?: string;
+  objectId?: number;
   operatorId?: number;
   from?: string;
   to?: string;

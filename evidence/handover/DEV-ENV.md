@@ -26,17 +26,28 @@
 
 ---
 
-## 电脑B — TBD
+## Computer B (zhouhy-office) — Verified
 
-请在本机执行 **CEO-OPS.md** 里【环境检查】那一节的命令，把各命令的输出贴到下面（或按上表格式填好），并注明采集日期。
+**Machine**
 
-- `pwsh -v`
-- `git --version`
-- `docker version`
-- `docker compose version`
-- `node -v`
-- `npm -v`
-- `java -version`
-- 在 `backend\dfbs-app` 下执行：`.\mvnw.cmd -v`
+| Item | Value |
+|------|--------|
+| Device name | zhouhy-office |
+| OS | Windows 11 (64-bit, x64-based) |
+| CPU | 12th Gen Intel(R) Core(TM) i9-12900H (2.50 GHz) |
+| RAM | 32.0 GB (31.7 GB usable) |
+| WSL | Ubuntu (Running, version 2); docker-desktop (Running, version 2) |
 
-（可选）若已装 WSL：`wsl --status`、`wsl -l -v`
+**Toolchain (PowerShell session)**
+
+| Tool | Version |
+|------|---------|
+| PowerShell | 7.5.4 |
+| Git | 2.52.0.windows.1 |
+| Docker Desktop | 4.56.0 (214940) |
+| Docker Client | 29.1.3 (API 1.52) |
+| Docker Server/Engine | 29.1.3 (API 1.52) |
+| Node | v25.5.0 |
+| npm | 11.8.0 |
+| Java | Eclipse Temurin OpenJDK 21.0.9+10 (LTS) |
+| Maven (wrapper) | Apache Maven 3.9.12 (via `backend/dfbs-app/mvnw.cmd -v`) |

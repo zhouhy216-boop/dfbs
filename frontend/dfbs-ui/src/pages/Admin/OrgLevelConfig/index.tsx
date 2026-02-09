@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Form, Input, InputNumber, message, Modal, Space, Switch, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { HolderOutlined } from '@ant-design/icons';
 import {
   listConfigurableLevels,
   createLevel,
   updateLevel,
+  reorderLevels,
   canResetLevels,
   resetLevelsToDefault,
   getResetAvailability,
@@ -144,7 +146,45 @@ export default function OrgLevelConfigPage() {
     }
   };
 
+  const sortedList = useMemo(() => [...list].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)), [list]);
+
+  const handleDragDrop = useCallback(
+    async (dragIndex: number, dropIndex: number) => {
+      if (dragIndex === dropIndex) return;
+      const prevList = [...sortedList];
+      const [removed] = prevList.splice(dragIndex, 1);
+      prevList.splice(dropIndex, 0, removed);
+      const orderedIds = prevList.map((l) => l.id);
+      setList(prevList);
+      try {
+        const data = await reorderLevels(orderedIds);
+        setList(data);
+        message.success('顺序已保存');
+      } catch (e) {
+        setList(list);
+        showError(e);
+      }
+    },
+    [list, sortedList]
+  );
+
   const columns: ColumnsType<OrgLevelItem> = [
+    {
+      key: 'drag',
+      width: 32,
+      render: () => (
+        <span
+          role="button"
+          tabIndex={0}
+          className="drag-handle"
+          style={{ cursor: 'grab', color: '#999', display: 'inline-flex' }}
+          onMouseDown={(e) => e.stopPropagation()}
+          title="拖拽排序"
+        >
+          <HolderOutlined />
+        </span>
+      ),
+    },
     {
       title: '层级顺序（公司下的第几层）',
       dataIndex: 'orderIndex',
@@ -216,12 +256,45 @@ export default function OrgLevelConfigPage() {
           <span style={{ color: '#666', fontSize: 12 }}>{resetAvailability.reason}</span>
         )}
       </div>
-      <Table
+      <Table<OrgLevelItem>
         rowKey="id"
         columns={columns}
-        dataSource={list}
+        dataSource={sortedList}
         loading={loading}
         pagination={false}
+        components={{
+          body: {
+            row: (props: React.HTMLAttributes<HTMLTableRowElement> & { 'data-row-key'?: string }) => {
+              const rowKey = props['data-row-key'];
+              const dropIndex = typeof rowKey !== 'undefined' ? list.findIndex((l) => String(l.id) === String(rowKey)) : -1;
+              return (
+                <tr
+                  {...props}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.effectAllowed = 'move';
+                    const idx = sortedList.findIndex((l) => String(l.id) === String(rowKey));
+                    if (idx >= 0) e.dataTransfer.setData('text/plain', String(idx));
+                    (e.currentTarget as HTMLElement).classList.add('dragging');
+                  }}
+                  onDragEnd={(e) => {
+                    (e.currentTarget as HTMLElement).classList.remove('dragging');
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const from = Number(e.dataTransfer.getData('text/plain'));
+                    if (!Number.isNaN(from) && dropIndex >= 0) handleDragDrop(from, dropIndex);
+                  }}
+                  style={{ cursor: 'default' }}
+                />
+              );
+            },
+          },
+        }}
       />
       <Modal
         title={editingId == null ? '新建层级' : '编辑层级'}
