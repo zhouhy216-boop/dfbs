@@ -284,23 +284,15 @@ wsl -l -v   # 【环境检查】看 WSL 里的发行版
 
 ##  阶段对齐工单
 ```
-[TICKET]
-ID: VNX-20260207-016
-Title: Handover Sync — Refresh evidence/handover snapshot to CURRENT repo reality
-Priority: P2
-Risk: LOW
-Status: CURRENT
-Owner: Cursor
-Language: EN (Questions to Delivery PM only)
-Wheel: NO
-Arch: LOCAL
+[DIRECT OPS TICKET — HANDOVER SYNC (FIXED)]
 
-1) Goal
-- Refresh the handover pack so PM/Gemini/Cursor align on CURRENT repo reality.
+Goal:
+- Refresh the handover pack so it matches CURRENT repo reality.
+- This handover pack is the ONLY truth source for non-repo viewers. It MUST be detailed and accurate.
 - Facts only. No new requirements. No planning. No guesses.
 
-2) Scope (documentation only; overwrite/update in place)
-Update these files under `evidence/handover/`:
+Scope (documentation only; overwrite/update in place):
+Update these files under `evidence/handover/` (overwrite/update in place):
 - STATE_SNAPSHOT.md
 - UI_ENTRYPOINTS.md
 - API_SURFACE.md
@@ -310,35 +302,90 @@ Update these files under `evidence/handover/`:
 - REUSABLE_BLOCKS.md
 - REUSABLE_BLOCKS_ZH.md
 
-3) Hard rules
-- Facts only: derive from repo code and config (routes, controllers, migrations, package.json, scripts, etc.).
-- If not verified in repo, write exactly: `Not verified` (do NOT invent).
-- Remove vague words: `etc.`, `likely`, `maybe`, `approximately`.
-- `REUSABLE_BLOCKS_ZH.md` must describe “current usage location” in page/flow wording (NO code paths).
+Definition of Done (DoD):
+- Every file above is updated to reflect CURRENT repo reality.
+- Any statement conflicting with repo reality is deleted/rewritten to current facts (no legacy sections).
+- Each file contains enough detail that a PM can understand CURRENT behavior without opening the repo.
+- Each file includes concrete evidence pointers (paths/identifiers/commands) so facts are auditable.
 
-4) What to include (minimum)
-- STATE_SNAPSHOT: what works now / known limitations (facts)
-- UI_ENTRYPOINTS: main pages/flows and where to enter them (facts)
-- API_SURFACE: enumerate existing endpoints (METHOD + PATH), grouped by controller (facts)
-- DATA_BASELINE: list Flyway migration filenames + key tables/entities touched by each (facts)
-- TEST_BASELINE: how to run tests/build (backend + frontend) + what counts as BUILD SUCCESS (facts)
-- REPO_MAP: key folders and entry points (facts)
-- REUSABLE_BLOCKS (EN/ZH): list reusable blocks and their current usage sites (facts)
+Hard rules (anti-laziness):
+- Repo is source of truth. You MUST inspect the repo to confirm each item.
+- Be explicit & exhaustive within the repo’s current scope:
+  - No hand-wavy language: remove `etc.`, `likely`, `maybe`, `approximately`, “similar”.
+  - No placeholders like “TBD”, “TODO”, unless explicitly required; prefer “Not verified” if truly unverifiable.
+- Evidence pointers are required:
+  - For each key fact, include at least one of: file path, symbol name, route path, script name, command line, migration filename.
+- If something cannot be verified from repo sources, write exactly: `Not verified` AND list it in a final “Not verified” section per file AND in the final receipt.
+- Do NOT change any application code/behavior/scripts/infra. Docs only.
+- Keep docs detailed but do not paste huge code blocks. Prefer concise tables/bullets + pointers.
 
-5) Non-goals
-- Do not change application code, scripts, infra, or behavior.
-- Do not add new requirements or design proposals.
+Global header requirement (add/update at top of EACH file):
+- As-of: <YYYY-MM-DD HH:MM>
+- Repo: <branch name>
+- Commit: <short SHA>
+- Verification method: <commands used / key files inspected>
 
-6) Constraints
-- Prefer direct citations to concrete repo evidence (file names, paths, command lines) inside the docs.
-- Keep each file concise and structured; do not paste huge code blocks.
+Per-file minimum requirements (MUST):
+1) STATE_SNAPSHOT.md
+- “What works now” list (user-visible capabilities) with pointers (routes/pages/modules).
+- “Known limitations” list (facts only).
+- “Feature flags / config gates” if present (name + where set).
+- “Not verified” section if any.
 
-7) Unknowns
-- Any item that cannot be verified from repo sources must be marked `Not verified` and listed in the final “Not verified” bullet list.
+2) UI_ENTRYPOINTS.md
+- Enumerate ALL current UI entry points / major pages/flows (route or navigation path).
+- For each entry:
+  - Name, route/path (or navigation), prerequisites (auth/role/data), primary actions/outcomes.
+  - Link to related APIs or modules (pointer only).
+- “Not verified” section if any.
 
-8) Output to Delivery PM when done (short)
-- `DONE: VNX-20260207-016 — Handover Sync`
-- 3–6 bullets: what changed in handover pack + any `Not verified` items needing PM follow-up
-[/TICKET]
+3) API_SURFACE.md
+- Enumerate ALL current endpoints:
+  - METHOD + PATH
+  - Grouped by controller/module (pointer to file).
+  - Include auth/role requirement if determinable from code/config.
+  - Include request/response schema pointers (DTO/type names or files), not full dumps.
+- “Not verified” section if any.
 
+4) DATA_BASELINE.md
+- List ALL Flyway migration filenames in order.
+- For each migration:
+  - Key tables/entities touched (names).
+  - Brief intent (fact-based from migration content/comments).
+  - Pointer: migration file path.
+- “Not verified” section if any.
+
+5) TEST_BASELINE.md
+- Exact commands to run:
+  - backend tests/build
+  - frontend tests/build
+  - full-suite build (what counts as BUILD SUCCESS)
+- Required env vars/config (names + where referenced).
+- Common failure modes observed in repo scripts/config (facts only, if evident).
+- “Not verified” section if any.
+
+6) REPO_MAP.md
+- High-level directory map of the repo (key folders).
+- Entry points for FE/BE (main files), build scripts, routing definitions, config roots.
+- Where “evidence/handover” lives + intended usage.
+- “Not verified” section if any.
+
+7) REUSABLE_BLOCKS.md (EN)
+- List reusable blocks/components/services judged reusable in CURRENT repo.
+- For each block:
+  - Name, purpose (1 line), location (file path), usage sites (list pages/flows), key interface (props/inputs/outputs names only).
+- “Not verified” section if any.
+
+8) REUSABLE_BLOCKS_ZH.md (ZH)
+- Same list as EN, but usage sites must be described in page/flow wording (NO code paths).
+- Still include the component name + location pointer, but do not explain via code structure.
+- “Not verified” section if any.
+
+Output (short receipt only; <=20 lines):
+- `DONE: HANDOVER_SYNC (FIXED) — Run: <YYYY-MM-DD HH:MM>`
+- 3–6 bullets: what changed (mention which files had major rewrites)
+- `Not verified:` list (if any, aggregated)
+- If anything blocked you from verifying: 1 blocker question max (only if truly blocking)
+
+[/DIRECT OPS TICKET — HANDOVER SYNC (FIXED)]
 ```

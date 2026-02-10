@@ -1,6 +1,11 @@
 # API_SURFACE — REST endpoints by controller
 
-**Facts only.** Enumerated from `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/` (all *Controller.java). Base: frontend uses `baseURL: '/api'`.
+- **As-of:** 2026-02-09 14:00
+- **Repo:** main
+- **Commit:** 1df603c5
+- **Verification method:** grep `@RequestMapping`, `@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping`, `@PatchMapping` under `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/`.
+
+**Facts only.** Enumerated from controller classes. Frontend uses `baseURL: '/api'`. Auth/role: Not verified per-endpoint; most protected routes expect Bearer token (see `request.ts`).
 
 ---
 
@@ -51,6 +56,7 @@
 | GET | /api/v1/platform-configs/{id} |
 | POST | /api/v1/platform-configs |
 | PUT | /api/v1/platform-configs/{id} |
+| PATCH | /api/v1/platform-configs/{id}/toggle |
 
 ---
 
@@ -558,6 +564,7 @@
 |--------|------|
 | POST | /api/masterdata/customers |
 | GET | /api/masterdata/customers/{id} |
+| PATCH | /api/masterdata/customers/{id} |
 | DELETE | /api/masterdata/customers/{id} |
 | POST | /api/masterdata/customers/merge |
 | POST | /api/masterdata/customers/merge/{logId}/undo |
@@ -581,6 +588,8 @@
 | GET | /api/v1/temp-pool |
 | POST | /api/v1/temp-pool/confirm |
 | POST | /api/v1/temp-pool/reject |
+
+(Controller uses class-level `@RequestMapping("/api/v1/temp-pool")`; GET has no method path so GET = `/api/v1/temp-pool`.)
 
 ---
 
@@ -746,4 +755,12 @@
 
 ---
 
-Controller file paths: `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/` + subpackages. Rescan when controllers change.
+**Controller file paths:** `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/` + subpackages. Rescan when controllers change.
+
+**Request/response schema pointers:** DTOs and request types live in same package as controller or in `application/` (e.g. `CreateQuoteRequest`, `QuoteResponseDto`). Not enumerated here.
+
+---
+
+## Not verified
+
+- Per-endpoint auth/role requirements (e.g. Super Admin only for org-structure) not read from security config; inferred from frontend SuperAdminGuard and ticket context only.

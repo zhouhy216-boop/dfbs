@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { ProLayout } from '@ant-design/pro-components';
 import { useAuthStore } from '@/shared/stores/useAuthStore';
@@ -25,6 +25,7 @@ import {
 } from '@ant-design/icons';
 import { getStoredToken } from '@/shared/utils/request';
 import { useIsSuperAdmin } from '@/shared/components/SuperAdminGuard';
+import { TestDataCleanerModal } from '@/shared/components/TestDataCleaner/Modal';
 
 /** Static menu config: guaranteed array to avoid "spread non-iterable" in ProLayout. */
 const MENU_ROUTES_BASE = [
@@ -138,6 +139,7 @@ export default function BasicLayout() {
   const logout = useAuthStore((s) => s.logout);
   const userInfo = useAuthStore((s) => s.userInfo);
   const isSuperAdmin = useIsSuperAdmin();
+  const [testDataCleanerOpen, setTestDataCleanerOpen] = useState(false);
   const displayName = userInfo?.username ?? userInfo?.name ?? 'User';
   const menuRoutes = useMemo(() => buildMenuRoutes(isSuperAdmin), [isSuperAdmin]);
 
@@ -155,6 +157,17 @@ export default function BasicLayout() {
           title: displayName,
         }}
         actionsRender={() => [
+          ...(isSuperAdmin
+            ? [
+                <a
+                  key="test-data-cleaner"
+                  onClick={() => setTestDataCleanerOpen(true)}
+                  style={{ marginRight: 8 }}
+                >
+                  测试数据清理器
+                </a>,
+              ]
+            : []),
           <a
             key="logout"
             onClick={() => {
@@ -168,6 +181,10 @@ export default function BasicLayout() {
       >
         <Outlet />
       </ProLayout>
+      <TestDataCleanerModal
+        open={testDataCleanerOpen}
+        onClose={() => setTestDataCleanerOpen(false)}
+      />
     </div>
   );
 }
