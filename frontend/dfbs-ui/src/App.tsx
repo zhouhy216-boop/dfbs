@@ -30,6 +30,8 @@ import ConfirmationCenter from '@/pages/Admin/ConfirmationCenter';
 import OrgLevelConfig from '@/pages/Admin/OrgLevelConfig';
 import OrgTree from '@/pages/Admin/OrgTree';
 import OrgChangeLog from '@/pages/Admin/OrgChangeLog';
+import DictionaryTypes from '@/pages/Admin/DictionaryTypes';
+import DictionaryItems from '@/pages/Admin/DictionaryItems';
 import { SuperAdminGuard } from '@/shared/components/SuperAdminGuard';
 import PlatformConfig from '@/pages/System/PlatformConfig';
 import PlatformApplication from '@/pages/Platform/Application';
@@ -92,6 +94,8 @@ function App() {
             <Route path="admin/org-levels" element={<SuperAdminGuard><OrgLevelConfig /></SuperAdminGuard>} />
             <Route path="admin/org-tree" element={<SuperAdminGuard><OrgTree /></SuperAdminGuard>} />
             <Route path="admin/org-change-logs" element={<SuperAdminGuard><OrgChangeLog /></SuperAdminGuard>} />
+            <Route path="admin/dictionary-types" element={<SuperAdminGuard><DictionaryTypes /></SuperAdminGuard>} />
+            <Route path="admin/dictionary-types/:typeId/items" element={<SuperAdminGuard><DictionaryItems /></SuperAdminGuard>} />
             <Route path="system/platform-config" element={<PlatformConfig />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

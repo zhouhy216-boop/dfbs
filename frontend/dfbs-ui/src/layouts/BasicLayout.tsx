@@ -91,11 +91,12 @@ const MENU_ROUTES_BASE = [
   },
 ];
 
-/** Super Admin only: 层级配置、组织架构、变更记录（人员视图已并入组织架构右侧） */
+/** Super Admin only: 层级配置、组织架构、变更记录、字典类型（人员视图已并入组织架构右侧） */
 const ORG_STRUCTURE_MENU = [
   { path: '/admin/org-levels', name: '层级配置' },
   { path: '/admin/org-tree', name: '组织架构' },
   { path: '/admin/org-change-logs', name: '变更记录' },
+  { path: '/admin/dictionary-types', name: '字典类型' },
 ];
 
 function buildMenuRoutes(isSuperAdmin: boolean) {

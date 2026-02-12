@@ -37,10 +37,20 @@ request.interceptors.response.use(
       window.location.href = '/login';
       return Promise.reject(err);
     }
-    // 409/400 on customer create: caller shows "Client name exists"
+    // 409/400: let caller show custom message (e.g. customers, dictionary-types, dictionary-items)
     if (err.response?.status === 409 || err.response?.status === 400) {
       const url = err.config?.url ?? '';
-      if (url.includes('customers') && err.config?.method?.toLowerCase() === 'post') {
+      const method = err.config?.method?.toLowerCase();
+      if (url.includes('customers') && method === 'post') {
+        return Promise.reject(err);
+      }
+      if (url.includes('dictionary-types') && (method === 'post' || method === 'put')) {
+        return Promise.reject(err);
+      }
+      if (url.includes('/items') && url.includes('dictionary-types') && method === 'post') {
+        return Promise.reject(err);
+      }
+      if (url.includes('dictionary-items') && (method === 'put' || method === 'patch')) {
         return Promise.reject(err);
       }
     }
