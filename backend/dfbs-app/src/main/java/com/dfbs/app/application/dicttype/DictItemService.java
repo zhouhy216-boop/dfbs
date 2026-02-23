@@ -16,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 @Service
@@ -40,10 +41,12 @@ public class DictItemService {
     public record ListResult(List<DictItemEntity> items, long total) {}
 
     /**
-     * List items for a type. When parentId present: list children of that parent.
-     * When parentId absent: list all items for the type.
+     * List items for a type.
+     * When rootsOnly true: only items with parentId null (root nodes).
+     * When parentId present: only children of that parent.
+     * When neither: list all items for the type.
      */
-    public ListResult list(Long typeId, String q, Boolean enabled, Long parentId, int page, int pageSize) {
+    public ListResult list(Long typeId, String q, Boolean enabled, Long parentId, Boolean rootsOnly, int page, int pageSize) {
         if (!typeRepo.existsById(typeId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "字典类型不存在");
         }
@@ -62,7 +65,9 @@ public class DictItemService {
             if (enabled != null) {
                 predicates.add(cb.equal(root.get("enabled"), enabled));
             }
-            if (parentId != null) {
+            if (Boolean.TRUE.equals(rootsOnly)) {
+                predicates.add(cb.isNull(root.get("parentId")));
+            } else if (parentId != null) {
                 predicates.add(cb.equal(root.get("parentId"), parentId));
             }
             return cb.and(predicates.toArray(new Predicate[0]));
@@ -170,10 +175,56 @@ public class DictItemService {
         return itemRepo.save(e);
     }
 
+    /**
+     * Reorder items: set sort_order to 1..N by the given ordered ids.
+     * All ids must belong to typeId and share the same parentId (null or the given one).
+     */
+    /**
+     * Delete item only when it has zero children (no dict_item.parent_id = this id). Otherwise throws DictItemDeleteNotAllowedHasChildrenException.
+     */
+    @Transactional
+    public void deleteById(Long id) {
+        DictItemEntity e = itemRepo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "字典项不存在"));
+        if (itemRepo.countByParentId(id) > 0) {
+            throw new DictItemDeleteNotAllowedHasChildrenException();
+        }
+        itemRepo.delete(e);
+    }
+
+    @Transactional
+    public List<DictItemEntity> reorder(Long typeId, Long parentId, List<Long> orderedItemIds) {
+        if (!typeRepo.existsById(typeId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "字典类型不存在");
+        }
+        if (orderedItemIds == null || orderedItemIds.isEmpty()) {
+            return List.of();
+        }
+        List<DictItemEntity> entities = new ArrayList<>();
+        for (Long id : orderedItemIds) {
+            DictItemEntity e = itemRepo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "字典项不存在: " + id));
+            if (!e.getTypeId().equals(typeId)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "字典项不属于该类型: " + id);
+            }
+            if (!Objects.equals(e.getParentId(), parentId)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "字典项父级不一致，无法排序: " + id);
+            }
+            entities.add(e);
+        }
+        int order = 1;
+        for (DictItemEntity e : entities) {
+            e.setSortOrder(order++);
+            e.setUpdatedAt(Instant.now());
+        }
+        return itemRepo.saveAll(entities);
+    }
+
     @SuppressWarnings("serial")
     public static class DictItemValueExistsException extends RuntimeException {}
     @SuppressWarnings("serial")
     public static class DictItemParentInvalidException extends RuntimeException {}
     @SuppressWarnings("serial")
     public static class DictTypeNotFoundException extends RuntimeException {}
+    /** Thrown when delete is called but item has children; controller maps to 400 + DICT_ITEM_DELETE_NOT_ALLOWED_HAS_CHILDREN */
+    @SuppressWarnings("serial")
+    public static class DictItemDeleteNotAllowedHasChildrenException extends RuntimeException {}
 }

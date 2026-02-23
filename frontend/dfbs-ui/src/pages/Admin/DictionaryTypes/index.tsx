@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Form, Input, message, Modal, Select, Switch, Tag } from 'antd';
+import { Button, Collapse, Form, Input, message, Modal, Select, Switch, Table, Tag } from 'antd';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import dayjs from 'dayjs';
@@ -10,12 +10,15 @@ import {
   updateDictType,
   enableDictType,
   disableDictType,
+  deleteDictType,
   type DictTypeItem,
   type CreateDictTypeRequest,
   type UpdateDictTypeRequest,
 } from '@/features/dicttype/services/dictType';
+import { useDictionaryItems } from '@/features/dicttype/hooks/useDictionaryItems';
 
 const DICT_TYPE_CODE_EXISTS = 'DICT_TYPE_CODE_EXISTS';
+const DICT_TYPE_DELETE_NOT_ALLOWED_USED = 'DICT_TYPE_DELETE_NOT_ALLOWED_USED';
 
 function showError(e: unknown, customMessage?: string) {
   const err = e as { response?: { data?: { message?: string; machineCode?: string } }; message?: string };
@@ -36,6 +39,8 @@ export default function DictionaryTypesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<DictTypeItem | null>(null);
   const [form] = Form.useForm<CreateDictTypeRequest & { id?: number }>();
+  const [readDemoTypeCode, setReadDemoTypeCode] = useState('payment_method');
+  const { loading: readLoading, error: readError, items: readItems, reload: readReload } = useDictionaryItems(readDemoTypeCode);
 
   const runQuery = () => {
     actionRef.current?.reload();
@@ -92,7 +97,7 @@ export default function DictionaryTypesPage() {
   const handleDisable = (row: DictTypeItem) => {
     Modal.confirm({
       title: '确认禁用',
-      content: '确认禁用该字典类型？',
+      content: '确认禁用该字典类型？禁用后将不可被选择（已有数据不受影响）。',
       okText: '确认',
       cancelText: '取消',
       onOk: async () => {
@@ -125,6 +130,36 @@ export default function DictionaryTypesPage() {
     });
   };
 
+  const handleDelete = (row: DictTypeItem) => {
+    Modal.confirm({
+      title: '确认删除该字典类型？',
+      content: '删除后不可恢复。仅当该类型下没有任何字典项时才允许删除。',
+      okText: '确认删除',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await deleteDictType(row.id);
+          message.success('已删除');
+          actionRef.current?.reload();
+        } catch (err) {
+          const e = err as { response?: { status?: number; data?: { machineCode?: string } } };
+          const code = e.response?.data?.machineCode;
+          const status = e.response?.status;
+          if (code === DICT_TYPE_DELETE_NOT_ALLOWED_USED) {
+            message.error('该类型下存在字典项，无法删除');
+            return;
+          }
+          if (status === 403) {
+            message.error('无权限');
+            return;
+          }
+          message.error('删除失败，请重试');
+        }
+      },
+    });
+  };
+
   const columns: ProColumns<DictTypeItem>[] = [
     { title: '编码', dataIndex: 'typeCode', width: 140, ellipsis: true },
     { title: '名称', dataIndex: 'typeName', width: 140, ellipsis: true },
@@ -144,7 +179,7 @@ export default function DictionaryTypesPage() {
     {
       title: '操作',
       valueType: 'option',
-      width: 200,
+      width: 240,
       fixed: 'right',
       render: (_, row) => [
         <Button
@@ -171,12 +206,55 @@ export default function DictionaryTypesPage() {
             启用
           </Button>
         ),
+        <Button key="delete" type="link" size="small" danger onClick={() => handleDelete(row)}>
+          删除
+        </Button>,
       ],
     },
   ];
 
   return (
     <div style={{ padding: 24 }}>
+      <Collapse
+        style={{ marginBottom: 16 }}
+        items={[
+          {
+            key: 'read-demo',
+            label: '读取示例（只读）',
+            children: (
+              <div>
+                <div style={{ marginBottom: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <Input
+                    placeholder="typeCode"
+                    value={readDemoTypeCode}
+                    onChange={(e) => setReadDemoTypeCode(e.target.value ?? '')}
+                    style={{ width: 180 }}
+                  />
+                  <Button onClick={() => readReload()} loading={readLoading}>
+                    刷新
+                  </Button>
+                </div>
+                {readError && <div style={{ color: '#ff4d4f', marginBottom: 8 }}>{readError}</div>}
+                {!readError && (
+                  <Table
+                    size="small"
+                    rowKey="value"
+                    dataSource={readItems}
+                    columns={[
+                      { title: 'value', dataIndex: 'value', width: 120 },
+                      { title: 'label', dataIndex: 'label', width: 140 },
+                      { title: 'enabled', dataIndex: 'enabled', width: 80, render: (v: boolean) => (v ? '是' : '否') },
+                      { title: 'sortOrder', dataIndex: 'sortOrder', width: 90 },
+                    ]}
+                    pagination={false}
+                    locale={{ emptyText: '暂无数据' }}
+                  />
+                )}
+              </div>
+            ),
+          },
+        ]}
+      />
       <ProTable<DictTypeItem>
         actionRef={actionRef}
         rowKey="id"

@@ -67,3 +67,7 @@ export async function disableDictType(id: number): Promise<DictTypeItem> {
   if (!data) throw new Error('No data returned');
   return data;
 }
+
+export async function deleteDictType(id: number): Promise<void> {
+  await request.delete(`${BASE}/${id}`);
+}

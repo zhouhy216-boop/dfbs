@@ -6,10 +6,12 @@ import com.dfbs.app.application.dicttype.DictItemService.DictItemValueExistsExce
 import com.dfbs.app.application.dicttype.DictItemService.DictTypeNotFoundException;
 import com.dfbs.app.application.dicttype.DictTypeService;
 import com.dfbs.app.application.dicttype.DictTypeService.DictTypeCodeExistsException;
+import com.dfbs.app.application.dicttype.DictTypeService.DictTypeDeleteNotAllowedUsedException;
 import com.dfbs.app.config.SuperAdminGuard;
 import com.dfbs.app.infra.dto.ErrorResult;
 import com.dfbs.app.interfaces.dicttype.dto.CreateDictItemRequest;
 import com.dfbs.app.interfaces.dicttype.dto.CreateDictTypeRequest;
+import com.dfbs.app.interfaces.dicttype.dto.ReorderDictItemsRequest;
 import com.dfbs.app.interfaces.dicttype.dto.DictItemDto;
 import com.dfbs.app.interfaces.dicttype.dto.DictItemListResponse;
 import com.dfbs.app.interfaces.dicttype.dto.DictTypeItemDto;
@@ -22,11 +24,14 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import static org.springframework.web.bind.annotation.RequestMethod.DELETE;
+
 @RestController
 @RequestMapping("/api/v1/admin/dictionary-types")
 public class DictionaryTypeAdminController {
 
     private static final String DICT_TYPE_CODE_EXISTS = "DICT_TYPE_CODE_EXISTS";
+    private static final String DICT_TYPE_DELETE_NOT_ALLOWED_USED = "DICT_TYPE_DELETE_NOT_ALLOWED_USED";
     private static final String DICT_ITEM_VALUE_EXISTS = "DICT_ITEM_VALUE_EXISTS";
     private static final String DICT_ITEM_PARENT_INVALID = "DICT_ITEM_PARENT_INVALID";
     private static final String DICT_TYPE_NOT_FOUND = "DICT_TYPE_NOT_FOUND";
@@ -90,16 +95,28 @@ public class DictionaryTypeAdminController {
         return ResponseEntity.ok(DictTypeItemDto.from(e));
     }
 
+    @RequestMapping(value = "/{id}", method = DELETE)
+    public ResponseEntity<?> delete(@PathVariable Long id) {
+        superAdminGuard.requireSuperAdmin();
+        try {
+            dictTypeService.deleteById(id);
+            return ResponseEntity.noContent().build();
+        } catch (DictTypeDeleteNotAllowedUsedException ex) {
+            return ResponseEntity.badRequest().body(ErrorResult.of("该类型下存在字典项，无法删除", DICT_TYPE_DELETE_NOT_ALLOWED_USED));
+        }
+    }
+
     @GetMapping("/{typeId}/items")
     public DictItemListResponse listItems(
             @PathVariable Long typeId,
             @RequestParam(required = false) String q,
             @RequestParam(required = false) Boolean enabled,
             @RequestParam(required = false) Long parentId,
+            @RequestParam(required = false) Boolean rootsOnly,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int pageSize) {
         superAdminGuard.requireSuperAdmin();
-        var result = dictItemService.list(typeId, q, enabled, parentId, page, pageSize);
+        var result = dictItemService.list(typeId, q, enabled, parentId, rootsOnly, page, pageSize);
         List<DictItemDto> items = result.items().stream().map(DictItemDto::from).toList();
         return new DictItemListResponse(items, result.total());
     }
@@ -125,5 +142,15 @@ public class DictionaryTypeAdminController {
         } catch (DictItemParentInvalidException ex) {
             return ResponseEntity.badRequest().body(ErrorResult.of("父级无效（需为同类型根节点）", DICT_ITEM_PARENT_INVALID));
         }
+    }
+
+    @PatchMapping("/{typeId}/items/reorder")
+    public ResponseEntity<DictItemListResponse> reorderItems(
+            @PathVariable Long typeId,
+            @RequestBody ReorderDictItemsRequest request) {
+        superAdminGuard.requireSuperAdmin();
+        var entities = dictItemService.reorder(typeId, request.parentId(), request.orderedItemIds() != null ? request.orderedItemIds() : List.of());
+        var items = entities.stream().map(DictItemDto::from).toList();
+        return ResponseEntity.ok(new DictItemListResponse(items, items.size()));
     }
 }

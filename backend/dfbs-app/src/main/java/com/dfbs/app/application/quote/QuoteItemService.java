@@ -2,6 +2,7 @@ package com.dfbs.app.application.quote;
 
 import com.dfbs.app.application.contractprice.ContractPriceService;
 import com.dfbs.app.application.contractprice.PriceSuggestionDto;
+import com.dfbs.app.application.dicttype.DictionaryReadService;
 import com.dfbs.app.application.masterdata.PartBomService;
 import com.dfbs.app.modules.masterdata.PartEntity;
 import com.dfbs.app.modules.quote.QuoteEntity;
@@ -26,21 +27,26 @@ import java.util.stream.Collectors;
 @Service
 public class QuoteItemService {
 
+    private static final String QUOTE_EXPENSE_TYPE_CODE = "quote_expense_type";
+
     private final QuoteRepo quoteRepo;
     private final QuoteItemRepo itemRepo;
     private final FeeTypeRepo feeTypeRepo;
     private final PartBomService partBomService;
     private final ContractPriceService contractPriceService;
+    private final DictionaryReadService dictionaryReadService;
     private final ApplicationContext applicationContext;
 
     public QuoteItemService(QuoteRepo quoteRepo, QuoteItemRepo itemRepo, FeeTypeRepo feeTypeRepo,
                             PartBomService partBomService, ContractPriceService contractPriceService,
+                            DictionaryReadService dictionaryReadService,
                             ApplicationContext applicationContext) {
         this.quoteRepo = quoteRepo;
         this.itemRepo = itemRepo;
         this.feeTypeRepo = feeTypeRepo;
         this.partBomService = partBomService;
         this.contractPriceService = contractPriceService;
+        this.dictionaryReadService = dictionaryReadService;
         this.applicationContext = applicationContext;
     }
 
@@ -56,6 +62,8 @@ public class QuoteItemService {
         QuoteItemEntity item = new QuoteItemEntity();
         item.setQuoteId(quoteId);
         item.setExpenseType(cmd.getExpenseType());
+        String expenseTypeValue = cmd.getExpenseType() != null ? cmd.getExpenseType().name() : null;
+        item.setExpenseTypeLabelSnapshot(dictionaryReadService.resolveLabel(QUOTE_EXPENSE_TYPE_CODE, expenseTypeValue));
         item.setDescription(cmd.getDescription());
         item.setSpec(cmd.getSpec());
         item.setQuantity(cmd.getQuantity());
@@ -148,6 +156,7 @@ public class QuoteItemService {
         // Update fields
         if (cmd.getExpenseType() != null) {
             item.setExpenseType(cmd.getExpenseType());
+            item.setExpenseTypeLabelSnapshot(dictionaryReadService.resolveLabel(QUOTE_EXPENSE_TYPE_CODE, cmd.getExpenseType().name()));
         }
         if (cmd.getDescription() != null) {
             item.setDescription(cmd.getDescription());
@@ -381,6 +390,7 @@ public class QuoteItemService {
         private String priceSourceInfo;
         private String manualPriceReason;
         private String alertMessage;
+        private String expenseTypeLabelSnapshot;
 
         public static QuoteItemDto from(QuoteItemEntity item, String alertMessage) {
             QuoteItemDto dto = new QuoteItemDto();
@@ -388,6 +398,7 @@ public class QuoteItemService {
             dto.quoteId = item.getQuoteId();
             dto.lineOrder = item.getLineOrder();
             dto.expenseType = item.getExpenseType();
+            dto.expenseTypeLabelSnapshot = item.getExpenseTypeLabelSnapshot();
             dto.feeTypeId = item.getFeeTypeId();
             dto.partId = item.getPartId();
             dto.description = item.getDescription();
@@ -428,5 +439,6 @@ public class QuoteItemService {
         public String getPriceSourceInfo() { return priceSourceInfo; }
         public String getManualPriceReason() { return manualPriceReason; }
         public String getAlertMessage() { return alertMessage; }
+        public String getExpenseTypeLabelSnapshot() { return expenseTypeLabelSnapshot; }
     }
 }

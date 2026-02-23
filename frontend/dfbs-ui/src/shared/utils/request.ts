@@ -47,12 +47,20 @@ request.interceptors.response.use(
       if (url.includes('dictionary-types') && (method === 'post' || method === 'put')) {
         return Promise.reject(err);
       }
-      if (url.includes('/items') && url.includes('dictionary-types') && method === 'post') {
+      if (url.includes('/items') && url.includes('dictionary-types') && (method === 'post' || method === 'patch')) {
         return Promise.reject(err);
       }
-      if (url.includes('dictionary-items') && (method === 'put' || method === 'patch')) {
+      if (url.includes('dictionary-items') && (method === 'put' || method === 'patch' || method === 'delete')) {
         return Promise.reject(err);
       }
+      if (url.includes('dictionary-types') && method === 'delete') {
+        return Promise.reject(err);
+      }
+    }
+    // Read-only dictionaries API: let caller show Chinese message (字典类型不存在 / 加载失败，请重试)
+    const url = err.config?.url ?? '';
+    if (url.includes('/v1/dictionaries/') && !url.includes('/admin/')) {
+      return Promise.reject(err);
     }
     const msg = err.response?.data?.message ?? err.message ?? '请求失败';
     message.error(msg);

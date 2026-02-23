@@ -8,4 +8,6 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 public interface DictTypeRepo extends JpaRepository<DictTypeEntity, Long>, JpaSpecificationExecutor<DictTypeEntity> {
 
     boolean existsByTypeCode(String typeCode);
+
+    java.util.Optional<DictTypeEntity> findByTypeCode(String typeCode);
 }

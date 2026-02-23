@@ -1,5 +1,6 @@
 package com.dfbs.app.infra.config;
 
+import com.dfbs.app.application.dicttype.DictTypeNotFoundException;
 import com.dfbs.app.application.quote.QuoteValidationException;
 import com.dfbs.app.infra.dto.ErrorResult;
 import org.slf4j.Logger;
@@ -47,6 +48,13 @@ public class GlobalExceptionHandler {
         HttpStatus status = notFound ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
         String code = notFound ? NOT_FOUND : VALIDATION_ERROR;
         return ResponseEntity.status(status).body(ErrorResult.of(msg, code));
+    }
+
+    @ExceptionHandler(DictTypeNotFoundException.class)
+    public ResponseEntity<ErrorResult> handleDictTypeNotFound(DictTypeNotFoundException ex) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ErrorResult.of(ex.getMessage(), DictTypeNotFoundException.MACHINE_CODE));
     }
 
     @ExceptionHandler(ResponseStatusException.class)

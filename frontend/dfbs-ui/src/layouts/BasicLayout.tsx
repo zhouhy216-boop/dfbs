@@ -25,6 +25,7 @@ import {
 } from '@ant-design/icons';
 import { getStoredToken } from '@/shared/utils/request';
 import { useIsSuperAdmin } from '@/shared/components/SuperAdminGuard';
+import { useIsPermSuperAdmin } from '@/shared/components/PermSuperAdminGuard';
 import { TestDataCleanerModal } from '@/shared/components/TestDataCleaner/Modal';
 
 /** Static menu config: guaranteed array to avoid "spread non-iterable" in ProLayout. */
@@ -97,13 +98,21 @@ const ORG_STRUCTURE_MENU = [
   { path: '/admin/org-tree', name: '组织架构' },
   { path: '/admin/org-change-logs', name: '变更记录' },
   { path: '/admin/dictionary-types', name: '字典类型' },
+  { path: '/admin/dictionary-snapshot-demo', name: '历史显示示例' },
 ];
 
-function buildMenuRoutes(isSuperAdmin: boolean) {
-  if (!isSuperAdmin) return MENU_ROUTES_BASE;
+/** PERM allowlist only: 角色与权限 */
+const PERM_MENU = [{ path: '/admin/roles-permissions', name: '角色与权限' }];
+
+function buildMenuRoutes(isSuperAdmin: boolean, permAllowed: boolean) {
+  const adminExtras = [
+    ...(permAllowed ? PERM_MENU : []),
+    ...(isSuperAdmin ? ORG_STRUCTURE_MENU : []),
+  ];
+  if (adminExtras.length === 0) return MENU_ROUTES_BASE;
   return MENU_ROUTES_BASE.map((r) => {
     if (r.key === 'admin-group' && r.routes) {
-      return { ...r, routes: [...r.routes, ...ORG_STRUCTURE_MENU] };
+      return { ...r, routes: [...r.routes, ...adminExtras] };
     }
     return r;
   });
@@ -140,9 +149,10 @@ export default function BasicLayout() {
   const logout = useAuthStore((s) => s.logout);
   const userInfo = useAuthStore((s) => s.userInfo);
   const isSuperAdmin = useIsSuperAdmin();
+  const { allowed: permAllowed } = useIsPermSuperAdmin();
   const [testDataCleanerOpen, setTestDataCleanerOpen] = useState(false);
   const displayName = userInfo?.username ?? userInfo?.name ?? 'User';
-  const menuRoutes = useMemo(() => buildMenuRoutes(isSuperAdmin), [isSuperAdmin]);
+  const menuRoutes = useMemo(() => buildMenuRoutes(isSuperAdmin, permAllowed), [isSuperAdmin, permAllowed]);
 
   return (
     <div style={{ height: '100vh', minHeight: '100vh' }}>

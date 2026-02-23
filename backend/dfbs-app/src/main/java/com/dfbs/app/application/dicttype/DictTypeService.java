@@ -1,5 +1,6 @@
 package com.dfbs.app.application.dicttype;
 
+import com.dfbs.app.modules.dicttype.DictItemRepo;
 import com.dfbs.app.modules.dicttype.DictTypeEntity;
 import com.dfbs.app.modules.dicttype.DictTypeRepo;
 import jakarta.persistence.criteria.Predicate;
@@ -28,9 +29,11 @@ public class DictTypeService {
     private static final Pattern TYPE_CODE_PATTERN = Pattern.compile("^[a-zA-Z0-9_-]+$");
 
     private final DictTypeRepo repo;
+    private final DictItemRepo itemRepo;
 
-    public DictTypeService(DictTypeRepo repo) {
+    public DictTypeService(DictTypeRepo repo, DictItemRepo itemRepo) {
         this.repo = repo;
+        this.itemRepo = itemRepo;
     }
 
     public record ListResult(List<DictTypeEntity> items, long total) {}
@@ -126,7 +129,23 @@ public class DictTypeService {
         return repo.save(e);
     }
 
+    /**
+     * Delete type only when it has zero dict_items. Otherwise throws DictTypeDeleteNotAllowedUsedException.
+     */
+    @Transactional
+    public void deleteById(Long id) {
+        DictTypeEntity e = repo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "字典类型不存在"));
+        if (itemRepo.countByTypeId(id) > 0) {
+            throw new DictTypeDeleteNotAllowedUsedException();
+        }
+        repo.delete(e);
+    }
+
     /** Thrown when create is called with duplicate type_code; controller maps to 400 + DICT_TYPE_CODE_EXISTS */
     @SuppressWarnings("serial")
     public static class DictTypeCodeExistsException extends RuntimeException {}
+
+    /** Thrown when delete is called but type has dict_items; controller maps to 400 + DICT_TYPE_DELETE_NOT_ALLOWED_USED */
+    @SuppressWarnings("serial")
+    public static class DictTypeDeleteNotAllowedUsedException extends RuntimeException {}
 }

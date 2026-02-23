@@ -26,6 +26,10 @@ public class QuoteItemEntity {
     @Column(name = "expense_type", nullable = false, length = 32)
     private QuoteExpenseType expenseType;
 
+    /** Label at save time for display stability (dict quote_expense_type). */
+    @Column(name = "expense_type_label_snapshot", length = 128)
+    private String expenseTypeLabelSnapshot;
+
     @Column(name = "fee_type_id")
     private Long feeTypeId;  // FK to FeeTypeEntity, Nullable
 

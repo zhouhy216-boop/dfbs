@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import {
   ProTable,
   ModalForm,
@@ -10,6 +10,7 @@ import {
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import { Drawer, Table, Button, message } from 'antd';
 import request from '@/shared/utils/request';
+import { getDictionaryItems } from '@/features/dicttype/services/dictRead';
 import dayjs from 'dayjs';
 import { AttachmentList } from '@/shared/components/AttachmentList';
 import { toProTableResult, type SpringPage } from '@/shared/utils/adapters';
@@ -65,6 +66,7 @@ interface QuoteLineItem {
   quoteId?: number;
   lineOrder?: number;
   expenseType?: string;
+  expenseTypeLabelSnapshot?: string | null;
   description?: string;
   spec?: string;
   unit?: string;
@@ -75,7 +77,13 @@ interface QuoteLineItem {
   remark?: string;
 }
 
-const EXPENSE_TYPE_OPTIONS = [
+/** Allowlist for backend enum; dict options are filtered to these values. */
+const QUOTE_EXPENSE_TYPE_VALUES = [
+  'REPAIR', 'ON_SITE', 'PARTS', 'PLATFORM', 'DATA_PLAN',
+  'STORAGE', 'SHIPPING', 'PACKING', 'CONSTRUCTION', 'OTHER',
+] as const;
+
+const EXPENSE_TYPE_OPTIONS_FALLBACK = [
   { label: '维修费', value: 'REPAIR' },
   { label: '上门费', value: 'ON_SITE' },
   { label: '配件费', value: 'PARTS' },
@@ -320,7 +328,7 @@ export default function Quote() {
                   dataSource={items}
                   rowKey={(r) => String(r.id ?? r.lineOrder ?? Math.random())}
                   columns={[
-                    { title: '类型', dataIndex: 'expenseType', width: 100, render: (v) => EXPENSE_TYPE_OPTIONS.find((o) => o.value === v)?.label ?? v },
+                    { title: '类型', dataIndex: 'expenseType', width: 100, render: (v, row) => (row.expenseTypeLabelSnapshot ?? EXPENSE_TYPE_OPTIONS_FALLBACK.find((o) => o.value === v)?.label ?? v) },
                     { title: '描述', dataIndex: 'description' },
                     { title: '数量', dataIndex: 'quantity', width: 80 },
                     { title: '单价', dataIndex: 'unitPrice', width: 100, render: (v) => (v != null ? Number(v) : '-') },
@@ -374,6 +382,18 @@ function QuoteItemsEditable({
 }) {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<QuoteLineItem | null>(null);
+  const [expenseTypeOptions, setExpenseTypeOptions] = useState<{ label: string; value: string; disabled?: boolean }[]>(EXPENSE_TYPE_OPTIONS_FALLBACK);
+
+  useEffect(() => {
+    getDictionaryItems('quote_expense_type', { includeDisabled: false })
+      .then((res) => {
+        const allowed = res.items?.filter((i) => QUOTE_EXPENSE_TYPE_VALUES.includes(i.value as (typeof QUOTE_EXPENSE_TYPE_VALUES)[number])) ?? [];
+        setExpenseTypeOptions(allowed.map((i) => ({ label: i.label, value: i.value })));
+      })
+      .catch(() => {
+        setExpenseTypeOptions(EXPENSE_TYPE_OPTIONS_FALLBACK);
+      });
+  }, []);
 
   async function handleAdd(values: { expenseType: string; description?: string; quantity: number; unitPrice: number }) {
     await request.post(`/v1/quotes/${quoteId}/items`, {
@@ -429,7 +449,7 @@ function QuoteItemsEditable({
         rowKey={(r) => String(r.id ?? r.lineOrder ?? Math.random())}
         size="small"
         columns={[
-          { title: '类型', dataIndex: 'expenseType', width: 100, render: (v) => EXPENSE_TYPE_OPTIONS.find((o) => o.value === v)?.label ?? v },
+          { title: '类型', dataIndex: 'expenseType', width: 100, render: (v, row) => (row.expenseTypeLabelSnapshot ?? EXPENSE_TYPE_OPTIONS_FALLBACK.find((o) => o.value === v)?.label ?? v) },
           { title: '描述', dataIndex: 'description', ellipsis: true },
           { title: '数量', dataIndex: 'quantity', width: 80 },
           { title: '单价', dataIndex: 'unitPrice', width: 100, render: (v) => (v != null ? Number(v) : '-') },
@@ -460,7 +480,7 @@ function QuoteItemsEditable({
         }}
         initialValues={{ expenseType: 'REPAIR', quantity: 1, unitPrice: 0 }}
       >
-        <ProFormSelect name="expenseType" label="类型" options={EXPENSE_TYPE_OPTIONS} rules={[{ required: true }]} />
+        <ProFormSelect name="expenseType" label="类型" options={expenseTypeOptions} rules={[{ required: true }]} />
         <ProFormText name="description" label="描述" placeholder="可选" />
         <ProFormDigit name="quantity" label="数量" min={1} rules={[{ required: true }]} />
         <ProFormDigit name="unitPrice" label="单价" min={0} fieldProps={{ precision: 2 }} rules={[{ required: true }]} />
@@ -481,7 +501,23 @@ function QuoteItemsEditable({
             unitPrice: editingRow.unitPrice ?? 0,
           }}
         >
-          <ProFormSelect name="expenseType" label="类型" options={EXPENSE_TYPE_OPTIONS} rules={[{ required: true }]} />
+          <ProFormSelect
+            name="expenseType"
+            label="类型"
+            options={
+              editingRow.expenseType && !expenseTypeOptions.some((o) => o.value === editingRow.expenseType)
+                ? [
+                    ...expenseTypeOptions,
+                    {
+                      label: editingRow.expenseTypeLabelSnapshot ?? EXPENSE_TYPE_OPTIONS_FALLBACK.find((o) => o.value === editingRow.expenseType)?.label ?? editingRow.expenseType,
+                      value: editingRow.expenseType,
+                      disabled: true,
+                    },
+                  ]
+                : expenseTypeOptions
+            }
+            rules={[{ required: true }]}
+          />
           <ProFormText name="description" label="描述" placeholder="可选" />
           <ProFormDigit name="quantity" label="数量" min={1} rules={[{ required: true }]} />
           <ProFormDigit name="unitPrice" label="单价" min={0} fieldProps={{ precision: 2 }} rules={[{ required: true }]} />

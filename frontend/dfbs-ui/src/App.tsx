@@ -32,7 +32,10 @@ import OrgTree from '@/pages/Admin/OrgTree';
 import OrgChangeLog from '@/pages/Admin/OrgChangeLog';
 import DictionaryTypes from '@/pages/Admin/DictionaryTypes';
 import DictionaryItems from '@/pages/Admin/DictionaryItems';
+import DictionarySnapshotDemo from '@/pages/Admin/DictionarySnapshotDemo';
+import RolesPermissionsPage from '@/pages/Admin/RolesPermissions';
 import { SuperAdminGuard } from '@/shared/components/SuperAdminGuard';
+import { PermSuperAdminGuard } from '@/shared/components/PermSuperAdminGuard';
 import PlatformConfig from '@/pages/System/PlatformConfig';
 import PlatformApplication from '@/pages/Platform/Application';
 import PlatformOrg from '@/pages/Platform/Org';
@@ -96,6 +99,8 @@ function App() {
             <Route path="admin/org-change-logs" element={<SuperAdminGuard><OrgChangeLog /></SuperAdminGuard>} />
             <Route path="admin/dictionary-types" element={<SuperAdminGuard><DictionaryTypes /></SuperAdminGuard>} />
             <Route path="admin/dictionary-types/:typeId/items" element={<SuperAdminGuard><DictionaryItems /></SuperAdminGuard>} />
+            <Route path="admin/dictionary-snapshot-demo" element={<SuperAdminGuard><DictionarySnapshotDemo /></SuperAdminGuard>} />
+            <Route path="admin/roles-permissions" element={<PermSuperAdminGuard><RolesPermissionsPage /></PermSuperAdminGuard>} />
             <Route path="system/platform-config" element={<PlatformConfig />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

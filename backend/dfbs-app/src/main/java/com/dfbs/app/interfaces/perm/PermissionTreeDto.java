@@ -1,0 +1,32 @@
+package com.dfbs.app.interfaces.perm;
+
+import java.util.List;
+
+/**
+ * DTOs for GET /api/v1/admin/perm/permission-tree (v1 read-only contract).
+ * keyFormat: "&lt;moduleKey&gt;:&lt;actionKey&gt;".
+ */
+public final class PermissionTreeDto {
+
+    public static final String KEY_FORMAT = "<moduleKey>:<actionKey>";
+
+    /** Single action in the default actions set. */
+    public record ActionItem(String key, String label) {}
+
+    /** Module node in the permission tree. */
+    public record ModuleNode(
+            String key,
+            String label,
+            List<String> actions,
+            List<ModuleNode> children
+    ) {}
+
+    /** Root response of permission-tree. */
+    public record PermissionTreeResponse(
+            String keyFormat,
+            List<ActionItem> actions,
+            List<ModuleNode> modules
+    ) {}
+
+    private PermissionTreeDto() {}
+}

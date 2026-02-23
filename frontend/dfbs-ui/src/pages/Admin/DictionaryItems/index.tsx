@@ -10,6 +10,8 @@ import {
   updateItem,
   enableItem,
   disableItem,
+  deleteDictItem,
+  reorderItems,
   type DictItem,
   type CreateDictItemRequest,
   type UpdateDictItemRequest,
@@ -17,6 +19,7 @@ import {
 
 const DICT_ITEM_VALUE_EXISTS = 'DICT_ITEM_VALUE_EXISTS';
 const DICT_ITEM_PARENT_INVALID = 'DICT_ITEM_PARENT_INVALID';
+const DICT_ITEM_DELETE_NOT_ALLOWED_HAS_CHILDREN = 'DICT_ITEM_DELETE_NOT_ALLOWED_HAS_CHILDREN';
 const DICT_TYPE_NOT_FOUND = 'DICT_TYPE_NOT_FOUND';
 
 function showItemError(e: unknown) {
@@ -75,13 +78,15 @@ export default function DictionaryItemsPage() {
   const openCreate = () => {
     setEditingItem(null);
     form.resetFields();
+    const defaultParent =
+      parentFilter !== 'all' && typeof parentFilter === 'number' ? parentFilter : null;
     form.setFieldsValue({
       itemValue: '',
       itemLabel: '',
       note: '',
       sortOrder: 0,
       enabled: true,
-      parentId: null,
+      parentId: defaultParent,
     });
     setModalOpen(true);
   };
@@ -141,7 +146,7 @@ export default function DictionaryItemsPage() {
   const handleDisable = (row: DictItem) => {
     Modal.confirm({
       title: '确认禁用',
-      content: '确认禁用该字典项？',
+      content: '确认禁用该字典项？禁用后将不可被选择（已有数据不受影响）。',
       okText: '确认',
       cancelText: '取消',
       onOk: async () => {
@@ -174,10 +179,77 @@ export default function DictionaryItemsPage() {
     });
   };
 
+  const handleDelete = (row: DictItem) => {
+    Modal.confirm({
+      title: '确认删除该字典项？',
+      content: '删除后不可恢复。若该字典项存在子项，将无法删除。',
+      okText: '确认删除',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await deleteDictItem(row.id);
+          message.success('已删除');
+          if (parentFilter !== 'all' && parentFilter !== null && parentFilter === row.id) {
+            parentFilterRef.current = 'all';
+            setParentFilter('all');
+          }
+          runQuery();
+          if (rootItems.some((r) => r.id === row.id)) {
+            listItems(typeIdNum, { page: 0, pageSize: 500 })
+              .then((res) => setRootItems(res.items.filter((i) => i.parentId == null)))
+              .catch(() => {});
+          }
+        } catch (err) {
+          const e = err as { response?: { status?: number; data?: { machineCode?: string } } };
+          const code = e.response?.data?.machineCode;
+          const status = e.response?.status;
+          if (code === DICT_ITEM_DELETE_NOT_ALLOWED_HAS_CHILDREN) {
+            message.error('该字典项存在子项，无法删除');
+            return;
+          }
+          if (status === 403) {
+            message.error('无权限');
+            return;
+          }
+          message.error('删除失败，请重试');
+        }
+      },
+    });
+  };
+
   const parentIdToLabel = (parentId: number | null) => {
     if (parentId == null) return '无';
     const p = lastItemsRef.current.find((i) => i.id === parentId) ?? rootItems.find((i) => i.id === parentId);
     return p ? p.itemLabel : `#${parentId}`;
+  };
+
+  const currentScopeParentId = (): number | null => {
+    if (parentFilter === 'all' || parentFilter === null) return null;
+    return parentFilter;
+  };
+
+  const handleMove = async (row: DictItem, direction: 'up' | 'down') => {
+    const list = lastItemsRef.current;
+    const idx = list.findIndex((i) => i.id === row.id);
+    if (idx < 0) return;
+    const newIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (newIdx < 0 || newIdx >= list.length) return;
+    const nextList = [...list];
+    [nextList[idx], nextList[newIdx]] = [nextList[newIdx], nextList[idx]];
+    const orderedIds = nextList.map((i) => i.id);
+    const parentId = currentScopeParentId();
+    try {
+      await reorderItems(typeIdNum, parentId, orderedIds);
+      message.success('排序已保存');
+      runQuery();
+    } catch (e) {
+      const err = e as { response?: { data?: { machineCode?: string } } };
+      if (err.response?.data?.machineCode) {
+        console.debug('Reorder failed:', err.response.data.machineCode);
+      }
+      message.error('排序保存失败，请重试');
+    }
   };
 
   const columns: ProColumns<DictItem>[] = [
@@ -208,22 +280,37 @@ export default function DictionaryItemsPage() {
     {
       title: '操作',
       valueType: 'option',
-      width: 160,
+      width: 280,
       fixed: 'right',
-      render: (_, row) => [
-        <Button key="edit" type="link" size="small" onClick={() => openEdit(row)}>
-          编辑
-        </Button>,
-        row.enabled ? (
-          <Button key="disable" type="link" size="small" danger onClick={() => handleDisable(row)}>
-            禁用
-          </Button>
-        ) : (
-          <Button key="enable" type="link" size="small" onClick={() => handleEnable(row)}>
-            启用
-          </Button>
-        ),
-      ],
+      render: (_, row) => {
+        const list = lastItemsRef.current;
+        const idx = list.findIndex((i) => i.id === row.id);
+        const canMoveUp = idx > 0;
+        const canMoveDown = idx >= 0 && idx < list.length - 1;
+        return [
+          <Button key="up" type="link" size="small" disabled={!canMoveUp} onClick={() => handleMove(row, 'up')}>
+            上移
+          </Button>,
+          <Button key="down" type="link" size="small" disabled={!canMoveDown} onClick={() => handleMove(row, 'down')}>
+            下移
+          </Button>,
+          <Button key="edit" type="link" size="small" onClick={() => openEdit(row)}>
+            编辑
+          </Button>,
+          row.enabled ? (
+            <Button key="disable" type="link" size="small" danger onClick={() => handleDisable(row)}>
+              禁用
+            </Button>
+          ) : (
+            <Button key="enable" type="link" size="small" onClick={() => handleEnable(row)}>
+              启用
+            </Button>
+          ),
+          <Button key="delete" type="link" size="small" danger onClick={() => handleDelete(row)}>
+            删除
+          </Button>,
+        ];
+      },
     },
   ];
 
@@ -247,6 +334,9 @@ export default function DictionaryItemsPage() {
           {typeDisplay ? ` · ${typeDisplay}` : ''}
         </span>
       </div>
+      <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
+        请先选择父级后再排序子项；根节点可直接排序
+      </div>
 
       <ProTable<DictItem>
         actionRef={actionRef}
@@ -255,16 +345,17 @@ export default function DictionaryItemsPage() {
         request={async ({ current = 1, pageSize = 20 }) => {
           const q = searchQRef.current?.trim() || undefined;
           const en = enabledFilterRef.current === 'all' ? undefined : enabledFilterRef.current;
+          const isRootsOnly =
+            parentFilterRef.current === 'all' || parentFilterRef.current === null;
           const parentId =
-            parentFilterRef.current === 'all' || parentFilterRef.current === null
-              ? undefined
-              : parentFilterRef.current;
+            isRootsOnly ? undefined : (parentFilterRef.current as number);
           const res = await listItems(typeIdNum, {
             page: (current ?? 1) - 1,
             pageSize: pageSize ?? 20,
             q,
             enabled: en,
-            parentId: parentId !== undefined ? parentId : undefined,
+            rootsOnly: isRootsOnly ? true : undefined,
+            parentId: parentId ?? undefined,
           });
           lastItemsRef.current = res.items;
           return { data: res.items, success: true, total: res.total };

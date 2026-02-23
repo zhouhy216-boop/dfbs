@@ -2,6 +2,9 @@ server:
   port: 8080
 
 dfbs:
+  perm:
+    # Comma-separated userId (as string) for 角色与权限 access. Example: superAdminAllowlist: "1,2"
+    superAdminAllowlist: ""
   company:
     name: "DFBS 示例公司"
     bank-name: "示例银行"

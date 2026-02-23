@@ -1,6 +1,7 @@
 package com.dfbs.app.interfaces.dicttype;
 
 import com.dfbs.app.application.dicttype.DictItemService;
+import com.dfbs.app.application.dicttype.DictItemService.DictItemDeleteNotAllowedHasChildrenException;
 import com.dfbs.app.application.dicttype.DictItemService.DictItemParentInvalidException;
 import com.dfbs.app.config.SuperAdminGuard;
 import com.dfbs.app.infra.dto.ErrorResult;
@@ -10,11 +11,14 @@ import com.dfbs.app.modules.dicttype.DictItemEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import static org.springframework.web.bind.annotation.RequestMethod.DELETE;
+
 @RestController
 @RequestMapping("/api/v1/admin/dictionary-items")
 public class DictionaryItemAdminController {
 
     private static final String DICT_ITEM_PARENT_INVALID = "DICT_ITEM_PARENT_INVALID";
+    private static final String DICT_ITEM_DELETE_NOT_ALLOWED_HAS_CHILDREN = "DICT_ITEM_DELETE_NOT_ALLOWED_HAS_CHILDREN";
 
     private final SuperAdminGuard superAdminGuard;
     private final DictItemService dictItemService;
@@ -54,5 +58,16 @@ public class DictionaryItemAdminController {
         superAdminGuard.requireSuperAdmin();
         DictItemEntity e = dictItemService.setEnabled(id, false);
         return ResponseEntity.ok(DictItemDto.from(e));
+    }
+
+    @RequestMapping(value = "/{id}", method = DELETE)
+    public ResponseEntity<?> delete(@PathVariable Long id) {
+        superAdminGuard.requireSuperAdmin();
+        try {
+            dictItemService.deleteById(id);
+            return ResponseEntity.noContent().build();
+        } catch (DictItemDeleteNotAllowedHasChildrenException ex) {
+            return ResponseEntity.badRequest().body(ErrorResult.of("该字典项存在子项，无法删除", DICT_ITEM_DELETE_NOT_ALLOWED_HAS_CHILDREN));
+        }
     }
 }
