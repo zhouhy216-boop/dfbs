@@ -1,20 +1,22 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import request from '@/shared/utils/request';
+import { getPermAllowedCache, setPermAllowedCache, clearPermAllowedCache } from '@/shared/permAllowedCache';
+
+export { clearPermAllowedCache };
 
 interface PermMeResponse {
   allowed?: boolean;
 }
 
-let cachedAllowed: boolean | null = null;
-
 export function useIsPermSuperAdmin(): { allowed: boolean; loading: boolean } {
-  const [allowed, setAllowed] = useState(cachedAllowed ?? false);
-  const [loading, setLoading] = useState(cachedAllowed === null);
+  const cached = getPermAllowedCache();
+  const [allowed, setAllowed] = useState(cached ?? false);
+  const [loading, setLoading] = useState(cached === null);
 
   useEffect(() => {
-    if (cachedAllowed !== null) {
-      setAllowed(cachedAllowed);
+    if (cached !== null) {
+      setAllowed(cached);
       setLoading(false);
       return;
     }
@@ -22,11 +24,11 @@ export function useIsPermSuperAdmin(): { allowed: boolean; loading: boolean } {
       .get<PermMeResponse>('/v1/admin/perm/super-admin/me')
       .then((res) => {
         const value = res.data?.allowed === true;
-        cachedAllowed = value;
+        setPermAllowedCache(value);
         setAllowed(value);
       })
       .catch(() => {
-        cachedAllowed = false;
+        setPermAllowedCache(false);
         setAllowed(false);
       })
       .finally(() => setLoading(false));

@@ -1,0 +1,4 @@
+# Loaded when spring.profiles.active includes "dev". Local/dev only; not used in prod.
+dfbs:
+  dev:
+    seedNonAllowlistUser: true

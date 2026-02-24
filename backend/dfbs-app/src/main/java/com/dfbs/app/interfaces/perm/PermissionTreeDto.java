@@ -4,7 +4,8 @@ import java.util.List;
 
 /**
  * DTOs for GET /api/v1/admin/perm/permission-tree (v1 read-only contract).
- * keyFormat: "&lt;moduleKey&gt;:&lt;actionKey&gt;".
+ * Permission key format: "&lt;moduleKey&gt;:&lt;actionKey&gt;" (stable, extensible).
+ * Data source: perm_action (v1 default actions seeded), perm_module + perm_module_action (tree; modules empty by default).
  */
 public final class PermissionTreeDto {
 

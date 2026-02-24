@@ -2,9 +2,13 @@ server:
   port: 8080
 
 dfbs:
+  dev:
+    # Dev-only: when true and profile=dev, seed non-allowlist user "admin2" for 403 verification. Default false (never in prod).
+    seedNonAllowlistUser: false
   perm:
     # Comma-separated userId (as string) for 角色与权限 access. Example: superAdminAllowlist: "1,2"
-    superAdminAllowlist: ""
+    # Dev: admin user (from POST /api/auth/login user.id when username=admin) typically has id 1.
+    superAdminAllowlist: "1"
   company:
     name: "DFBS 示例公司"
     bank-name: "示例银行"

@@ -1,7 +1,10 @@
 import axios, { type AxiosError } from 'axios';
 import { message } from 'antd';
+import { clearPermAllowedCache } from '@/shared/permAllowedCache';
 
 const AUTH_TOKEN_KEY = 'dfbs_token';
+const AUTH_USER_ID_KEY = 'dfbs_user_id';
+const AUTH_USER_INFO_KEY = 'dfbs_user_info';
 
 export function getStoredToken(): string | null {
   return localStorage.getItem(AUTH_TOKEN_KEY);
@@ -11,8 +14,48 @@ export function setStoredToken(token: string): void {
   localStorage.setItem(AUTH_TOKEN_KEY, token);
 }
 
+export function getStoredUserId(): string | null {
+  return localStorage.getItem(AUTH_USER_ID_KEY);
+}
+
+export function setStoredUserId(userId: number | undefined | null): void {
+  if (userId != null) {
+    localStorage.setItem(AUTH_USER_ID_KEY, String(userId));
+  } else {
+    localStorage.removeItem(AUTH_USER_ID_KEY);
+  }
+}
+
+export interface StoredUserInfo {
+  id?: number;
+  username?: string;
+  roles?: string[];
+}
+
+export function getStoredUserInfo(): StoredUserInfo | null {
+  try {
+    const raw = localStorage.getItem(AUTH_USER_INFO_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as StoredUserInfo;
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredUserInfo(info: StoredUserInfo | null | undefined): void {
+  if (info != null && typeof info === 'object') {
+    localStorage.setItem(AUTH_USER_INFO_KEY, JSON.stringify({ id: info.id, username: info.username, roles: info.roles }));
+  } else {
+    localStorage.removeItem(AUTH_USER_INFO_KEY);
+  }
+}
+
 export function clearStoredToken(): void {
   localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem(AUTH_USER_ID_KEY);
+  localStorage.removeItem(AUTH_USER_INFO_KEY);
+  clearPermAllowedCache();
 }
 
 const request = axios.create({
@@ -25,6 +68,10 @@ request.interceptors.request.use((config) => {
   const token = getStoredToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  const userId = getStoredUserId();
+  if (userId) {
+    config.headers['X-User-Id'] = userId;
   }
   return config;
 });

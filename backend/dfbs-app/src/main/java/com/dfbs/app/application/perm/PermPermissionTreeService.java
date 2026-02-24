@@ -1,19 +1,30 @@
 package com.dfbs.app.application.perm;
 
 import com.dfbs.app.interfaces.perm.PermissionTreeDto;
+import com.dfbs.app.modules.perm.PermActionEntity;
+import com.dfbs.app.modules.perm.PermActionRepo;
+import com.dfbs.app.modules.perm.PermModuleActionRepo;
+import com.dfbs.app.modules.perm.PermModuleEntity;
+import com.dfbs.app.modules.perm.PermModuleRepo;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * v1 permission model: default actions set + minimal module tree (read-only).
- * No DB; constants only. Extensible via new moduleKey/actionKey later.
+ * v1 permission model: default actions set + module tree (read-only, persisted).
+ * keyFormat: "&lt;moduleKey&gt;:&lt;actionKey&gt;". Extensible via new moduleKey/actionKey in DB.
  */
 @Service
 public class PermPermissionTreeService {
 
-    /** v1 default common actions (stable keys). */
-    private static final List<PermissionTreeDto.ActionItem> DEFAULT_ACTIONS = List.of(
+    private final PermActionRepo actionRepo;
+    private final PermModuleRepo moduleRepo;
+    private final PermModuleActionRepo moduleActionRepo;
+
+    /** v1 default actions fallback when DB has no actions (e.g. pre-migration). */
+    private static final List<PermissionTreeDto.ActionItem> FALLBACK_ACTIONS = List.of(
             new PermissionTreeDto.ActionItem("VIEW", "查看"),
             new PermissionTreeDto.ActionItem("CREATE", "创建"),
             new PermissionTreeDto.ActionItem("EDIT", "编辑"),
@@ -26,22 +37,50 @@ public class PermPermissionTreeService {
             new PermissionTreeDto.ActionItem("EXPORT", "导出")
     );
 
-    /** v1 minimal module: platform_application with all default actions. */
-    private static final List<String> MODULE_ACTION_KEYS = List.of(
-            "VIEW", "CREATE", "EDIT", "SUBMIT", "APPROVE", "REJECT", "ASSIGN", "CLOSE", "DELETE", "EXPORT"
-    );
+    public PermPermissionTreeService(PermActionRepo actionRepo,
+                                    PermModuleRepo moduleRepo,
+                                    PermModuleActionRepo moduleActionRepo) {
+        this.actionRepo = actionRepo;
+        this.moduleRepo = moduleRepo;
+        this.moduleActionRepo = moduleActionRepo;
+    }
 
     public PermissionTreeDto.PermissionTreeResponse getPermissionTree() {
-        PermissionTreeDto.ModuleNode platformApp = new PermissionTreeDto.ModuleNode(
-                "platform_application",
-                "平台应用",
-                MODULE_ACTION_KEYS,
-                List.of()
-        );
+        List<PermissionTreeDto.ActionItem> actions = loadActions();
+        List<PermissionTreeDto.ModuleNode> modules = loadModuleTree();
         return new PermissionTreeDto.PermissionTreeResponse(
                 PermissionTreeDto.KEY_FORMAT,
-                DEFAULT_ACTIONS,
-                List.of(platformApp)
+                actions,
+                modules
         );
+    }
+
+    private List<PermissionTreeDto.ActionItem> loadActions() {
+        List<PermActionEntity> entities = actionRepo.findAllByOrderByIdAsc();
+        if (entities.isEmpty()) {
+            return FALLBACK_ACTIONS;
+        }
+        return entities.stream()
+                .map(e -> new PermissionTreeDto.ActionItem(e.getActionKey(), e.getLabel()))
+                .collect(Collectors.toList());
+    }
+
+    private List<PermissionTreeDto.ModuleNode> loadModuleTree() {
+        List<PermModuleEntity> roots = moduleRepo.findByParentIdIsNullOrderByIdAsc();
+        List<PermissionTreeDto.ModuleNode> result = new ArrayList<>();
+        for (PermModuleEntity root : roots) {
+            result.add(toModuleNode(root));
+        }
+        return result;
+    }
+
+    private PermissionTreeDto.ModuleNode toModuleNode(PermModuleEntity entity) {
+        List<String> actionKeys = moduleActionRepo.findByModuleId(entity.getId()).stream()
+                .map(ma -> ma.getActionKey())
+                .collect(Collectors.toList());
+        List<PermissionTreeDto.ModuleNode> children = moduleRepo.findByParentIdOrderByIdAsc(entity.getId()).stream()
+                .map(this::toModuleNode)
+                .collect(Collectors.toList());
+        return new PermissionTreeDto.ModuleNode(entity.getModuleKey(), entity.getLabel(), actionKeys, children);
     }
 }

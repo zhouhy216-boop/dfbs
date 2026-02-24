@@ -33,6 +33,12 @@
 - **新增动作**：若将来需要新的通用动作，在默认动作集中增加新的 `actionKey` 与中文名，并在需要该动作的模块的 `actions` 中加入即可。
 - 本约定不承诺对已有 key 的兼容性策略（如重命名、废弃）的细化；扩展时尽量只做增量添加。
 
+## 持久化（Step-02）
+
+- **perm_action**：动作定义（action_key, label）；v1 默认动作通过迁移幂等写入。
+- **perm_module**：模块树节点（module_key, label, parent_id）；默认无模块，可后续增量添加。
+- **perm_module_action**：模块与动作关联（module_id, action_key）。
+
 ## 相关接口
 
 - `GET /api/v1/admin/perm/permission-tree`：返回 keyFormat、默认动作列表、模块树（只读，需 PERM 超级管理员 allowlist）。

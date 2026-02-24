@@ -37,3 +37,21 @@ DFBS_PERM_SUPERADMINALLOWLIST=1,2
 - **Empty or unset:** No one is allowlisted; “角色与权限” is hidden and PERM admin endpoints return 403.
 - **Server:** PERM admin endpoints (other than the visibility check `GET /api/v1/admin/perm/super-admin/me`) must call `PermSuperAdminGuard.requirePermSuperAdmin()`; if the current user’s userId (as string) is not in the list, the server returns 403 with message “无权限”.
 - **Frontend:** The “角色与权限” menu entry and page are only shown when `GET .../super-admin/me` returns `allowed: true`.
+
+## Dev-only: non-allowlist test user (admin2)
+
+To verify 403 / menu hidden / redirect **without** editing backend config or touching the DB:
+
+1. **Start backend** so the dev seeder runs (pick one):
+   - **One-command (Windows PowerShell, from backend folder):**  
+     `.\mvnw.cmd spring-boot:run "-Dspring-boot.run.jvmArguments=-Ddfbs.dev.seedNonAllowlistUser=true"`  
+     (Seeder runs when property is true and profile is not `prod`.)
+   - **Using dev profile (loads application-dev.yml):**  
+     `.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev`  
+     or: `.\mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--spring.profiles.active=dev"`  
+     or set env `SPRING_PROFILES_ACTIVE=dev` then run `.\mvnw.cmd spring-boot:run`.
+   - **Do not** put `--spring.profiles.active=dev` directly after `spring-boot:run` (e.g. `.\mvnw.cmd spring-boot:run --spring.profiles.active=dev`). Maven does not accept that; you get “Unrecognized option”.
+2. **Log in as admin2:** Username **admin2**, password **anything** (ignored in MVP).
+3. **Verify:** `GET /api/v1/admin/perm/permission-tree` → 403 “无权限”; sidebar no “角色与权限”; `/admin/roles-permissions` → redirect to /dashboard.
+
+**Files:** `application-dev.yml` (profile dev), `runner/DevNonAllowlistUserSeeder.java`. Do **not** add admin2’s userId to `dfbs.perm.superAdminAllowlist`.

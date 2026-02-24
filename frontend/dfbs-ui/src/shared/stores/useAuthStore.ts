@@ -1,5 +1,13 @@
 import { create } from 'zustand';
-import { getStoredToken, setStoredToken, clearStoredToken } from '@/shared/utils/request';
+import {
+  getStoredToken,
+  setStoredToken,
+  clearStoredToken,
+  setStoredUserId,
+  getStoredUserInfo,
+  setStoredUserInfo,
+} from '@/shared/utils/request';
+import { clearPermAllowedCache } from '@/shared/permAllowedCache';
 
 export interface UserInfo {
   id?: number;
@@ -18,9 +26,12 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set) => ({
   token: getStoredToken(),
-  userInfo: null,
+  userInfo: getStoredUserInfo(),
   login: (token, user) => {
+    clearPermAllowedCache();
     setStoredToken(token);
+    setStoredUserId(user?.id);
+    setStoredUserInfo(user ?? null);
     set({ token, userInfo: user ?? null });
   },
   logout: () => {
@@ -29,6 +40,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   hydrateFromStorage: () => {
     const t = getStoredToken();
-    if (t) set((s) => (s.token ? s : { ...s, token: t }));
+    const stored = getStoredUserInfo();
+    if (t) {
+      set((s) => {
+        const next = { ...s, token: s.token || t };
+        if (stored && !s.userInfo) next.userInfo = stored;
+        return next;
+      });
+    }
   },
 }));
