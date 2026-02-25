@@ -5,6 +5,10 @@ dfbs:
   dev:
     # Dev-only: when true and profile=dev, seed non-allowlist user "admin2" for 403 verification. Default false (never in prod).
     seedNonAllowlistUser: false
+    # Dev-only: when true and profile != prod, seed demo perm modules (platform_application + child) for UI verification. Default false.
+    seedPermDemoModules: false
+    # Dev-only: when true and profile != prod, seed minimal default role templates (e.g. template_viewer) for UI. Default false.
+    seedPermDefaultRoleTemplates: false
   perm:
     # Comma-separated userId (as string) for 角色与权限 access. Example: superAdminAllowlist: "1,2"
     # Dev: admin user (from POST /api/auth/login user.id when username=admin) typically has id 1.

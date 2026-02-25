@@ -7,4 +7,6 @@ import java.util.List;
 public interface PermModuleActionRepo extends JpaRepository<PermModuleActionEntity, Long> {
 
     List<PermModuleActionEntity> findByModuleId(Long moduleId);
+
+    boolean existsByModuleIdAndActionKey(Long moduleId, String actionKey);
 }
