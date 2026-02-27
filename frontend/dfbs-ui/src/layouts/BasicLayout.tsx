@@ -26,6 +26,11 @@ import {
 import { getStoredToken } from '@/shared/utils/request';
 import { useIsSuperAdmin } from '@/shared/components/SuperAdminGuard';
 import { useIsPermSuperAdmin } from '@/shared/components/PermSuperAdminGuard';
+import { useEffectivePermissions } from '@/shared/hooks/useEffectivePermissions';
+
+const PERM_ORGS_VIEW = 'platform_application.orgs:VIEW';
+const PERM_APPS_VIEW = 'platform_application.applications:VIEW';
+const PERM_WORK_ORDER_VIEW = 'work_order:VIEW';
 import { TestDataCleanerModal } from '@/shared/components/TestDataCleaner/Modal';
 
 /** Static menu config: guaranteed array to avoid "spread non-iterable" in ProLayout. */
@@ -104,13 +109,31 @@ const ORG_STRUCTURE_MENU = [
 /** PERM allowlist only: 角色与权限 */
 const PERM_MENU = [{ path: '/admin/roles-permissions', name: '角色与权限' }];
 
-function buildMenuRoutes(isSuperAdmin: boolean, permAllowed: boolean) {
+function buildMenuRoutes(
+  isSuperAdmin: boolean,
+  permAllowed: boolean,
+  hasPermission: (key: string) => boolean
+) {
   const adminExtras = [
     ...(permAllowed ? PERM_MENU : []),
     ...(isSuperAdmin ? ORG_STRUCTURE_MENU : []),
   ];
-  if (adminExtras.length === 0) return MENU_ROUTES_BASE;
   return MENU_ROUTES_BASE.map((r) => {
+    if (r.key === 'platform-group' && r.routes) {
+      const platformRoutes = (r.routes as { path: string; name: string }[]).filter((item) => {
+        if (item.path === '/platform/orgs') return hasPermission(PERM_ORGS_VIEW);
+        if (item.path === '/platform/applications') return hasPermission(PERM_APPS_VIEW);
+        return true;
+      });
+      return { ...r, routes: platformRoutes };
+    }
+    if (r.key === 'after-sales-service-group' && r.routes) {
+      const workOrderRoutes = (r.routes as { path: string; name: string }[]).filter((item) => {
+        if (item.path === '/work-orders') return hasPermission(PERM_WORK_ORDER_VIEW);
+        return true;
+      });
+      return { ...r, routes: workOrderRoutes };
+    }
     if (r.key === 'admin-group' && r.routes) {
       return { ...r, routes: [...r.routes, ...adminExtras] };
     }
@@ -150,9 +173,13 @@ export default function BasicLayout() {
   const userInfo = useAuthStore((s) => s.userInfo);
   const isSuperAdmin = useIsSuperAdmin();
   const { allowed: permAllowed } = useIsPermSuperAdmin();
+  const { has: hasPermission } = useEffectivePermissions();
   const [testDataCleanerOpen, setTestDataCleanerOpen] = useState(false);
-  const displayName = userInfo?.username ?? userInfo?.name ?? 'User';
-  const menuRoutes = useMemo(() => buildMenuRoutes(isSuperAdmin, permAllowed), [isSuperAdmin, permAllowed]);
+  const displayName = userInfo?.username ?? 'User';
+  const menuRoutes = useMemo(
+    () => buildMenuRoutes(isSuperAdmin, permAllowed, hasPermission),
+    [isSuperAdmin, permAllowed, hasPermission]
+  );
 
   return (
     <div style={{ height: '100vh', minHeight: '100vh' }}>
@@ -160,7 +187,7 @@ export default function BasicLayout() {
         title="DFBS"
         layout="mix"
         route={{ routes: menuRoutes }}
-        menuDataRender={() => menuRoutes}
+        menuDataRender={() => menuRoutes as any}
         menuItemRender={(item, dom) => (
           <a onClick={() => navigate(item.path ?? '/dashboard')}>{dom}</a>
         )}

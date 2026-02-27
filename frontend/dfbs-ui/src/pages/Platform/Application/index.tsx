@@ -13,7 +13,13 @@ import { PhoneRule, EmailRule } from '@/shared/utils/validators/common';
 import { ContractRule, OrgCodeRule, OrgCodeUppercaseRule } from '@/features/platform/utils/validators';
 import { getPlatformConfigs, type PlatformConfigItem } from '@/features/platform/services/platformConfig';
 import { useDraftForm } from '@/shared/hooks/useDraftForm';
+import { useEffectivePermissions } from '@/shared/hooks/useEffectivePermissions';
 import ApplicationsHistory from '@/pages/Platform/applications/History';
+
+const PERM_APPS_SUBMIT = 'platform_application.applications:SUBMIT';
+const PERM_APPS_CLOSE = 'platform_application.applications:CLOSE';
+const PERM_APPS_APPROVE = 'platform_application.applications:APPROVE';
+const PERM_APPS_REJECT = 'platform_application.applications:REJECT';
 
 const SOURCE_TYPE_OPTIONS = [
   { label: '销售渠道', value: 'FACTORY' },
@@ -198,6 +204,7 @@ export default function PlatformApplication({
   const createFormRef = useRef<{ getFieldsValue: () => Record<string, unknown>; setFieldsValue: (v: Record<string, unknown>) => void } | null>(null);
   const draftKey = `platform-apply-${createSourceType}${enterpriseDirect ? '-enterprise' : ''}`;
   const { saveDraft, loadDraft, clearDraft, hasDraft } = useDraftForm(draftKey);
+  const { has: hasPermission } = useEffectivePermissions();
   const plannerDraftKey = 'platform-apply-enterprise-confirm';
   const { saveDraft: savePlannerDraft, loadDraft: loadPlannerDraft, clearDraft: clearPlannerDraft, hasDraft: hasPlannerDraft } = useDraftForm(plannerDraftKey);
 
@@ -241,7 +248,8 @@ export default function PlatformApplication({
       fixed: 'right',
       render: (_, row) => [
         <a key="view" onClick={() => { setCurrentRow(row); setDetailModalOpen(true); }}>详情</a>,
-        (row.status === 'PENDING_PLANNER' || row.status === 'PENDING_CONFIRM' || row.status === 'CLOSED') && (
+        (row.status === 'PENDING_PLANNER' || row.status === 'PENDING_CONFIRM' || row.status === 'CLOSED') &&
+          (hasPermission(PERM_APPS_SUBMIT) || hasPermission(PERM_APPS_CLOSE)) && (
           <a
             key="planner"
             onClick={() => {
@@ -269,7 +277,7 @@ export default function PlatformApplication({
             营企处理
           </a>
         ),
-        row.status === 'PENDING_ADMIN' && (
+        row.status === 'PENDING_ADMIN' && (hasPermission(PERM_APPS_APPROVE) || hasPermission(PERM_APPS_REJECT)) && (
           <a key="admin" onClick={() => { setCurrentRow(row); setAdminHitMatches([]); adminForm.setFieldsValue({ orgCodeShort: row.orgCodeShort ?? '', region: row.region ?? undefined }); setAdminModalOpen(true); }}>
             管理员审核
           </a>
@@ -786,9 +794,9 @@ export default function PlatformApplication({
         destroyOnClose
         width={560}
         footer={[
-          <Button key="closeApp" danger onClick={handlePlannerCloseApp}>
-            关闭申请
-          </Button>,
+          ...(hasPermission(PERM_APPS_CLOSE)
+            ? [<Button key="closeApp" danger onClick={handlePlannerCloseApp}>关闭申请</Button>]
+            : []),
           <Button key="cancel" onClick={() => { setPlannerModalOpen(false); setCurrentRow(null); setPlannerCustomerExists(null); plannerForm.resetFields(); }}>
             取消
           </Button>,
@@ -806,9 +814,9 @@ export default function PlatformApplication({
           >
             保存草稿
           </Button>,
-          <Button key="submit" type="primary" onClick={() => handlePlannerConfirm()}>
-            提交至管理员
-          </Button>,
+          ...(hasPermission(PERM_APPS_SUBMIT)
+            ? [<Button key="submit" type="primary" onClick={() => handlePlannerConfirm()}>提交至管理员</Button>]
+            : []),
         ]}
       >
         {currentRow && (
@@ -1064,8 +1072,12 @@ export default function PlatformApplication({
                   <Select options={REGION_OPTIONS} placeholder="华东/华北/华南/西部/海外" allowClear />
                 </Form.Item>
                 <Form.Item>
-                  <Button type="primary" onClick={handleApprove} style={{ marginRight: 8 }}>通过</Button>
-                  <Button danger onClick={() => setRejectModalOpen(true)}>驳回</Button>
+                  {hasPermission(PERM_APPS_APPROVE) && (
+                    <Button type="primary" onClick={handleApprove} style={{ marginRight: 8 }}>通过</Button>
+                  )}
+                  {hasPermission(PERM_APPS_REJECT) && (
+                    <Button danger onClick={() => setRejectModalOpen(true)}>驳回</Button>
+                  )}
                 </Form.Item>
               </Form>
             </Col>

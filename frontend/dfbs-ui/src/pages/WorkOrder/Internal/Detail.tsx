@@ -18,6 +18,7 @@ import {
 import { ArrowLeftOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import request from '@/shared/utils/request';
 import { useAuthStore } from '@/shared/stores/useAuthStore';
+import { useEffectivePermissions } from '@/shared/hooks/useEffectivePermissions';
 import dayjs from 'dayjs';
 
 interface WorkOrder {
@@ -100,6 +101,7 @@ export default function WorkOrderInternalDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const userInfo = useAuthStore((s) => s.userInfo);
+  const { has } = useEffectivePermissions();
   const [detail, setDetail] = useState<WorkOrderDetailDto | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -143,12 +145,6 @@ export default function WorkOrderInternalDetail() {
       setSpareParts([]);
     }
   }
-
-  const wo = detail?.workOrder;
-  const records = detail?.records ?? [];
-  const parts = detail?.parts ?? [];
-  const isAssignee = wo && userInfo?.id != null && String(userInfo.id) === String(wo.serviceManagerId);
-  console.log('Assignee Check:', userInfo?.id, wo?.serviceManagerId);
 
   const handleDispatch = async () => {
     const values = await dispatchForm.validateFields();
@@ -273,7 +269,7 @@ export default function WorkOrderInternalDetail() {
     }
   };
 
-  if (loading || !detail) {
+  if (loading || !detail || !detail.workOrder) {
     return (
       <div style={{ padding: 24 }}>
         {loading ? '加载中...' : '未找到工单'}
@@ -281,6 +277,10 @@ export default function WorkOrderInternalDetail() {
     );
   }
 
+  const wo = detail.workOrder;
+  const records = detail.records ?? [];
+  const parts = detail.parts ?? [];
+  const isAssignee = userInfo?.id != null && String(userInfo.id) === String(wo.serviceManagerId);
   const status = wo.status;
   const canDispatch = status === 'ACCEPTED_BY_DISPATCHER';
   const canAccept = status === 'DISPATCHED' && isAssignee;
@@ -311,22 +311,22 @@ export default function WorkOrderInternalDetail() {
         }
         extra={
           <Space wrap>
-            {canDispatch && (
+            {canDispatch && has('work_order:ASSIGN') && (
               <Button type="primary" onClick={() => setDispatchOpen(true)}>
                 派单
               </Button>
             )}
-            {canAccept && (
+            {canAccept && has('work_order:SUBMIT') && (
               <Button type="primary" onClick={handleAccept} loading={submitting}>
                 接单
               </Button>
             )}
-            {canStart && (
+            {canStart && has('work_order:EDIT') && (
               <Button type="primary" onClick={() => setRecordOpen(true)}>
                 开始处理
               </Button>
             )}
-            {canAddRecordOrParts && (
+            {canAddRecordOrParts && has('work_order:EDIT') && (
               <>
                 <Button onClick={() => { setRecordOpen(true); }}>添加记录</Button>
                 <Button
@@ -339,12 +339,12 @@ export default function WorkOrderInternalDetail() {
                 </Button>
               </>
             )}
-            {canSubmitSign && (
+            {canSubmitSign && has('work_order:APPROVE') && (
               <Button type="primary" onClick={handleSubmitSign} loading={submitting}>
                 提交签字
               </Button>
             )}
-            {canComplete && (
+            {canComplete && has('work_order:CLOSE') && (
               <Button type="primary" onClick={() => setCompleteOpen(true)}>
                 完修
               </Button>
@@ -428,7 +428,7 @@ export default function WorkOrderInternalDetail() {
               title: '操作',
               width: 100,
               render: (_, row: WorkOrderPart) =>
-                row.usageStatus === 'PENDING' ? (
+                row.usageStatus === 'PENDING' && has('work_order:EDIT') ? (
                   <Button
                     type="link"
                     size="small"

@@ -8,6 +8,8 @@ import {
   setStoredUserInfo,
 } from '@/shared/utils/request';
 import { clearPermAllowedCache } from '@/shared/permAllowedCache';
+import { clearEffectiveKeysCache } from '@/shared/hooks/useEffectivePermissions';
+import { useVisionStore } from '@/shared/stores/useVisionStore';
 
 export interface UserInfo {
   id?: number;
@@ -29,12 +31,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   userInfo: getStoredUserInfo(),
   login: (token, user) => {
     clearPermAllowedCache();
+    clearEffectiveKeysCache();
     setStoredToken(token);
     setStoredUserId(user?.id);
     setStoredUserInfo(user ?? null);
     set({ token, userInfo: user ?? null });
   },
   logout: () => {
+    useVisionStore.getState().clearVision();
     clearStoredToken();
     set({ token: null, userInfo: null });
   },

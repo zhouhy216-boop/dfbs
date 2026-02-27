@@ -2,3 +2,6 @@
 dfbs:
   dev:
     seedNonAllowlistUser: true
+  perm:
+    # Enable test utilities (Role-Vision) in dev for verification. Prod never loads this file.
+    testUtilitiesEnabled: true

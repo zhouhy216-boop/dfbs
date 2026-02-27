@@ -115,3 +115,40 @@ export function saveAccountOverride(
     .put<AccountOverrideResponse>(`/v1/admin/perm/accounts/${userId}/override`, body)
     .then((res) => res.data);
 }
+
+// --- Test-only Role-Vision (404 when test utilities disabled) ---
+
+export interface VisionResponse {
+  mode: string;
+  userId?: number | null;
+}
+
+export function getTestVision(): Promise<VisionResponse> {
+  return request.get<VisionResponse>('/v1/admin/perm/test/vision').then((res) => res.data);
+}
+
+export function setTestVision(body: { mode: string; userId?: number }): Promise<VisionResponse> {
+  return request.post<VisionResponse>('/v1/admin/perm/test/vision', body).then((res) => res.data);
+}
+
+export function getTestEffectiveKeys(): Promise<string[]> {
+  return request
+    .get<{ effectiveKeys?: string[] }>('/v1/admin/perm/test/me/effective-keys')
+    .then((res) => res.data?.effectiveKeys ?? []);
+}
+
+export interface KitAccountSummary {
+  username: string;
+  nickname: string;
+  userId: number;
+  effectiveKeyCount: number;
+  effectiveKeySample: string[];
+}
+
+export function getTestAccounts(): Promise<KitAccountSummary[]> {
+  return request.get<KitAccountSummary[]>('/v1/admin/perm/test/accounts').then((res) => res.data ?? []);
+}
+
+export function resetTestAccounts(): Promise<KitAccountSummary[]> {
+  return request.post<KitAccountSummary[]>('/v1/admin/perm/test/accounts/reset').then((res) => res.data ?? []);
+}

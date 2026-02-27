@@ -16,6 +16,11 @@ import { PhoneRule, EmailRule } from '@/shared/utils/validators/common';
 import { OrgCodeRule, OrgCodeUppercaseRule } from '@/features/platform/utils/validators';
 import { getPlatformConfigs, type PlatformConfigItem } from '@/features/platform/services/platformConfig';
 import { useDraftForm } from '@/shared/hooks/useDraftForm';
+import { useEffectivePermissions } from '@/shared/hooks/useEffectivePermissions';
+
+const PERM_ORGS_CREATE = 'platform_application.orgs:CREATE';
+const PERM_ORGS_EDIT = 'platform_application.orgs:EDIT';
+const PERM_ORGS_DELETE = 'platform_application.orgs:DELETE';
 
 /** Region options for create/edit org (same as Platform Application flow). */
 const REGION_OPTIONS = [
@@ -169,6 +174,7 @@ export default function PlatformOrg() {
   const [lastAutofillOrgFullName, setLastAutofillOrgFullName] = useState('');
 
   const { saveDraft, loadDraft, clearDraft, hasDraft } = useDraftForm<PlatformOrgFormValues>('platform-org-create-admin');
+  const { has: hasPermission } = useEffectivePermissions();
 
   const [platformConfigs, setPlatformConfigs] = useState<PlatformConfigItem[]>([]);
   useEffect(() => {
@@ -517,13 +523,16 @@ export default function PlatformOrg() {
       dataIndex: 'isActive',
       width: 90,
       search: false,
-      render: (_, row) => (
-        <Switch
-          checked={!!row.isActive}
-          onChange={(val) => handleToggleActive(row, val)}
-          disabled={row.status === 'DELETED'}
-        />
-      ),
+      render: (_, row) =>
+        hasPermission(PERM_ORGS_EDIT) ? (
+          <Switch
+            checked={!!row.isActive}
+            onChange={(val) => handleToggleActive(row, val)}
+            disabled={row.status === 'DELETED'}
+          />
+        ) : (
+          <span>{row.isActive ? '启用' : '禁用'}</span>
+        ),
     },
     {
       title: '备注',
@@ -565,30 +574,32 @@ export default function PlatformOrg() {
         >
           详情
         </a>,
-        <a
-          key="edit"
-          onClick={() => {
-            setCurrentRow(row);
-            editForm.setFieldsValue({
-              platform: row.platform,
-              orgCodeShort: row.orgCodeShort ?? row.orgCode,
-              orgFullName: row.orgFullName ?? row.orgName,
-              customerIds: row.customerIds ?? (row.customerId != null ? [row.customerId] : []),
-              isActive: row.isActive ?? true,
-              status: row.status ?? 'ACTIVE',
-              contactPerson: row.contactPerson ?? undefined,
-              contactPhone: row.contactPhone ?? undefined,
-              contactEmail: row.contactEmail ?? undefined,
-              salesPerson: row.salesPerson ?? undefined,
-              region: row.region ?? undefined,
-              remark: row.remark ?? undefined,
-            });
-            setEditOpen(true);
-          }}
-        >
-          编辑
-        </a>,
-        row.status !== 'DELETED' && (
+        hasPermission(PERM_ORGS_EDIT) && (
+          <a
+            key="edit"
+            onClick={() => {
+              setCurrentRow(row);
+              editForm.setFieldsValue({
+                platform: row.platform,
+                orgCodeShort: row.orgCodeShort ?? row.orgCode,
+                orgFullName: row.orgFullName ?? row.orgName,
+                customerIds: row.customerIds ?? (row.customerId != null ? [row.customerId] : []),
+                isActive: row.isActive ?? true,
+                status: row.status ?? 'ACTIVE',
+                contactPerson: row.contactPerson ?? undefined,
+                contactPhone: row.contactPhone ?? undefined,
+                contactEmail: row.contactEmail ?? undefined,
+                salesPerson: row.salesPerson ?? undefined,
+                region: row.region ?? undefined,
+                remark: row.remark ?? undefined,
+              });
+              setEditOpen(true);
+            }}
+          >
+            编辑
+          </a>
+        ),
+        row.status !== 'DELETED' && hasPermission(PERM_ORGS_DELETE) && (
           <Popconfirm
             key="delete"
             title="确认删除该机构？"
@@ -655,9 +666,9 @@ export default function PlatformOrg() {
           <Button key="enterprise" onClick={() => navigate('/platform/apply?source=enterprise')}>
             营企申请
           </Button>,
-          <Button key="create" onClick={openCreateModal}>
-            新建机构
-          </Button>,
+          ...(hasPermission(PERM_ORGS_CREATE)
+            ? [<Button key="create" onClick={openCreateModal}>新建机构</Button>]
+            : []),
         ]}
       />
 

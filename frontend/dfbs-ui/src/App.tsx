@@ -36,6 +36,8 @@ import DictionarySnapshotDemo from '@/pages/Admin/DictionarySnapshotDemo';
 import RolesPermissionsPage from '@/pages/Admin/RolesPermissions';
 import { SuperAdminGuard } from '@/shared/components/SuperAdminGuard';
 import { PermSuperAdminGuard } from '@/shared/components/PermSuperAdminGuard';
+import { PlatformViewGuard } from '@/shared/components/PlatformViewGuard';
+import { WorkOrderViewGuard } from '@/shared/components/WorkOrderViewGuard';
 import PlatformConfig from '@/pages/System/PlatformConfig';
 import PlatformApplication from '@/pages/Platform/Application';
 import PlatformOrg from '@/pages/Platform/Org';
@@ -66,8 +68,8 @@ function App() {
             <Route path="after-sales" element={<AfterSales />} />
             <Route path="after-sales/:id" element={<AfterSalesDetail />} />
             <Route path="after-sales-service" element={<Navigate to="/work-orders" replace />} />
-            <Route path="work-orders" element={<WorkOrderInternal />} />
-            <Route path="work-orders/:id" element={<WorkOrderInternalDetail />} />
+            <Route path="work-orders" element={<WorkOrderViewGuard><WorkOrderInternal /></WorkOrderViewGuard>} />
+            <Route path="work-orders/:id" element={<WorkOrderViewGuard><WorkOrderInternalDetail /></WorkOrderViewGuard>} />
             <Route path="finance" element={<Finance />} />
             <Route path="warehouse/inventory" element={<WarehouseInventory />} />
             <Route path="warehouse/replenish" element={<WarehouseReplenish />} />
@@ -83,8 +85,8 @@ function App() {
             <Route path="master-data/sim-cards/:id" element={<MasterDataSimCardDetail />} />
             <Route path="master-data/model-part-lists" element={<MasterDataModelPartList />} />
             <Route path="platform" element={<Navigate to="/platform/applications" replace />} />
-            <Route path="platform/orgs" element={<PlatformOrg />} />
-            <Route path="platform/applications" element={<PlatformApplication />} />
+            <Route path="platform/orgs" element={<PlatformViewGuard requiredPermission="platform_application.orgs:VIEW"><PlatformOrg /></PlatformViewGuard>} />
+            <Route path="platform/applications" element={<PlatformViewGuard requiredPermission="platform_application.applications:VIEW"><PlatformApplication /></PlatformViewGuard>} />
             <Route path="platform/applications/history" element={<ApplicationsHistory />} />
             <Route path="platform/apply" element={<PlatformApply />} />
             <Route path="platform/applications/reuse" element={<ReusePlaceholder />} />

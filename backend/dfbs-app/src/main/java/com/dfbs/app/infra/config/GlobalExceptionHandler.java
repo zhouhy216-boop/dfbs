@@ -1,6 +1,7 @@
 package com.dfbs.app.infra.config;
 
 import com.dfbs.app.application.dicttype.DictTypeNotFoundException;
+import com.dfbs.app.application.perm.PermForbiddenException;
 import com.dfbs.app.application.quote.QuoteValidationException;
 import com.dfbs.app.infra.dto.ErrorResult;
 import org.slf4j.Logger;
@@ -55,6 +56,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
                 .body(ErrorResult.of(ex.getMessage(), DictTypeNotFoundException.MACHINE_CODE));
+    }
+
+    @ExceptionHandler(PermForbiddenException.class)
+    public ResponseEntity<ErrorResult> handlePermForbidden(PermForbiddenException ex) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ErrorResult.of(ex.getMessage(), PermForbiddenException.MACHINE_CODE));
     }
 
     @ExceptionHandler(ResponseStatusException.class)

@@ -17,6 +17,17 @@ public class PermAllowlistProperties {
     /** Comma-separated list of userId (as string). Empty = no one allowed. */
     private String superAdminAllowlist = "";
 
+    /** When true and profile != prod, test utilities (Role-Vision etc.) are exposed. Default false. */
+    private boolean testUtilitiesEnabled = false;
+
+    public boolean isTestUtilitiesEnabled() {
+        return testUtilitiesEnabled;
+    }
+
+    public void setTestUtilitiesEnabled(boolean testUtilitiesEnabled) {
+        this.testUtilitiesEnabled = testUtilitiesEnabled;
+    }
+
     public String getSuperAdminAllowlist() {
         return superAdminAllowlist;
     }

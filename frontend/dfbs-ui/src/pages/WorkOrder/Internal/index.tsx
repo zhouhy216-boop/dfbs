@@ -6,6 +6,7 @@ import type { Dayjs } from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 import request from '@/shared/utils/request';
 import SmartReferenceSelect from '@/shared/components/SmartReferenceSelect';
+import { useEffectivePermissions } from '@/shared/hooks/useEffectivePermissions';
 
 function CustomerSmartSelectInternal() {
   const form = Form.useFormInstance();
@@ -80,6 +81,7 @@ function toWorkOrderRow(d: { id: number; orderNo?: string; status?: string; cust
 
 export default function WorkOrderInternal() {
   const navigate = useNavigate();
+  const { has } = useEffectivePermissions();
   const pendingPoolRef = useRef<ActionType>(null);
   const readyPoolRef = useRef<ActionType>(null);
   const myOrdersRef = useRef<ActionType>(null);
@@ -154,70 +156,7 @@ export default function WorkOrderInternal() {
       width: 200,
       render: (_, row) => [
         <a key="detail" onClick={() => navigate(`/work-orders/${row.id}`)}>详情</a>,
-        <a
-          key="accept"
-          onClick={() => {
-            setAcceptRow(row);
-            acceptForm.setFieldsValue({
-              customerId: row.customerId ?? undefined,
-              customerName: row.customerName ?? '',
-              contactPerson: row.contactPerson ?? '',
-              contactPhone: row.contactPhone ?? '',
-              serviceAddress: row.serviceAddress ?? '',
-              issueDescription: undefined,
-              appointmentTime: undefined,
-            });
-            setAcceptModalOpen(true);
-          }}
-        >
-          受理
-        </a>,
-        <a
-          key="reject"
-          style={{ color: 'var(--ant-color-error)' }}
-          onClick={() => {
-            setRejectRow(row);
-            rejectForm.setFieldsValue({ reason: '' });
-            setRejectModalOpen(true);
-          }}
-        >
-          驳回
-        </a>,
-      ],
-    },
-  ];
-
-  const readyPoolColumns: ProColumns<WorkOrderRow>[] = [
-    ...baseColumns,
-    {
-      title: '操作',
-      valueType: 'option',
-      width: 140,
-      render: (_, row) => [
-        <a key="detail" onClick={() => navigate(`/work-orders/${row.id}`)}>详情</a>,
-        <a
-          key="dispatch"
-          onClick={() => {
-            setDispatchRow(row);
-            dispatchForm.setFieldsValue({ serviceManagerId: undefined });
-            setDispatchModalOpen(true);
-          }}
-        >
-          派单
-        </a>,
-      ],
-    },
-  ];
-
-  const allPoolColumns: ProColumns<WorkOrderRow>[] = [
-    ...baseColumns,
-    {
-      title: '操作',
-      valueType: 'option',
-      width: 220,
-      render: (_, row) => [
-        <a key="detail" onClick={() => navigate(`/work-orders/${row.id}`)}>详情</a>,
-        row.status === 'PENDING' && (
+        has('work_order:ASSIGN') && (
           <a
             key="accept"
             onClick={() => {
@@ -237,7 +176,32 @@ export default function WorkOrderInternal() {
             受理
           </a>
         ),
-        row.status === 'ACCEPTED_BY_DISPATCHER' && (
+        has('work_order:REJECT') && (
+          <a
+            key="reject"
+            style={{ color: 'var(--ant-color-error)' }}
+            onClick={() => {
+              setRejectRow(row);
+              rejectForm.setFieldsValue({ reason: '' });
+              setRejectModalOpen(true);
+            }}
+          >
+            驳回
+          </a>
+        ),
+      ].filter(Boolean),
+    },
+  ];
+
+  const readyPoolColumns: ProColumns<WorkOrderRow>[] = [
+    ...baseColumns,
+    {
+      title: '操作',
+      valueType: 'option',
+      width: 140,
+      render: (_, row) => [
+        <a key="detail" onClick={() => navigate(`/work-orders/${row.id}`)}>详情</a>,
+        has('work_order:ASSIGN') && (
           <a
             key="dispatch"
             onClick={() => {
@@ -249,7 +213,51 @@ export default function WorkOrderInternal() {
             派单
           </a>
         ),
-        row.status === 'PENDING' && (
+      ].filter(Boolean),
+    },
+  ];
+
+  const allPoolColumns: ProColumns<WorkOrderRow>[] = [
+    ...baseColumns,
+    {
+      title: '操作',
+      valueType: 'option',
+      width: 220,
+      render: (_, row) => [
+        <a key="detail" onClick={() => navigate(`/work-orders/${row.id}`)}>详情</a>,
+        row.status === 'PENDING' && has('work_order:ASSIGN') && (
+          <a
+            key="accept"
+            onClick={() => {
+              setAcceptRow(row);
+              acceptForm.setFieldsValue({
+                customerId: row.customerId ?? undefined,
+                customerName: row.customerName ?? '',
+                contactPerson: row.contactPerson ?? '',
+                contactPhone: row.contactPhone ?? '',
+                serviceAddress: row.serviceAddress ?? '',
+                issueDescription: undefined,
+                appointmentTime: undefined,
+              });
+              setAcceptModalOpen(true);
+            }}
+          >
+            受理
+          </a>
+        ),
+        row.status === 'ACCEPTED_BY_DISPATCHER' && has('work_order:ASSIGN') && (
+          <a
+            key="dispatch"
+            onClick={() => {
+              setDispatchRow(row);
+              dispatchForm.setFieldsValue({ serviceManagerId: undefined });
+              setDispatchModalOpen(true);
+            }}
+          >
+            派单
+          </a>
+        ),
+        row.status === 'PENDING' && has('work_order:REJECT') && (
           <a
             key="reject"
             style={{ color: 'var(--ant-color-error)' }}
@@ -386,10 +394,12 @@ export default function WorkOrderInternal() {
     <PageContainer
       title="工单管理"
       extra={[
-        <Button key="create" type="primary" onClick={() => setCreateModalOpen(true)}>
-          新建工单
-        </Button>,
-      ]}
+        has('work_order:CREATE') && (
+          <Button key="create" type="primary" onClick={() => setCreateModalOpen(true)}>
+            新建工单
+          </Button>
+        ),
+      ].filter(Boolean)}
     >
       <div style={{ padding: 24 }}>
         <Tabs

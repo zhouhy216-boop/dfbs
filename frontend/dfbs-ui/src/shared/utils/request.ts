@@ -1,6 +1,7 @@
 import axios, { type AxiosError } from 'axios';
 import { message } from 'antd';
 import { clearPermAllowedCache } from '@/shared/permAllowedCache';
+import { clearEffectiveKeysCache } from '@/shared/effectiveKeysCache';
 
 const AUTH_TOKEN_KEY = 'dfbs_token';
 const AUTH_USER_ID_KEY = 'dfbs_user_id';
@@ -56,6 +57,7 @@ export function clearStoredToken(): void {
   localStorage.removeItem(AUTH_USER_ID_KEY);
   localStorage.removeItem(AUTH_USER_INFO_KEY);
   clearPermAllowedCache();
+  clearEffectiveKeysCache();
 }
 
 const request = axios.create({

@@ -11,4 +11,6 @@ public interface PermRoleRepo extends JpaRepository<PermRoleEntity, Long> {
     List<PermRoleEntity> findByEnabledTrueOrderByIdAsc();
 
     boolean existsByRoleKey(String roleKey);
+
+    java.util.Optional<PermRoleEntity> findByRoleKey(String roleKey);
 }

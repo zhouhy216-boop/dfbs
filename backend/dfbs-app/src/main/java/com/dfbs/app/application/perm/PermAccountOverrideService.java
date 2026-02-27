@@ -41,6 +41,28 @@ public class PermAccountOverrideService {
         this.roleService = roleService;
     }
 
+    /** Effective permissions for userId: (template ∪ add) \\ remove. Returns empty set if user not in app_user (for enforcement). */
+    public java.util.Set<String> getEffectiveKeys(Long userId) {
+        if (userId == null || !userRepo.existsById(userId)) {
+            return java.util.Set.of();
+        }
+        List<String> templateKeys = new ArrayList<>();
+        Optional<PermUserRoleTemplateEntity> templateOpt = userRoleTemplateRepo.findByUserId(userId);
+        if (templateOpt.isPresent() && templateOpt.get().getRoleId() != null) {
+            Long roleId = templateOpt.get().getRoleId();
+            templateKeys.addAll(rolePermissionRepo.findByRoleId(roleId).stream()
+                    .map(PermRolePermissionEntity::getPermissionKey)
+                    .toList());
+        }
+        List<PermUserPermissionOverrideEntity> overrides = overrideRepo.findByUserId(userId);
+        List<String> addKeys = overrides.stream().filter(o -> OP_ADD.equals(o.getOp())).map(PermUserPermissionOverrideEntity::getPermissionKey).distinct().toList();
+        List<String> removeKeys = overrides.stream().filter(o -> OP_REMOVE.equals(o.getOp())).map(PermUserPermissionOverrideEntity::getPermissionKey).distinct().toList();
+        Set<String> effective = new HashSet<>(templateKeys);
+        effective.addAll(addKeys);
+        effective.removeAll(removeKeys);
+        return effective;
+    }
+
     public PermAccountOverrideDto.AccountOverrideResponse getOverride(Long userId) {
         if (!userRepo.existsById(userId)) {
             throw new UserNotFoundException("用户不存在: id=" + userId);

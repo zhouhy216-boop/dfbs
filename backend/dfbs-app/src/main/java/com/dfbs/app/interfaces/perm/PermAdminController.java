@@ -8,11 +8,13 @@ import com.dfbs.app.application.perm.PermPermissionTreeService;
 import com.dfbs.app.application.perm.PermAccountOverrideService;
 import com.dfbs.app.application.perm.PermAccountOverrideService.RoleDisabledException;
 import com.dfbs.app.application.perm.PermAccountOverrideService.UserNotFoundException;
+import com.dfbs.app.application.perm.PermAuditService;
 import com.dfbs.app.application.perm.PermRoleService;
 import com.dfbs.app.application.perm.PermRoleService.InvalidPermissionKeyException;
 import com.dfbs.app.application.perm.PermRoleService.RoleKeyExistsException;
 import com.dfbs.app.application.perm.PermRoleService.RoleNotFoundException;
 import com.dfbs.app.config.PermSuperAdminGuard;
+import com.dfbs.app.modules.perm.PermAuditLogEntity;
 import com.dfbs.app.modules.user.UserRepo;
 import com.dfbs.app.infra.dto.ErrorResult;
 import org.springframework.http.ResponseEntity;
@@ -47,19 +49,22 @@ public class PermAdminController {
     private final PermRoleService roleService;
     private final PermAccountOverrideService accountOverrideService;
     private final UserRepo userRepo;
+    private final PermAuditService auditService;
 
     public PermAdminController(PermSuperAdminGuard permSuperAdminGuard,
                                PermPermissionTreeService permissionTreeService,
                                PermModuleManagementService moduleManagementService,
                                PermRoleService roleService,
                                PermAccountOverrideService accountOverrideService,
-                               UserRepo userRepo) {
+                               UserRepo userRepo,
+                               PermAuditService auditService) {
         this.permSuperAdminGuard = permSuperAdminGuard;
         this.permissionTreeService = permissionTreeService;
         this.moduleManagementService = moduleManagementService;
         this.roleService = roleService;
         this.accountOverrideService = accountOverrideService;
         this.userRepo = userRepo;
+        this.auditService = auditService;
     }
 
     /**
@@ -83,12 +88,24 @@ public class PermAdminController {
         return ResponseEntity.ok(permissionTreeService.getPermissionTree());
     }
 
+    /** GET /api/v1/admin/perm/audit — recent audit log (newest first). Optional: actionType, targetType, targetId, limit (default 50). */
+    @GetMapping("/audit")
+    public ResponseEntity<List<PermAuditLogEntity>> getAudit(
+            @RequestParam(required = false) String actionType,
+            @RequestParam(required = false) String targetType,
+            @RequestParam(required = false) Long targetId,
+            @RequestParam(required = false, defaultValue = "50") int limit) {
+        permSuperAdminGuard.requirePermSuperAdmin();
+        return ResponseEntity.ok(auditService.getRecent(limit, actionType, targetType, targetId));
+    }
+
     /** POST /api/v1/admin/perm/modules — create module node (optional parentId for child). */
     @PostMapping("/modules")
     public ResponseEntity<?> createModule(@RequestBody PermModuleDto.CreateModuleRequest request) {
         permSuperAdminGuard.requirePermSuperAdmin();
         try {
             var e = moduleManagementService.create(request.moduleKey(), request.label(), request.parentId());
+            auditService.log(PermAuditService.ACTION_MODULE_CREATE, PermAuditService.TARGET_MODULE, e.getId(), e.getModuleKey(), null);
             return ResponseEntity.ok(PermModuleDto.ModuleResponse.from(e));
         } catch (ModuleKeyExistsException ex) {
             return ResponseEntity.badRequest().body(ErrorResult.of(ex.getMessage(), MODULE_KEY_EXISTS));
@@ -101,6 +118,7 @@ public class PermAdminController {
         permSuperAdminGuard.requirePermSuperAdmin();
         try {
             var e = moduleManagementService.update(id, request.label(), request.parentId());
+            auditService.log(PermAuditService.ACTION_MODULE_UPDATE, PermAuditService.TARGET_MODULE, e.getId(), e.getModuleKey(), null);
             return ResponseEntity.ok(PermModuleDto.ModuleResponse.from(e));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(ErrorResult.of(ex.getMessage(), "VALIDATION_ERROR"));
@@ -113,6 +131,7 @@ public class PermAdminController {
         permSuperAdminGuard.requirePermSuperAdmin();
         try {
             moduleManagementService.delete(id);
+            auditService.log(PermAuditService.ACTION_MODULE_DELETE, PermAuditService.TARGET_MODULE, id, null, null);
             return ResponseEntity.noContent().build();
         } catch (ModuleHasChildrenException ex) {
             return ResponseEntity.badRequest().body(ErrorResult.of(ex.getMessage(), MODULE_HAS_CHILDREN));
@@ -127,6 +146,8 @@ public class PermAdminController {
         permSuperAdminGuard.requirePermSuperAdmin();
         try {
             moduleManagementService.setModuleActions(id, request.actionKeys());
+            auditService.log(PermAuditService.ACTION_MODULE_ACTIONS_SET, PermAuditService.TARGET_MODULE, id, null,
+                    "actionKeys=" + (request.actionKeys() != null ? request.actionKeys().size() : 0));
             return ResponseEntity.noContent().build();
         } catch (ActionKeyNotFoundException ex) {
             return ResponseEntity.badRequest().body(ErrorResult.of(ex.getMessage(), ACTION_KEY_NOT_FOUND));
@@ -178,6 +199,8 @@ public class PermAdminController {
         permSuperAdminGuard.requirePermSuperAdmin();
         try {
             var e = roleService.saveTemplate(id, request.label(), request.enabled(), request.permissionKeys());
+            auditService.log(PermAuditService.ACTION_ROLE_TEMPLATE_SAVE, PermAuditService.TARGET_ROLE, e.getId(), e.getRoleKey(),
+                    "enabled=" + e.getEnabled() + ", permissionKeysCount=" + (request.permissionKeys() != null ? request.permissionKeys().size() : 0));
             return ResponseEntity.ok(PermRoleDto.RoleResponse.from(e));
         } catch (RoleNotFoundException ex) {
             return ResponseEntity.badRequest().body(ErrorResult.of(ex.getMessage(), ROLE_NOT_FOUND));
@@ -274,6 +297,9 @@ public class PermAdminController {
         try {
             var resp = accountOverrideService.saveOverride(userId, request.roleTemplateId(),
                     request.addKeys(), request.removeKeys());
+            String targetKey = userRepo.findById(userId).map(u -> u.getUsername()).orElse(null);
+            auditService.log(PermAuditService.ACTION_ACCOUNT_OVERRIDE_SAVE, PermAuditService.TARGET_USER, userId, targetKey,
+                    "addKeys=" + (request.addKeys() != null ? request.addKeys().size() : 0) + ", removeKeys=" + (request.removeKeys() != null ? request.removeKeys().size() : 0));
             return ResponseEntity.ok(resp);
         } catch (UserNotFoundException ex) {
             return ResponseEntity.badRequest().body(ErrorResult.of(ex.getMessage(), USER_NOT_FOUND));

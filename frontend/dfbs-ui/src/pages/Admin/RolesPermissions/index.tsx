@@ -16,13 +16,19 @@ import {
   searchUsers,
   getAccountOverride,
   saveAccountOverride,
+  getTestVision,
+  setTestVision,
+  getTestAccounts,
+  resetTestAccounts,
   type PermissionTreeResponse,
   type ActionItem,
   type ModuleNode,
   type RoleResponse,
   type UserSummary,
   type AccountOverrideResponse,
+  type KitAccountSummary,
 } from './permService';
+import { useVisionStore } from '@/shared/stores/useVisionStore';
 
 type LoadState = 'loading' | 'success' | 'error' | 'forbidden';
 
@@ -72,6 +78,18 @@ export default function RolesPermissionsPage() {
   const [draftAddKeys, setDraftAddKeys] = useState<Set<string>>(new Set());
   const [draftRemoveKeys, setDraftRemoveKeys] = useState<Set<string>>(new Set());
 
+  // --- Role-Vision (test-only) ---
+  const [testUtilitiesAvailable, setTestUtilitiesAvailable] = useState(false);
+  const [visionProbeDone, setVisionProbeDone] = useState(false);
+  const [visionApplying, setVisionApplying] = useState(false);
+  const [visionUserSearchResults, setVisionUserSearchResults] = useState<UserSummary[]>([]);
+  const [visionUserSearchQuery, setVisionUserSearchQuery] = useState('');
+  const [visionUserSearchLoading, setVisionUserSearchLoading] = useState(false);
+  const [kitAccounts, setKitAccounts] = useState<KitAccountSummary[]>([]);
+  const [kitResetLoading, setKitResetLoading] = useState(false);
+  const visionState = useVisionStore((s) => s.vision);
+  const setVision = useVisionStore((s) => s.setVision);
+
   const loadTreeAndRoles = useCallback(() => {
     setState('loading');
     Promise.all([fetchPermissionTree(), fetchRoles(enabledOnly)])
@@ -92,6 +110,17 @@ export default function RolesPermissionsPage() {
   useEffect(() => {
     loadTreeAndRoles();
   }, [loadTreeAndRoles]);
+
+  // Probe test utilities (Role-Vision) on mount
+  useEffect(() => {
+    getTestVision()
+      .then((res) => {
+        setTestUtilitiesAvailable(true);
+        setVision(res.mode === 'USER' && res.userId != null ? { mode: 'USER', userId: res.userId } : { mode: 'OFF' });
+      })
+      .catch(() => setTestUtilitiesAvailable(false))
+      .finally(() => setVisionProbeDone(true));
+  }, []);
 
   useEffect(() => {
     if (selectedRoleId == null) {
@@ -406,6 +435,111 @@ export default function RolesPermissionsPage() {
           )}
         </div>
       </section>
+
+      {visionProbeDone && testUtilitiesAvailable && (
+        <section style={{ marginTop: 24, padding: 12, border: '1px dashed #faad14', borderRadius: 8, background: '#fffbe6' }}>
+          <h3 style={{ marginTop: 0 }}>Role-Vision（测试）</h3>
+          {visionState?.mode === 'USER' && visionState.userId != null && (
+            <p style={{ color: '#d48806', marginBottom: 12 }}>
+              当前以用户 #{visionState.userId} 的权限查看菜单与按钮；后端接口仍按登录用户鉴权。
+            </p>
+          )}
+          <Space wrap align="center">
+            <span style={{ fontSize: 12 }}>视角：</span>
+            <Select
+              style={{ width: 120 }}
+              value={visionState?.mode ?? 'OFF'}
+              options={[
+                { label: '关闭', value: 'OFF' },
+                { label: '按用户', value: 'USER' },
+              ]}
+              onChange={(val) => setVision(val === 'USER' ? { mode: 'USER', userId: visionState?.userId } : { mode: 'OFF' })}
+            />
+            {visionState?.mode === 'USER' && (
+              <Select
+                placeholder="搜索用户"
+                showSearch
+                filterOption={false}
+                onSearch={(q) => {
+                  setVisionUserSearchQuery(q);
+                  if (!q.trim()) {
+                    setVisionUserSearchResults([]);
+                    return;
+                  }
+                  setVisionUserSearchLoading(true);
+                  searchUsers(q)
+                    .then(setVisionUserSearchResults)
+                    .finally(() => setVisionUserSearchLoading(false));
+                }}
+                onSelect={(id: number) => {
+                  const u = visionUserSearchResults.find((r) => r.id === id);
+                  if (u) setVision({ mode: 'USER', userId: u.id });
+                }}
+                loading={visionUserSearchLoading}
+                style={{ width: 260 }}
+                value={visionState?.userId ?? undefined}
+                notFoundContent={visionUserSearchQuery.trim() ? '无结果' : '输入关键词搜索'}
+                options={visionUserSearchResults.map((u) => ({
+                  value: u.id,
+                  label: `${u.username}${u.nickname ? ` (${u.nickname})` : ''} #${u.id}`,
+                }))}
+                allowClear
+                onClear={() => setVision({ mode: 'USER' })}
+              />
+            )}
+            <Button
+              type="primary"
+              size="small"
+              loading={visionApplying}
+              onClick={() => {
+                const mode = visionState?.mode ?? 'OFF';
+                const userId = mode === 'USER' ? visionState?.userId : undefined;
+                if (mode === 'USER' && userId == null) {
+                  message.warning('请选择要查看的用户');
+                  return;
+                }
+                setVisionApplying(true);
+                setTestVision({ mode, userId })
+                  .then((res) => {
+                    setVision(res.mode === 'USER' && res.userId != null ? { mode: 'USER', userId: res.userId } : { mode: 'OFF' });
+                    message.success('已应用');
+                  })
+                  .catch(() => message.error('设置失败'))
+                  .finally(() => setVisionApplying(false));
+              }}
+            >
+              应用
+            </Button>
+          </Space>
+          <div style={{ marginTop: 16 }}>
+            <Button
+              size="small"
+              loading={kitResetLoading}
+              onClick={() => {
+                setKitResetLoading(true);
+                resetTestAccounts()
+                  .then((list) => {
+                    setKitAccounts(list);
+                    message.success(`已生成/重置 ${list.length} 个测试账号`);
+                  })
+                  .catch(() => message.error('重置失败'))
+                  .finally(() => setKitResetLoading(false));
+              }}
+            >
+              生成/重置测试账号（4个）
+            </Button>
+            {kitAccounts.length > 0 && (
+              <div style={{ marginTop: 8, fontSize: 12 }}>
+                {kitAccounts.map((a) => (
+                  <div key={a.username}>
+                    {a.username}（{a.nickname}）— id: {a.userId}，有效权限数: {a.effectiveKeyCount}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       <section style={{ marginTop: 32 }}>
         <h3>角色与权限绑定</h3>
