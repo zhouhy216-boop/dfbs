@@ -13,6 +13,10 @@ export interface ModuleNode {
   label: string;
   actions: string[];
   children: ModuleNode[];
+  /** From API (002-04.c): id/parentId/enabled for editing all modules. */
+  id?: number;
+  parentId?: number | null;
+  enabled?: boolean;
 }
 
 export interface PermissionTreeResponse {
@@ -36,6 +40,52 @@ const ROLES_BASE = '/v1/admin/perm/roles';
 
 export function fetchPermissionTree(): Promise<PermissionTreeResponse> {
   return request.get<PermissionTreeResponse>('/v1/admin/perm/permission-tree').then((res) => res.data);
+}
+
+// --- Module management (allowlist-only) ---
+
+const MODULES_BASE = '/v1/admin/perm/modules';
+
+export interface ModuleResponse {
+  id: number;
+  moduleKey: string;
+  label: string;
+  parentId: number | null;
+  enabled?: boolean;
+}
+
+export function createModule(
+  moduleKey: string,
+  label: string,
+  parentId: number | null,
+  enabled?: boolean,
+): Promise<ModuleResponse> {
+  const body: { moduleKey: string; label: string; parentId: number | null; enabled?: boolean } = {
+    moduleKey: moduleKey.trim(),
+    label: label?.trim() || moduleKey.trim(),
+    parentId,
+  };
+  if (enabled !== undefined) body.enabled = enabled;
+  return request.post<ModuleResponse>(MODULES_BASE, body).then((res) => res.data);
+}
+
+export function updateModule(
+  id: number,
+  label: string,
+  parentId: number | null,
+  enabled?: boolean,
+): Promise<ModuleResponse> {
+  const body: { label: string; parentId: number | null; enabled?: boolean } = { label, parentId };
+  if (enabled !== undefined) body.enabled = enabled;
+  return request.put<ModuleResponse>(`${MODULES_BASE}/${id}`, body).then((res) => res.data);
+}
+
+export function deleteModule(id: number): Promise<void> {
+  return request.delete(`${MODULES_BASE}/${id}`).then(() => undefined);
+}
+
+export function setModuleActions(id: number, actionKeys: string[]): Promise<void> {
+  return request.put(`${MODULES_BASE}/${id}/actions`, { actionKeys: actionKeys ?? [] }).then(() => undefined);
 }
 
 export function fetchRoles(enabledOnly = true): Promise<RoleResponse[]> {

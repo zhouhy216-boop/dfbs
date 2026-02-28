@@ -26,6 +26,7 @@ import {
 import { getStoredToken } from '@/shared/utils/request';
 import { useIsSuperAdmin } from '@/shared/components/SuperAdminGuard';
 import { useIsPermSuperAdmin } from '@/shared/components/PermSuperAdminGuard';
+import { useIsAdminOrSuperAdmin } from '@/shared/components/AdminOrSuperAdminGuard';
 import { useEffectivePermissions } from '@/shared/hooks/useEffectivePermissions';
 
 const PERM_ORGS_VIEW = 'platform_application.orgs:VIEW';
@@ -109,12 +110,17 @@ const ORG_STRUCTURE_MENU = [
 /** PERM allowlist only: 角色与权限 */
 const PERM_MENU = [{ path: '/admin/roles-permissions', name: '角色与权限' }];
 
+/** Admin or Super-admin: 账号与权限 (new primary entry) */
+const ACCOUNT_PERMISSIONS_MENU = [{ path: '/admin/account-permissions', name: '账号与权限' }];
+
 function buildMenuRoutes(
   isSuperAdmin: boolean,
   permAllowed: boolean,
+  isAdminOrSuperAdmin: boolean,
   hasPermission: (key: string) => boolean
 ) {
   const adminExtras = [
+    ...(isAdminOrSuperAdmin ? ACCOUNT_PERMISSIONS_MENU : []),
     ...(permAllowed ? PERM_MENU : []),
     ...(isSuperAdmin ? ORG_STRUCTURE_MENU : []),
   ];
@@ -173,12 +179,13 @@ export default function BasicLayout() {
   const userInfo = useAuthStore((s) => s.userInfo);
   const isSuperAdmin = useIsSuperAdmin();
   const { allowed: permAllowed } = useIsPermSuperAdmin();
+  const isAdminOrSuperAdmin = useIsAdminOrSuperAdmin();
   const { has: hasPermission } = useEffectivePermissions();
   const [testDataCleanerOpen, setTestDataCleanerOpen] = useState(false);
   const displayName = userInfo?.username ?? 'User';
   const menuRoutes = useMemo(
-    () => buildMenuRoutes(isSuperAdmin, permAllowed, hasPermission),
-    [isSuperAdmin, permAllowed, hasPermission]
+    () => buildMenuRoutes(isSuperAdmin, permAllowed, isAdminOrSuperAdmin, hasPermission),
+    [isSuperAdmin, permAllowed, isAdminOrSuperAdmin, hasPermission]
   );
 
   return (

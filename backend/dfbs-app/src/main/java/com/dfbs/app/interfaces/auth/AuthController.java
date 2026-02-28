@@ -1,9 +1,11 @@
 package com.dfbs.app.interfaces.auth;
 
+import com.dfbs.app.application.account.DefaultPasswordService;
 import com.dfbs.app.modules.user.UserEntity;
 import com.dfbs.app.modules.user.UserRepo;
 import lombok.Data;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,16 +18,20 @@ import java.util.regex.Pattern;
 
 /**
  * Minimal auth controller for MVP login flow.
- * TODO: Replace with real token-based authentication (JWT, OAuth2, etc.)
+ * Verifies password (BCrypt or legacy defaultPassword when password_hash is null); enforces enabled flag.
  */
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
     private final UserRepo userRepo;
+    private final PasswordEncoder passwordEncoder;
+    private final DefaultPasswordService defaultPasswordService;
 
-    public AuthController(UserRepo userRepo) {
+    public AuthController(UserRepo userRepo, PasswordEncoder passwordEncoder, DefaultPasswordService defaultPasswordService) {
         this.userRepo = userRepo;
+        this.passwordEncoder = passwordEncoder;
+        this.defaultPasswordService = defaultPasswordService;
     }
 
     @PostMapping("/login")
@@ -35,6 +41,20 @@ public class AuthController {
         }
         UserEntity user = userRepo.findByUsername(request.getUsername().trim())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+        if (Boolean.FALSE.equals(user.getEnabled())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account disabled");
+        }
+        String rawPassword = request.getPassword() != null ? request.getPassword() : "";
+        String hash = user.getPasswordHash();
+        if (hash == null || hash.isBlank()) {
+            if (!rawPassword.equals(defaultPasswordService.getEffectiveDefaultPassword())) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid password");
+            }
+        } else {
+            if (!passwordEncoder.matches(rawPassword, hash)) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid password");
+            }
+        }
         List<String> roles = parseAuthorities(user.getAuthorities());
         return new LoginResponse(
                 "mock-jwt-token-" + System.currentTimeMillis(),

@@ -22,4 +22,7 @@ public class PermModuleEntity {
 
     @Column(name = "parent_id")
     private Long parentId;
+
+    @Column(name = "enabled", nullable = false)
+    private Boolean enabled = true;
 }

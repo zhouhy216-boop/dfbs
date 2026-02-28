@@ -11,7 +11,7 @@ import java.util.Optional;
 
 @Configuration
 @EnableJpaAuditing
-@EnableConfigurationProperties({CompanyInfoProperties.class, PermAllowlistProperties.class})
+@EnableConfigurationProperties({CompanyInfoProperties.class, PermAllowlistProperties.class, AuthProperties.class})
 public class JpaAuditingConfig {
 
     @Bean

@@ -14,12 +14,15 @@ public final class PermissionTreeDto {
     /** Single action in the default actions set. */
     public record ActionItem(String key, String label) {}
 
-    /** Module node in the permission tree. */
+    /** Module node in the permission tree. id/parentId/enabled allow UI to edit all modules. */
     public record ModuleNode(
             String key,
             String label,
             List<String> actions,
-            List<ModuleNode> children
+            List<ModuleNode> children,
+            Long id,
+            Long parentId,
+            Boolean enabled
     ) {}
 
     /** Root response of permission-tree. */

@@ -32,7 +32,7 @@ public class PermModuleManagementService {
     }
 
     @Transactional
-    public PermModuleEntity create(String moduleKey, String label, Long parentId) {
+    public PermModuleEntity create(String moduleKey, String label, Long parentId, Boolean enabled) {
         if (moduleKey == null || moduleKey.isBlank()) {
             throw new IllegalArgumentException("moduleKey 不能为空");
         }
@@ -47,11 +47,12 @@ public class PermModuleManagementService {
         e.setModuleKey(key);
         e.setLabel(label != null && !label.isBlank() ? label.trim() : key);
         e.setParentId(parentId);
+        e.setEnabled(enabled != null ? enabled : true);
         return moduleRepo.save(e);
     }
 
     @Transactional
-    public PermModuleEntity update(Long id, String label, Long parentId) {
+    public PermModuleEntity update(Long id, String label, Long parentId, Boolean enabled) {
         PermModuleEntity e = moduleRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("模块不存在: id=" + id));
         if (label != null && !label.isBlank()) {
             e.setLabel(label.trim());
@@ -66,6 +67,9 @@ public class PermModuleManagementService {
             e.setParentId(parentId);
         } else {
             e.setParentId(null);
+        }
+        if (enabled != null) {
+            e.setEnabled(enabled);
         }
         return moduleRepo.save(e);
     }

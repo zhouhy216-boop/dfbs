@@ -2,6 +2,7 @@ package com.dfbs.app.application.orgstructure;
 
 import com.dfbs.app.application.orgstructure.dto.OrgPersonResponse;
 import com.dfbs.app.application.orgstructure.dto.PersonOptionDto;
+import com.dfbs.app.application.orgstructure.dto.PersonOptionForBindingDto;
 import com.dfbs.app.application.orgstructure.dto.PersonPositionAssignmentDto;
 import com.dfbs.app.config.CurrentUserIdResolver;
 import jakarta.persistence.EntityManager;
@@ -95,6 +96,37 @@ public class OrgPersonService {
                 org.springframework.data.domain.PageRequest.of(0, 200, org.springframework.data.domain.Sort.by("name")));
         return page.getContent().stream()
                 .map(p -> new PersonOptionDto(p.getId(), p.getName(), p.getPhone(), p.getEmail()))
+                .toList();
+    }
+
+    /** Admin-only: minimal person options for account binding (personId, name, orgUnitLabel, title, phone, email). Active only. */
+    public List<PersonOptionForBindingDto> listOptionsForAccountBinding(String keyword) {
+        Page<OrgPersonEntity> page = personRepo.searchAllWithActive(
+                keyword == null || keyword.isBlank() ? null : keyword.trim(),
+                true,
+                org.springframework.data.domain.PageRequest.of(0, 50, org.springframework.data.domain.Sort.by("name")));
+        List<OrgPersonEntity> persons = page.getContent();
+        if (persons.isEmpty()) {
+            return List.of();
+        }
+        java.util.Set<Long> jobLevelIds = persons.stream().map(OrgPersonEntity::getJobLevelId).filter(java.util.Objects::nonNull).collect(java.util.stream.Collectors.toSet());
+        java.util.Map<Long, String> jobLevelNames = new java.util.HashMap<>();
+        jobLevelRepo.findAllById(jobLevelIds).forEach(j -> jobLevelNames.put(j.getId(), j.getDisplayName()));
+        java.util.Map<Long, String> nodeNames = new java.util.HashMap<>();
+        for (OrgPersonEntity p : persons) {
+            affiliationRepo.findByPersonIdAndIsPrimaryTrue(p.getId())
+                    .map(PersonAffiliationEntity::getOrgNodeId)
+                    .flatMap(nodeRepo::findById)
+                    .ifPresent(n -> nodeNames.put(p.getId(), n.getName()));
+        }
+        return persons.stream()
+                .map(p -> new PersonOptionForBindingDto(
+                        p.getId(),
+                        p.getName(),
+                        nodeNames.getOrDefault(p.getId(), null),
+                        p.getJobLevelId() != null ? jobLevelNames.get(p.getJobLevelId()) : null,
+                        p.getPhone(),
+                        p.getEmail()))
                 .toList();
     }
 

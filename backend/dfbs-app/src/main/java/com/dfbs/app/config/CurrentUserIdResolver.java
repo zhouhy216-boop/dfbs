@@ -50,4 +50,11 @@ public class CurrentUserIdResolver {
         String auth = user.getAuthorities();
         return auth != null && auth.contains("ROLE_SUPER_ADMIN");
     }
+
+    /** True if user has ROLE_ADMIN or ROLE_SUPER_ADMIN (admin-only entry: Account & Permissions). Does not use perm allowlist. */
+    public boolean isAdminOrSuperAdmin() {
+        UserEntity user = getCurrentUserEntity();
+        String auth = user.getAuthorities();
+        return auth != null && (auth.contains("ROLE_ADMIN") || auth.contains("ROLE_SUPER_ADMIN"));
+    }
 }

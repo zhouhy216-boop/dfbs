@@ -25,6 +25,10 @@ public class PermAuditService {
     public static final String ACTION_MODULE_ACTIONS_SET = "MODULE_ACTIONS_SET";
     public static final String ACTION_TEST_KIT_RESET = "TEST_KIT_RESET";
     public static final String ACTION_VISION_SET = "VISION_SET";
+    public static final String ACTION_ACCOUNT_ENABLE_SET = "ACCOUNT_ENABLE_SET";
+    public static final String ACTION_ACCOUNT_PASSWORD_RESET = "ACCOUNT_PASSWORD_RESET";
+    public static final String ACTION_ROLE_TEMPLATE_CLONE = "ROLE_TEMPLATE_CLONE";
+    public static final String ACTION_DEFAULT_PASSWORD_CHANGED = "DEFAULT_PASSWORD_CHANGED";
 
     public static final String TARGET_ROLE = "ROLE";
     public static final String TARGET_USER = "USER";

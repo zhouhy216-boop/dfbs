@@ -7,10 +7,11 @@ import com.dfbs.app.modules.perm.PermModuleEntity;
  */
 public final class PermModuleDto {
 
-    /** parentId null = root node. */
-    public record CreateModuleRequest(String moduleKey, String label, Long parentId) {}
+    /** parentId null = root node. enabled optional (default true when absent). */
+    public record CreateModuleRequest(String moduleKey, String label, Long parentId, Boolean enabled) {}
 
-    public record UpdateModuleRequest(String label, Long parentId) {}
+    /** enabled optional: if null, keep unchanged. */
+    public record UpdateModuleRequest(String label, Long parentId, Boolean enabled) {}
 
     public record SetModuleActionsRequest(java.util.List<String> actionKeys) {
         public SetModuleActionsRequest {
@@ -18,9 +19,10 @@ public final class PermModuleDto {
         }
     }
 
-    public record ModuleResponse(Long id, String moduleKey, String label, Long parentId) {
+    public record ModuleResponse(Long id, String moduleKey, String label, Long parentId, Boolean enabled) {
         public static ModuleResponse from(PermModuleEntity e) {
-            return new ModuleResponse(e.getId(), e.getModuleKey(), e.getLabel(), e.getParentId());
+            return new ModuleResponse(e.getId(), e.getModuleKey(), e.getLabel(), e.getParentId(),
+                    e.getEnabled() != null ? e.getEnabled() : true);
         }
     }
 

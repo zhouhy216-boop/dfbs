@@ -10,13 +10,16 @@ import com.dfbs.app.modules.perm.PermActionRepo;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 /**
  * PERM role CRUD and role-permission assignment. permission_key format: &lt;moduleKey&gt;:&lt;actionKey&gt;.
- * Validation: roleKey non-empty unique; assigned permission keys must have moduleKey in perm_module and actionKey in perm_action.
+ * roleKey: if provided must be unique; if absent/blank, auto-generated (acctperm_yyyyMMdd_8alnum).
  */
 @Service
 public class PermRoleService {
@@ -43,20 +46,49 @@ public class PermRoleService {
         return roleRepo.findAllByOrderByIdAsc();
     }
 
-    @Transactional
-    public PermRoleEntity create(String roleKey, String label, Boolean enabled) {
-        if (roleKey == null || roleKey.isBlank()) {
-            throw new IllegalArgumentException("roleKey 不能为空");
+    private static final String ROLE_KEY_PREFIX = "acctperm_";
+    private static final int GENERATE_RETRIES = 5;
+
+    private String generateUniqueRoleKey() {
+        String datePart = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+        for (int attempt = 0; attempt < GENERATE_RETRIES; attempt++) {
+            StringBuilder sb = new StringBuilder(8);
+            ThreadLocalRandom r = ThreadLocalRandom.current();
+            for (int i = 0; i < 8; i++) {
+                sb.append(chars.charAt(r.nextInt(chars.length())));
+            }
+            String key = ROLE_KEY_PREFIX + datePart + "_" + sb;
+            if (!roleRepo.existsByRoleKey(key)) {
+                return key;
+            }
         }
-        String key = roleKey.trim();
-        if (roleRepo.existsByRoleKey(key)) {
-            throw new RoleKeyExistsException("角色 key 已存在: " + key);
+        throw new IllegalStateException("无法生成唯一 roleKey，请重试");
+    }
+
+    @Transactional
+    public PermRoleEntity create(String roleKey, String label, Boolean enabled, String description) {
+        String key;
+        if (roleKey == null || roleKey.isBlank()) {
+            key = generateUniqueRoleKey();
+        } else {
+            key = roleKey.trim();
+            if (roleRepo.existsByRoleKey(key)) {
+                throw new RoleKeyExistsException("角色 key 已存在: " + key);
+            }
         }
         PermRoleEntity e = new PermRoleEntity();
         e.setRoleKey(key);
         e.setLabel(label != null && !label.isBlank() ? label.trim() : key);
         e.setEnabled(enabled == null || enabled);
+        e.setDescription(description != null && !description.isBlank() ? description.trim() : null);
         return roleRepo.save(e);
+    }
+
+    /** Backward-compatible for callers that do not pass description (e.g. test kit, old perm controller). */
+    @Transactional
+    public PermRoleEntity create(String roleKey, String label, Boolean enabled) {
+        return create(roleKey, label, enabled, null);
     }
 
     @Transactional
@@ -72,7 +104,7 @@ public class PermRoleService {
     }
 
     @Transactional
-    public PermRoleEntity saveTemplate(Long id, String label, Boolean enabled, List<String> permissionKeys) {
+    public PermRoleEntity saveTemplate(Long id, String label, Boolean enabled, List<String> permissionKeys, String description) {
         PermRoleEntity role = roleRepo.findById(id).orElseThrow(() -> new RoleNotFoundException("角色不存在: id=" + id));
         if (permissionKeys == null) {
             permissionKeys = List.of();
@@ -86,6 +118,9 @@ public class PermRoleService {
         }
         if (enabled != null) {
             role.setEnabled(enabled);
+        }
+        if (description != null) {
+            role.setDescription(description.trim().isEmpty() ? null : description.trim());
         }
         roleRepo.save(role);
         rolePermissionRepo.deleteByRoleId(id);
@@ -105,6 +140,24 @@ public class PermRoleService {
         PermRoleEntity e = roleRepo.findById(id).orElseThrow(() -> new RoleNotFoundException("角色不存在: id=" + id));
         rolePermissionRepo.deleteByRoleId(id);
         roleRepo.delete(e);
+    }
+
+    /** Clone source role: new role with label + "-副本", enabled=false, copied description and permissions; roleKey auto-generated. */
+    @Transactional
+    public PermRoleEntity clone(Long sourceRoleId) {
+        PermRoleEntity source = roleRepo.findById(sourceRoleId).orElseThrow(() -> new RoleNotFoundException("角色不存在: id=" + sourceRoleId));
+        String newLabel = (source.getLabel() != null ? source.getLabel().trim() : "角色") + "-副本";
+        PermRoleEntity created = create(null, newLabel, false, source.getDescription());
+        List<PermRolePermissionEntity> sourcePerms = rolePermissionRepo.findByRoleId(sourceRoleId);
+        List<PermRolePermissionEntity> toSave = new ArrayList<>();
+        for (PermRolePermissionEntity p : sourcePerms) {
+            PermRolePermissionEntity copy = new PermRolePermissionEntity();
+            copy.setRoleId(created.getId());
+            copy.setPermissionKey(p.getPermissionKey());
+            toSave.add(copy);
+        }
+        rolePermissionRepo.saveAll(toSave);
+        return roleRepo.findById(created.getId()).orElse(created);
     }
 
     public List<String> getPermissions(Long roleId) {

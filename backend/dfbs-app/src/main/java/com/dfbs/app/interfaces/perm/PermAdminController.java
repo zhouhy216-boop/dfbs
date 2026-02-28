@@ -99,12 +99,13 @@ public class PermAdminController {
         return ResponseEntity.ok(auditService.getRecent(limit, actionType, targetType, targetId));
     }
 
-    /** POST /api/v1/admin/perm/modules — create module node (optional parentId for child). */
+    /** POST /api/v1/admin/perm/modules — create module node (optional parentId for child, optional enabled default true). */
     @PostMapping("/modules")
     public ResponseEntity<?> createModule(@RequestBody PermModuleDto.CreateModuleRequest request) {
         permSuperAdminGuard.requirePermSuperAdmin();
         try {
-            var e = moduleManagementService.create(request.moduleKey(), request.label(), request.parentId());
+            Boolean enabled = request.enabled() != null ? request.enabled() : true;
+            var e = moduleManagementService.create(request.moduleKey(), request.label(), request.parentId(), enabled);
             auditService.log(PermAuditService.ACTION_MODULE_CREATE, PermAuditService.TARGET_MODULE, e.getId(), e.getModuleKey(), null);
             return ResponseEntity.ok(PermModuleDto.ModuleResponse.from(e));
         } catch (ModuleKeyExistsException ex) {
@@ -112,13 +113,14 @@ public class PermAdminController {
         }
     }
 
-    /** PUT /api/v1/admin/perm/modules/{id} — update module label and/or parent. */
+    /** PUT /api/v1/admin/perm/modules/{id} — update module label, parent, and/or enabled. */
     @PutMapping("/modules/{id}")
     public ResponseEntity<?> updateModule(@PathVariable Long id, @RequestBody PermModuleDto.UpdateModuleRequest request) {
         permSuperAdminGuard.requirePermSuperAdmin();
         try {
-            var e = moduleManagementService.update(id, request.label(), request.parentId());
-            auditService.log(PermAuditService.ACTION_MODULE_UPDATE, PermAuditService.TARGET_MODULE, e.getId(), e.getModuleKey(), null);
+            var e = moduleManagementService.update(id, request.label(), request.parentId(), request.enabled());
+            String note = request.enabled() != null ? "enabled=" + request.enabled() : null;
+            auditService.log(PermAuditService.ACTION_MODULE_UPDATE, PermAuditService.TARGET_MODULE, e.getId(), e.getModuleKey(), note);
             return ResponseEntity.ok(PermModuleDto.ModuleResponse.from(e));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(ErrorResult.of(ex.getMessage(), "VALIDATION_ERROR"));
@@ -170,7 +172,7 @@ public class PermAdminController {
     public ResponseEntity<?> createRole(@RequestBody PermRoleDto.CreateRoleRequest request) {
         permSuperAdminGuard.requirePermSuperAdmin();
         try {
-            var e = roleService.create(request.roleKey(), request.label(), request.enabled());
+            var e = roleService.create(request.roleKey(), request.label(), request.enabled(), request.description());
             return ResponseEntity.ok(PermRoleDto.RoleResponse.from(e));
         } catch (RoleKeyExistsException ex) {
             return ResponseEntity.badRequest().body(ErrorResult.of(ex.getMessage(), ROLE_KEY_EXISTS));
@@ -198,7 +200,7 @@ public class PermAdminController {
     public ResponseEntity<?> saveRoleTemplate(@PathVariable Long id, @RequestBody PermRoleDto.TemplateUpdateRequest request) {
         permSuperAdminGuard.requirePermSuperAdmin();
         try {
-            var e = roleService.saveTemplate(id, request.label(), request.enabled(), request.permissionKeys());
+            var e = roleService.saveTemplate(id, request.label(), request.enabled(), request.permissionKeys(), request.description());
             auditService.log(PermAuditService.ACTION_ROLE_TEMPLATE_SAVE, PermAuditService.TARGET_ROLE, e.getId(), e.getRoleKey(),
                     "enabled=" + e.getEnabled() + ", permissionKeysCount=" + (request.permissionKeys() != null ? request.permissionKeys().size() : 0));
             return ResponseEntity.ok(PermRoleDto.RoleResponse.from(e));
@@ -216,6 +218,20 @@ public class PermAdminController {
         try {
             roleService.delete(id);
             return ResponseEntity.noContent().build();
+        } catch (RoleNotFoundException ex) {
+            return ResponseEntity.badRequest().body(ErrorResult.of(ex.getMessage(), ROLE_NOT_FOUND));
+        }
+    }
+
+    /** POST /api/v1/admin/perm/roles/{id}/clone — clone role (label + "-副本", enabled=false, permissions copied). */
+    @PostMapping("/roles/{id}/clone")
+    public ResponseEntity<?> cloneRole(@PathVariable Long id) {
+        permSuperAdminGuard.requirePermSuperAdmin();
+        try {
+            var e = roleService.clone(id);
+            auditService.log(PermAuditService.ACTION_ROLE_TEMPLATE_CLONE, PermAuditService.TARGET_ROLE, e.getId(), e.getRoleKey(),
+                    "clonedFrom=" + id);
+            return ResponseEntity.ok(PermRoleDto.RoleResponse.from(e));
         } catch (RoleNotFoundException ex) {
             return ResponseEntity.badRequest().body(ErrorResult.of(ex.getMessage(), ROLE_NOT_FOUND));
         }

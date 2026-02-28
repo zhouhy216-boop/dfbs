@@ -2,6 +2,9 @@ server:
   port: 8080
 
 dfbs:
+  auth:
+    # Default password for new accounts and legacy login (when password_hash is null). Dev/test only; in prod set explicitly.
+    defaultPassword: changeme
   dev:
     # Dev-only: when true and profile=dev, seed non-allowlist user "admin2" for 403 verification. Default false (never in prod).
     seedNonAllowlistUser: false

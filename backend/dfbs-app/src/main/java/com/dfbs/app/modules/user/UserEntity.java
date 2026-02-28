@@ -34,5 +34,17 @@ public class UserEntity {
     @Column(name = "can_manage_statements", nullable = false)
     private Boolean canManageStatements = false;
 
+    /** 1:1 binding to org person (nullable for accounts created before Step-02 or unlinked). */
+    @Column(name = "org_person_id")
+    private Long orgPersonId;
+
+    /** Account enabled; disabled accounts cannot login. */
+    @Column(name = "enabled", nullable = false)
+    private Boolean enabled = true;
+
+    /** BCrypt password hash; null = legacy user (login via defaultPassword until reset). */
+    @Column(name = "password_hash", length = 255)
+    private String passwordHash;
+
     public UserEntity() {}
 }

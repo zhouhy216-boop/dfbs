@@ -81,6 +81,9 @@ public class PermPermissionTreeService {
         List<PermissionTreeDto.ModuleNode> children = moduleRepo.findByParentIdOrderByIdAsc(entity.getId()).stream()
                 .map(this::toModuleNode)
                 .collect(Collectors.toList());
-        return new PermissionTreeDto.ModuleNode(entity.getModuleKey(), entity.getLabel(), actionKeys, children);
+        Boolean enabled = entity.getEnabled() != null ? entity.getEnabled() : true;
+        return new PermissionTreeDto.ModuleNode(
+                entity.getModuleKey(), entity.getLabel(), actionKeys, children,
+                entity.getId(), entity.getParentId(), enabled);
     }
 }

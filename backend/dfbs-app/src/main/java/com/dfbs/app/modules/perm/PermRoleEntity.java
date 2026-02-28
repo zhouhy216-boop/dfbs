@@ -22,4 +22,7 @@ public class PermRoleEntity {
 
     @Column(name = "enabled", nullable = false)
     private Boolean enabled = true;
+
+    @Column(name = "description", length = 512)
+    private String description;
 }
