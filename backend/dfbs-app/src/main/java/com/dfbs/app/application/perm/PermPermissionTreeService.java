@@ -9,7 +9,9 @@ import com.dfbs.app.modules.perm.PermModuleRepo;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -53,6 +55,24 @@ public class PermPermissionTreeService {
                 actions,
                 modules
         );
+    }
+
+    /** All valid permission keys (moduleKey:actionKey) from current permission tree. Used for strict validation. */
+    public Set<String> getAllPermissionKeys() {
+        Set<String> keys = new HashSet<>();
+        for (PermissionTreeDto.ModuleNode m : loadModuleTree()) {
+            collectPermissionKeys(m, keys);
+        }
+        return keys;
+    }
+
+    private void collectPermissionKeys(PermissionTreeDto.ModuleNode node, Set<String> out) {
+        for (String action : node.actions()) {
+            out.add(node.key() + ":" + action);
+        }
+        for (PermissionTreeDto.ModuleNode child : node.children()) {
+            collectPermissionKeys(child, out);
+        }
     }
 
     private List<PermissionTreeDto.ActionItem> loadActions() {

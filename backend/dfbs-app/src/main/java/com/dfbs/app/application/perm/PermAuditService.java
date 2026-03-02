@@ -29,6 +29,14 @@ public class PermAuditService {
     public static final String ACTION_ACCOUNT_PASSWORD_RESET = "ACCOUNT_PASSWORD_RESET";
     public static final String ACTION_ROLE_TEMPLATE_CLONE = "ROLE_TEMPLATE_CLONE";
     public static final String ACTION_DEFAULT_PASSWORD_CHANGED = "DEFAULT_PASSWORD_CHANGED";
+    public static final String ACTION_BIZPERM_CATALOG_NODE_CREATE = "BIZPERM_CATALOG_NODE_CREATE";
+    public static final String ACTION_BIZPERM_CATALOG_NODE_UPDATE = "BIZPERM_CATALOG_NODE_UPDATE";
+    public static final String ACTION_BIZPERM_CATALOG_NODE_DELETE = "BIZPERM_CATALOG_NODE_DELETE";
+    public static final String ACTION_BIZPERM_CATALOG_NODE_REORDER = "BIZPERM_CATALOG_NODE_REORDER";
+    public static final String ACTION_BIZPERM_OP_CREATE = "BIZPERM_OP_CREATE";
+    public static final String ACTION_BIZPERM_OP_UPDATE = "BIZPERM_OP_UPDATE";
+    public static final String ACTION_BIZPERM_OP_CLAIM = "BIZPERM_OP_CLAIM";
+    public static final String ACTION_BIZPERM_OP_TOGGLE_HANDLED = "BIZPERM_OP_TOGGLE_HANDLED";
 
     public static final String TARGET_ROLE = "ROLE";
     public static final String TARGET_USER = "USER";

@@ -32,6 +32,8 @@ import {
   type ModuleNodeLike,
   type QuickOp,
 } from './permissionQuickOps';
+import { useIsPermSuperAdmin } from '@/shared/components/PermSuperAdminGuard';
+import BizPermCatalogMaintenance from './BizPermCatalogMaintenance';
 
 function getErrorMessage(err: { response?: { data?: { message?: string; machineCode?: string } } }): string {
   const data = err.response?.data;
@@ -50,6 +52,7 @@ function getEffectiveHasKey(
 }
 
 export default function AccountsTab() {
+  const { allowed: permSuperAdminAllowed } = useIsPermSuperAdmin();
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userSearchResults, setUserSearchResults] = useState<UserSummary[]>([]);
   const [userSearchLoading, setUserSearchLoading] = useState(false);
@@ -617,6 +620,40 @@ export default function AccountsTab() {
                   重置密码
                 </Button>
               </Space>
+
+              {/* 业务模块视图：超管显示目录维护，非超管显示只读占位 */}
+              <div style={{ marginBottom: 16, padding: 12, border: '1px dashed #d9d9d9', borderRadius: 4, background: '#fafafa' }}>
+                <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>业务模块视图</p>
+                {permSuperAdminAllowed ? (
+                  <>
+                    <p style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>
+                      维护业务模块目录（中文树、操作点排序与仅已处理、未归类认领）。操作立即生效。
+                    </p>
+                    <BizPermCatalogMaintenance />
+                  </>
+                ) : (
+                  <>
+                    <p style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>
+                      此处将展示业务模块权限目录（按钮级）。目录维护仅超管可用。
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ padding: 8, background: '#fff', borderRadius: 4, border: '1px solid #f0f0f0' }}>
+                        <p style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>订单管理（占位）</p>
+                        <p style={{ fontSize: 12, color: '#999' }}>权限：查看/新建/编辑/删除（占位）</p>
+                      </div>
+                      <div style={{ padding: 8, background: '#fff', borderRadius: 4, border: '1px solid #f0f0f0' }}>
+                        <p style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>工单管理（占位）</p>
+                        <p style={{ fontSize: 12, color: '#999' }}>权限：查看/派单/完修（占位）</p>
+                      </div>
+                      <div style={{ padding: 8, background: '#fff', borderRadius: 4, border: '1px solid #f0f0f0' }}>
+                        <p style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>平台配置（占位）</p>
+                        <p style={{ fontSize: 12, color: '#999' }}>权限：查看/编辑（占位）</p>
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 12, color: '#999', display: 'block', marginTop: 12 }}>目录维护仅超管可用</span>
+                  </>
+                )}
+              </div>
 
               {treeUnavailable && (
                 <p style={{ color: '#faad14', marginBottom: 12 }}>
