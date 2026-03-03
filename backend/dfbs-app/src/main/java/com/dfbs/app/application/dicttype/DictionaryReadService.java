@@ -33,7 +33,8 @@ public class DictionaryReadService {
 
     /**
      * List items for a type by typeCode. No internal ids in response.
-     * If parentValue is set, returns only children of the item with that item_value; otherwise all items for the type.
+     * Type A/C baseline: includeDisabled=false (default) excludes disabled for selection; includeDisabled=true includes disabled for history/snapshot (each item has enabled flag).
+     * Type D cascades (1-level): when parentValue is set, returns only direct children of that parent; when parentValue is omitted or blank, returns all items (roots + children). Ordering: sortOrder asc, id asc.
      */
     @Transactional(readOnly = true)
     public DictionaryItemsResponse getItemsByTypeCode(String typeCode, boolean includeDisabled,

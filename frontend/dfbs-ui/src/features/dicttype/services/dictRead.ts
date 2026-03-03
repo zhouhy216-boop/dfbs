@@ -19,7 +19,9 @@ export interface DictionaryItemsResponse {
 }
 
 export interface GetDictionaryItemsParams {
+  /** Default false: exclude disabled (for dropdowns). Use true for history/snapshot label resolution. */
   includeDisabled?: boolean;
+  /** Type D cascades (1-level): when set, returns only direct children of this parent (item_value). Omit to get all items (roots + children); filter roots client-side by parentValue == null/empty. */
   parentValue?: string;
   q?: string;
 }
@@ -29,6 +31,11 @@ const DICT_TYPE_NOT_FOUND = 'DICT_TYPE_NOT_FOUND';
 /**
  * Fetch dictionary items by typeCode (read-only API). No client caching; always fresh.
  * Throws with user-friendly Chinese: 字典类型不存在 for 404 DICT_TYPE_NOT_FOUND, else 加载失败，请重试.
+ *
+ * Type D cascades (1-level):
+ * - Fetch all (roots + children): call without parentValue; filter roots client-side where item.parentValue is null/empty.
+ * - Fetch children of a root: call with parentValue = root's value (e.g. parentValue: selectedRoot.value).
+ * - Selection: use includeDisabled: false (default). History/snapshot: use includeDisabled: true.
  */
 export async function getDictionaryItems(
   typeCode: string,

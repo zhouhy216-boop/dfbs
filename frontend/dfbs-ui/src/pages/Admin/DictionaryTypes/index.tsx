@@ -20,6 +20,13 @@ import { useDictionaryItems } from '@/features/dicttype/hooks/useDictionaryItems
 const DICT_TYPE_CODE_EXISTS = 'DICT_TYPE_CODE_EXISTS';
 const DICT_TYPE_DELETE_NOT_ALLOWED_USED = 'DICT_TYPE_DELETE_NOT_ALLOWED_USED';
 
+const TYPE_OPTIONS = [
+  { label: 'A', value: 'A' },
+  { label: 'B', value: 'B' },
+  { label: 'C', value: 'C' },
+  { label: 'D', value: 'D' },
+];
+
 function showError(e: unknown, customMessage?: string) {
   const err = e as { response?: { data?: { message?: string; machineCode?: string } }; message?: string };
   const code = err.response?.data?.machineCode;
@@ -49,7 +56,7 @@ export default function DictionaryTypesPage() {
   const openCreate = () => {
     setEditingItem(null);
     form.resetFields();
-    form.setFieldsValue({ typeCode: '', typeName: '', description: '', enabled: true });
+    form.setFieldsValue({ typeCode: '', typeName: '', description: '', type: 'A', enabled: true });
     setModalOpen(true);
   };
 
@@ -60,6 +67,7 @@ export default function DictionaryTypesPage() {
       typeCode: row.typeCode,
       typeName: row.typeName,
       description: row.description ?? '',
+      type: row.type ?? 'A',
       enabled: row.enabled,
     });
     setModalOpen(true);
@@ -72,6 +80,7 @@ export default function DictionaryTypesPage() {
         const body: UpdateDictTypeRequest = {
           typeName: values.typeName?.trim(),
           description: values.description?.trim() || null,
+          type: (values.type as string) || 'A',
           enabled: values.enabled,
         };
         await updateDictType(editingItem.id, body);
@@ -81,6 +90,7 @@ export default function DictionaryTypesPage() {
           typeCode: (values.typeCode ?? '').toString().trim(),
           typeName: (values.typeName ?? '').toString().trim(),
           description: values.description?.trim() || undefined,
+          type: (values.type as string) || 'A',
           enabled: values.enabled ?? true,
         };
         await createDictType(body);
@@ -161,8 +171,9 @@ export default function DictionaryTypesPage() {
   };
 
   const columns: ProColumns<DictTypeItem>[] = [
-    { title: '编码', dataIndex: 'typeCode', width: 140, ellipsis: true },
     { title: '名称', dataIndex: 'typeName', width: 140, ellipsis: true },
+    { title: '编码', dataIndex: 'typeCode', width: 140, ellipsis: true },
+    { title: '类型', dataIndex: 'type', width: 80, render: (_, row) => row.type ?? 'A' },
     { title: '描述', dataIndex: 'description', ellipsis: true, render: (v) => v ?? '—' },
     {
       title: '状态',
@@ -179,7 +190,7 @@ export default function DictionaryTypesPage() {
     {
       title: '操作',
       valueType: 'option',
-      width: 240,
+      width: 280,
       fixed: 'right',
       render: (_, row) => [
         <Button
@@ -188,12 +199,26 @@ export default function DictionaryTypesPage() {
           size="small"
           onClick={() =>
             navigate(`/admin/dictionary-types/${row.id}/items`, {
-              state: { typeCode: row.typeCode, typeName: row.typeName },
+              state: { typeCode: row.typeCode, typeName: row.typeName, type: row.type },
             })
           }
         >
           字典项
         </Button>,
+        row.type === 'B' ? (
+          <Button
+            key="transitions"
+            type="link"
+            size="small"
+            onClick={() =>
+              navigate(`/admin/dictionary-types/${row.id}/transitions`, {
+                state: { typeCode: row.typeCode, typeName: row.typeName },
+              })
+            }
+          >
+            状态流(迁移规则)
+          </Button>
+        ) : null,
         <Button key="edit" type="link" size="small" onClick={() => openEdit(row)}>
           编辑
         </Button>,
@@ -225,7 +250,7 @@ export default function DictionaryTypesPage() {
               <div>
                 <div style={{ marginBottom: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
                   <Input
-                    placeholder="typeCode"
+                    placeholder="类型编码"
                     value={readDemoTypeCode}
                     onChange={(e) => setReadDemoTypeCode(e.target.value ?? '')}
                     style={{ width: 180 }}
@@ -241,10 +266,10 @@ export default function DictionaryTypesPage() {
                     rowKey="value"
                     dataSource={readItems}
                     columns={[
-                      { title: 'value', dataIndex: 'value', width: 120 },
-                      { title: 'label', dataIndex: 'label', width: 140 },
-                      { title: 'enabled', dataIndex: 'enabled', width: 80, render: (v: boolean) => (v ? '是' : '否') },
-                      { title: 'sortOrder', dataIndex: 'sortOrder', width: 90 },
+                      { title: '值', dataIndex: 'value', width: 120 },
+                      { title: '标签', dataIndex: 'label', width: 140 },
+                      { title: '启用', dataIndex: 'enabled', width: 80, render: (v: boolean) => (v ? '是' : '否') },
+                      { title: '排序', dataIndex: 'sortOrder', width: 90 },
                     ]}
                     pagination={false}
                     locale={{ emptyText: '暂无数据' }}
@@ -318,7 +343,7 @@ export default function DictionaryTypesPage() {
         <Form form={form} layout="vertical">
           <Form.Item
             name="typeCode"
-            label="编码"
+            label="编码（稳定键，创建后不可改）"
             rules={[{ required: !editingItem, message: '请输入编码' }]}
           >
             <Input placeholder="字母、数字、下划线、连字符" disabled={!!editingItem} />
@@ -329,6 +354,9 @@ export default function DictionaryTypesPage() {
             rules={[{ required: true, message: '请输入名称' }]}
           >
             <Input placeholder="显示名称" />
+          </Form.Item>
+          <Form.Item name="type" label="类型" rules={[{ required: true, message: '请选择类型' }]}>
+            <Select placeholder="请选择" options={TYPE_OPTIONS} allowClear={false} />
           </Form.Item>
           <Form.Item name="description" label="描述">
             <Input.TextArea rows={2} placeholder="选填" />

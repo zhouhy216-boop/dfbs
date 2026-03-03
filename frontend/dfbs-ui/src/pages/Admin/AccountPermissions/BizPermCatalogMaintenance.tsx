@@ -13,30 +13,37 @@ import {
   Table,
   Tooltip,
   Typography,
+  Upload,
 } from 'antd';
 import {
   ArrowDownOutlined,
   ArrowUpOutlined,
   DeleteOutlined,
   EditOutlined,
+  ExportOutlined,
+  ImportOutlined,
   PlusOutlined,
 } from '@ant-design/icons';
 import {
   claimOpPoints,
   createNode,
   deleteNode,
+  exportCatalog,
   getCatalog,
+  importApply,
+  importPreview,
   reorderChildren,
   updateHandledOnly,
   updateNode,
   updateOpPoint,
   type CatalogNode,
   type CatalogResponse,
+  type ImportPreviewResponse,
   type OpPoint,
 } from './bizpermCatalogService';
 
-function getErrorMessage(err: { response?: { data?: { message?: string; machineCode?: string }; status?: number } }): string {
-  if (err.response?.status === 403) return '无权限（仅超管可维护）';
+function getErrorMessage(err: { response?: { data?: { message?: string; machineCode?: string }; status?: number } }, forImportExport = false): string {
+  if (err.response?.status === 403) return forImportExport ? '无权限（仅超管可导入/导出）' : '无权限（仅超管可维护）';
   return err.response?.data?.message ?? '操作失败，请重试';
 }
 
@@ -76,6 +83,11 @@ export default function BizPermCatalogMaintenance({ onError }: BizPermCatalogMai
   const [renameSubmitting, setRenameSubmitting] = useState(false);
   const [opEditCnName, setOpEditCnName] = useState<{ id: number; value: string } | null>(null);
   const [expandKeyRow, setExpandKeyRow] = useState<number | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [previewResult, setPreviewResult] = useState<ImportPreviewResponse | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [applyLoading, setApplyLoading] = useState(false);
 
   const loadCatalog = useCallback(() => {
     setLoading(true);
@@ -227,6 +239,62 @@ export default function BizPermCatalogMaintenance({ onError }: BizPermCatalogMai
       .catch((err) => message.error(getErrorMessage(err)));
   };
 
+  const handleExport = () => {
+    exportCatalog()
+      .then(() => message.success('导出成功'))
+      .catch((err) => message.error(getErrorMessage(err, true)));
+  };
+
+  const handleImportPreview = () => {
+    if (!importFile) {
+      message.warning('请先选择 xlsx 文件');
+      return;
+    }
+    setPreviewLoading(true);
+    setPreviewResult(null);
+    importPreview(importFile)
+      .then((data) => {
+        setPreviewResult(data);
+        setPreviewLoading(false);
+      })
+      .catch((err) => {
+        setPreviewLoading(false);
+        message.error(getErrorMessage(err, true));
+        if (err.response?.data?.errors) setPreviewResult({ valid: false, summary: { nodeRows: 0, opRows: 0, errorCount: err.response.data.errors.length }, errors: err.response.data.errors });
+      });
+  };
+
+  const handleImportApply = () => {
+    if (!importFile) return;
+    Modal.confirm({
+      title: '确认应用导入',
+      content: '应用导入将更新目录结构与操作点，确认继续？',
+      okText: '确定',
+      cancelText: '取消',
+      onOk: () => {
+        setApplyLoading(true);
+        importApply(importFile)
+          .then((data) => {
+            message.success('导入成功');
+            setImportModalOpen(false);
+            setImportFile(null);
+            setPreviewResult(null);
+            loadCatalog();
+            if (data.summary) {
+              message.info(`节点更新 ${data.summary.nodesUpdated}、操作点新建 ${data.summary.opsCreated}、更新 ${data.summary.opsUpdated}`);
+            }
+          })
+          .catch((err) => {
+            setApplyLoading(false);
+            message.error('导入失败，请按错误修正文件');
+            if (err.response?.data?.errors) setPreviewResult({ valid: false, summary: { nodeRows: 0, opRows: 0, errorCount: err.response.data.errors.length }, errors: err.response.data.errors });
+            else message.error(getErrorMessage(err, true));
+          })
+          .finally(() => setApplyLoading(false));
+      },
+    });
+  };
+
   const renderTreeNode = (node: CatalogNode, parent: CatalogNode | null, siblingIndex: number, siblingCount: number) => (
     <div key={node.id} style={{ marginLeft: parent ? 16 : 0, marginBottom: 4 }}>
       <div
@@ -273,7 +341,16 @@ export default function BizPermCatalogMaintenance({ onError }: BizPermCatalogMai
   const ops = selectedNode?.ops ?? [];
 
   return (
-    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+    <div>
+      <Space style={{ marginBottom: 12 }}>
+        <Button type="default" icon={<ExportOutlined />} onClick={handleExport}>
+          导出目录
+        </Button>
+        <Button type="default" icon={<ImportOutlined />} onClick={() => { setImportModalOpen(true); setImportFile(null); setPreviewResult(null); }}>
+          导入目录
+        </Button>
+      </Space>
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
       {/* 左侧：目录树 */}
       <div style={{ minWidth: 280, maxWidth: 360, border: '1px solid #f0f0f0', borderRadius: 4, padding: 8, background: '#fff' }}>
         <p style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>目录树</p>
@@ -396,6 +473,7 @@ export default function BizPermCatalogMaintenance({ onError }: BizPermCatalogMai
           一键认领到当前节点
         </Button>
       </div>
+      </div>
 
       <Modal title="新建子节点" open={createChildOpen} onCancel={() => { setCreateChildOpen(false); setCreateChildName(''); }} onOk={handleCreateChild} confirmLoading={createChildSubmitting} okText="确定" cancelText="取消">
         <p style={{ marginBottom: 8 }}>中文名称</p>
@@ -434,6 +512,56 @@ export default function BizPermCatalogMaintenance({ onError }: BizPermCatalogMai
             ))
           )}
         </div>
+      </Modal>
+
+      <Modal
+        title="导入目录"
+        open={importModalOpen}
+        onCancel={() => { setImportModalOpen(false); setImportFile(null); setPreviewResult(null); }}
+        footer={[
+          <Button key="cancel" onClick={() => { setImportModalOpen(false); setImportFile(null); setPreviewResult(null); }}>取消</Button>,
+          <Button key="preview" loading={previewLoading} onClick={handleImportPreview} disabled={!importFile}>预检</Button>,
+          <Button key="apply" type="primary" loading={applyLoading} onClick={handleImportApply} disabled={!previewResult?.valid || !importFile}>应用导入</Button>,
+        ]}
+      >
+        <p style={{ marginBottom: 8, color: '#666' }}>仅支持从本系统导出的 xlsx 文件，请先选择文件后点击「预检」。</p>
+        <Upload
+          accept=".xlsx"
+          maxCount={1}
+          beforeUpload={(file) => { setImportFile(file); setPreviewResult(null); return false; }}
+          onRemove={() => { setImportFile(null); setPreviewResult(null); }}
+          fileList={importFile ? [{ uid: '-1', name: importFile.name, status: 'done' }] : []}
+        >
+          <Button>选择 xlsx 文件</Button>
+        </Upload>
+        {previewResult && (
+          <div style={{ marginTop: 16 }}>
+            {previewResult.valid ? (
+              <>
+                <p style={{ color: '#52c41a', marginBottom: 8 }}>预检通过，可应用导入。</p>
+                <p style={{ fontSize: 12, color: '#666' }}>
+                  节点行数：{previewResult.summary.nodeRows}，操作点行数：{previewResult.summary.opRows}。
+                </p>
+              </>
+            ) : (
+              <>
+                <p style={{ color: '#ff4d4f', marginBottom: 8 }}>预检未通过，请按下方错误修正后重新上传。</p>
+                <Table
+                  size="small"
+                  pagination={false}
+                  rowKey={(_, i) => String(i)}
+                  dataSource={previewResult.errors}
+                  columns={[
+                    { title: '工作表', dataIndex: 'sheet', width: 80 },
+                    { title: '行', dataIndex: 'row', width: 60 },
+                    { title: '列', dataIndex: 'col', width: 120 },
+                    { title: '错误信息', dataIndex: 'message', ellipsis: true },
+                  ]}
+                />
+              </>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );

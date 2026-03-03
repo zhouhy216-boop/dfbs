@@ -1,31 +1,44 @@
 package com.dfbs.app.interfaces.bizperm;
 
+import com.dfbs.app.application.bizperm.BizPermCatalogImportService;
 import com.dfbs.app.application.bizperm.BizPermCatalogException;
 import com.dfbs.app.application.bizperm.BizPermCatalogService;
+import com.dfbs.app.config.AdminOrSuperAdminGuard;
 import com.dfbs.app.config.PermSuperAdminGuard;
 import com.dfbs.app.infra.dto.ErrorResult;
 import com.dfbs.app.modules.bizperm.BizPermCatalogNodeEntity;
 import com.dfbs.app.modules.bizperm.BizPermOperationPointEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * Business Module Catalog API. All endpoints require allowlist super-admin.
- * Read: GET /catalog. Write: nodes (create/update/delete/reorder), op-points (upsert/update/claim/handled-only).
+ * Business Module Catalog API. Maintenance endpoints require allowlist super-admin.
+ * GET /read: admin-readable (AdminOrSuperAdminGuard), same response as getCatalog().
  */
 @RestController
 @RequestMapping("/api/v1/admin/bizperm/catalog")
 public class BizPermCatalogController {
 
     private final PermSuperAdminGuard permSuperAdminGuard;
+    private final AdminOrSuperAdminGuard adminGuard;
     private final BizPermCatalogService catalogService;
+    private final BizPermCatalogImportService importService;
 
     public BizPermCatalogController(PermSuperAdminGuard permSuperAdminGuard,
-                                    BizPermCatalogService catalogService) {
+                                    AdminOrSuperAdminGuard adminGuard,
+                                    BizPermCatalogService catalogService,
+                                    BizPermCatalogImportService importService) {
         this.permSuperAdminGuard = permSuperAdminGuard;
+        this.adminGuard = adminGuard;
         this.catalogService = catalogService;
+        this.importService = importService;
     }
 
     @ExceptionHandler(BizPermCatalogException.class)
@@ -33,10 +46,52 @@ public class BizPermCatalogController {
         return ResponseEntity.badRequest().body(ErrorResult.of(ex.getMessage(), ex.getMachineCode()));
     }
 
+    @ExceptionHandler(BizPermCatalogImportService.BizPermCatalogImportException.class)
+    public ResponseEntity<BizPermCatalogImportDto.ImportValidationErrorResponse> handleImportValidation(
+            BizPermCatalogImportService.BizPermCatalogImportException ex) {
+        return ResponseEntity.badRequest().body(new BizPermCatalogImportDto.ImportValidationErrorResponse(
+                ex.getMessage(), "BIZPERM_IMPORT_VALIDATION", ex.getErrors()));
+    }
+
     @GetMapping
     public ResponseEntity<BizPermCatalogDto.CatalogResponse> getCatalog() {
         permSuperAdminGuard.requirePermSuperAdmin();
         return ResponseEntity.ok(catalogService.getCatalog());
+    }
+
+    /** Admin-readable catalog (same shape as getCatalog). Non-admin -> 403. */
+    @GetMapping("/read")
+    public ResponseEntity<BizPermCatalogDto.CatalogResponse> getCatalogRead() {
+        adminGuard.requireAdminOrSuperAdmin();
+        return ResponseEntity.ok(catalogService.getCatalog());
+    }
+
+    /** Import preview: validate XLSX, return valid/summary/errors. No DB write. Allowlist only. */
+    @PostMapping("/import/preview")
+    public ResponseEntity<BizPermCatalogImportDto.ImportPreviewResponse> importPreview(@RequestParam("file") MultipartFile file) {
+        permSuperAdminGuard.requirePermSuperAdmin();
+        return ResponseEntity.ok(importService.preview(file));
+    }
+
+    /** Import apply: validate then apply in one transaction. 400 with CN errors if invalid. Allowlist only. */
+    @PostMapping("/import/apply")
+    public ResponseEntity<BizPermCatalogImportDto.ImportApplyResponse> importApply(@RequestParam("file") MultipartFile file) {
+        permSuperAdminGuard.requirePermSuperAdmin();
+        return ResponseEntity.ok(importService.apply(file));
+    }
+
+    /** Export catalog to XLSX (nodes + op points, CN headers). Allowlist super-admin only. */
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportCatalog() {
+        permSuperAdminGuard.requirePermSuperAdmin();
+        BizPermCatalogService.ExportResult result = catalogService.exportToXlsx();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        try {
+            headers.setContentDispositionFormData("attachment", URLEncoder.encode(result.filename(), StandardCharsets.UTF_8));
+        } catch (Exception ignored) {}
+        headers.setContentLength(result.bytes().length);
+        return ResponseEntity.ok().headers(headers).body(result.bytes());
     }
 
     @PostMapping("/nodes")

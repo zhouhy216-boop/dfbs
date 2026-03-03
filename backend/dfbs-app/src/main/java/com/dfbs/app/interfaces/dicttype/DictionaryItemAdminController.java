@@ -1,7 +1,7 @@
 package com.dfbs.app.interfaces.dicttype;
 
 import com.dfbs.app.application.dicttype.DictItemService;
-import com.dfbs.app.application.dicttype.DictItemService.DictItemDeleteNotAllowedHasChildrenException;
+import com.dfbs.app.application.dicttype.DictItemService.DictItemHasChildrenCannotBecomeChildException;
 import com.dfbs.app.application.dicttype.DictItemService.DictItemParentInvalidException;
 import com.dfbs.app.config.SuperAdminGuard;
 import com.dfbs.app.infra.dto.ErrorResult;
@@ -18,7 +18,7 @@ import static org.springframework.web.bind.annotation.RequestMethod.DELETE;
 public class DictionaryItemAdminController {
 
     private static final String DICT_ITEM_PARENT_INVALID = "DICT_ITEM_PARENT_INVALID";
-    private static final String DICT_ITEM_DELETE_NOT_ALLOWED_HAS_CHILDREN = "DICT_ITEM_DELETE_NOT_ALLOWED_HAS_CHILDREN";
+    private static final String DICT_ITEM_HAS_CHILDREN_CANNOT_BECOME_CHILD = "DICT_ITEM_HAS_CHILDREN_CANNOT_BECOME_CHILD";
 
     private final SuperAdminGuard superAdminGuard;
     private final DictItemService dictItemService;
@@ -43,6 +43,8 @@ public class DictionaryItemAdminController {
             return ResponseEntity.ok(DictItemDto.from(e));
         } catch (DictItemParentInvalidException ex) {
             return ResponseEntity.badRequest().body(ErrorResult.of("父级无效（需为同类型根节点）", DICT_ITEM_PARENT_INVALID));
+        } catch (DictItemHasChildrenCannotBecomeChildException ex) {
+            return ResponseEntity.badRequest().body(ErrorResult.of("该字典项已有子项，不能设为子项（仅支持一层级）", DICT_ITEM_HAS_CHILDREN_CANNOT_BECOME_CHILD));
         }
     }
 
@@ -60,14 +62,11 @@ public class DictionaryItemAdminController {
         return ResponseEntity.ok(DictItemDto.from(e));
     }
 
+    /** Soft-disable (enabled=false) so history/snapshot can still resolve via includeDisabled=true. No physical delete. */
     @RequestMapping(value = "/{id}", method = DELETE)
     public ResponseEntity<?> delete(@PathVariable Long id) {
         superAdminGuard.requireSuperAdmin();
-        try {
-            dictItemService.deleteById(id);
-            return ResponseEntity.noContent().build();
-        } catch (DictItemDeleteNotAllowedHasChildrenException ex) {
-            return ResponseEntity.badRequest().body(ErrorResult.of("该字典项存在子项，无法删除", DICT_ITEM_DELETE_NOT_ALLOWED_HAS_CHILDREN));
-        }
+        dictItemService.setEnabled(id, false);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -9,6 +9,7 @@ public record DictTypeItemDto(
         String typeCode,
         String typeName,
         String description,
+        String type,
         Boolean enabled,
         Instant createdAt,
         Instant updatedAt
@@ -19,6 +20,7 @@ public record DictTypeItemDto(
                 e.getTypeCode(),
                 e.getTypeName(),
                 e.getDescription(),
+                e.getType() != null ? e.getType() : "A",
                 e.getEnabled(),
                 e.getCreatedAt(),
                 e.getUpdatedAt()

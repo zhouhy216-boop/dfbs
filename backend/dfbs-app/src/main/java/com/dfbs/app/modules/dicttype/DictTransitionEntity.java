@@ -7,29 +7,26 @@ import lombok.Setter;
 import java.time.Instant;
 
 @Entity
-@Table(name = "dict_type")
+@Table(name = "dict_transition")
 @Getter
 @Setter
-public class DictTypeEntity {
+public class DictTransitionEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "type_code", nullable = false, unique = true, length = 64)
-    private String typeCode;
+    @Column(name = "type_id", nullable = false)
+    private Long typeId;
 
-    @Column(name = "type_name", nullable = false, length = 128)
-    private String typeName;
+    @Column(name = "from_item_id", nullable = false)
+    private Long fromItemId;
 
-    @Column(name = "description", length = 512)
-    private String description;
+    @Column(name = "to_item_id", nullable = false)
+    private Long toItemId;
 
     @Column(name = "enabled", nullable = false)
     private Boolean enabled = true;
-
-    @Column(name = "type", nullable = false, length = 1)
-    private String type = "A";
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();

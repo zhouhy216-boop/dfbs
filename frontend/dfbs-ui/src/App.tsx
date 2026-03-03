@@ -32,6 +32,7 @@ import OrgTree from '@/pages/Admin/OrgTree';
 import OrgChangeLog from '@/pages/Admin/OrgChangeLog';
 import DictionaryTypes from '@/pages/Admin/DictionaryTypes';
 import DictionaryItems from '@/pages/Admin/DictionaryItems';
+import DictionaryTransitions from '@/pages/Admin/DictionaryTransitions';
 import DictionarySnapshotDemo from '@/pages/Admin/DictionarySnapshotDemo';
 import RolesPermissionsPage from '@/pages/Admin/RolesPermissions';
 import AccountPermissionsPage from '@/pages/Admin/AccountPermissions';
@@ -98,11 +99,13 @@ function App() {
             <Route path="platform/sim-applications" element={<PlatformSimApplication />} />
             <Route path="admin" element={<Navigate to="/admin/confirmation-center" replace />} />
             <Route path="admin/confirmation-center" element={<ConfirmationCenter />} />
+            <Route path="admin/data-dictionary" element={<SuperAdminGuard><DictionaryTypes /></SuperAdminGuard>} />
             <Route path="admin/org-levels" element={<SuperAdminGuard><OrgLevelConfig /></SuperAdminGuard>} />
             <Route path="admin/org-tree" element={<SuperAdminGuard><OrgTree /></SuperAdminGuard>} />
             <Route path="admin/org-change-logs" element={<SuperAdminGuard><OrgChangeLog /></SuperAdminGuard>} />
             <Route path="admin/dictionary-types" element={<SuperAdminGuard><DictionaryTypes /></SuperAdminGuard>} />
             <Route path="admin/dictionary-types/:typeId/items" element={<SuperAdminGuard><DictionaryItems /></SuperAdminGuard>} />
+            <Route path="admin/dictionary-types/:typeId/transitions" element={<SuperAdminGuard><DictionaryTransitions /></SuperAdminGuard>} />
             <Route path="admin/dictionary-snapshot-demo" element={<SuperAdminGuard><DictionarySnapshotDemo /></SuperAdminGuard>} />
             <Route path="admin/account-permissions" element={<AdminOrSuperAdminGuard><AccountPermissionsPage /></AdminOrSuperAdminGuard>} />
             <Route path="admin/roles-permissions" element={<PermSuperAdminGuard><RolesPermissionsPage /></PermSuperAdminGuard>} />

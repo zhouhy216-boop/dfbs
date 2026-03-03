@@ -3,7 +3,7 @@
  * Uses /api/v1/admin/account-permissions/*.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Collapse, Drawer, Input, message, Modal, Select, Space, Switch, Table, Tag } from 'antd';
+import { Button, Collapse, Drawer, Input, message, Modal, Select, Space, Switch, Table, Tabs, Tag } from 'antd';
 import {
   createAccount,
   getAccountOverride,
@@ -34,6 +34,7 @@ import {
 } from './permissionQuickOps';
 import { useIsPermSuperAdmin } from '@/shared/components/PermSuperAdminGuard';
 import BizPermCatalogMaintenance from './BizPermCatalogMaintenance';
+import BizPermAssignmentView from './BizPermAssignmentView';
 
 function getErrorMessage(err: { response?: { data?: { message?: string; machineCode?: string } } }): string {
   const data = err.response?.data;
@@ -621,37 +622,69 @@ export default function AccountsTab() {
                 </Button>
               </Space>
 
-              {/* 业务模块视图：超管显示目录维护，非超管显示只读占位 */}
+              {/* 业务模块视图：按账号分配（默认）+ 目录维护（仅超管） */}
               <div style={{ marginBottom: 16, padding: 12, border: '1px dashed #d9d9d9', borderRadius: 4, background: '#fafafa' }}>
-                <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>业务模块视图</p>
+                <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>业务模块视图</p>
                 {permSuperAdminAllowed ? (
-                  <>
-                    <p style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>
-                      维护业务模块目录（中文树、操作点排序与仅已处理、未归类认领）。操作立即生效。
-                    </p>
-                    <BizPermCatalogMaintenance />
-                  </>
+                  <Tabs
+                    defaultActiveKey="assign"
+                    items={[
+                      {
+                        key: 'assign',
+                        label: '按账号分配',
+                        children: selectedUser ? (
+                          <BizPermAssignmentView
+                            userId={selectedUser.id}
+                            savedOverride={savedOverride}
+                            onSaveSuccess={() => {
+                              if (selectedUser) {
+                                getAccountOverride(selectedUser.id).then((res) => {
+                                  setSavedOverride(res);
+                                  setDraftRoleTemplateId(res.roleTemplateId ?? null);
+                                  setDraftAddKeys(new Set(res.addKeys ?? []));
+                                  setDraftRemoveKeys(new Set(res.removeKeys ?? []));
+                                  if (res.roleTemplateId != null) {
+                                    getRolePermissions(res.roleTemplateId).then((keys) => setTemplateKeys(new Set(keys)));
+                                  } else {
+                                    setTemplateKeys(new Set());
+                                  }
+                                }).catch(() => {});
+                              }
+                            }}
+                          />
+                        ) : null,
+                      },
+                      {
+                        key: 'maintain',
+                        label: '目录维护',
+                        children: <BizPermCatalogMaintenance />,
+                      },
+                    ]}
+                  />
                 ) : (
-                  <>
-                    <p style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>
-                      此处将展示业务模块权限目录（按钮级）。目录维护仅超管可用。
-                    </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <div style={{ padding: 8, background: '#fff', borderRadius: 4, border: '1px solid #f0f0f0' }}>
-                        <p style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>订单管理（占位）</p>
-                        <p style={{ fontSize: 12, color: '#999' }}>权限：查看/新建/编辑/删除（占位）</p>
-                      </div>
-                      <div style={{ padding: 8, background: '#fff', borderRadius: 4, border: '1px solid #f0f0f0' }}>
-                        <p style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>工单管理（占位）</p>
-                        <p style={{ fontSize: 12, color: '#999' }}>权限：查看/派单/完修（占位）</p>
-                      </div>
-                      <div style={{ padding: 8, background: '#fff', borderRadius: 4, border: '1px solid #f0f0f0' }}>
-                        <p style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>平台配置（占位）</p>
-                        <p style={{ fontSize: 12, color: '#999' }}>权限：查看/编辑（占位）</p>
-                      </div>
-                    </div>
-                    <span style={{ fontSize: 12, color: '#999', display: 'block', marginTop: 12 }}>目录维护仅超管可用</span>
-                  </>
+                  selectedUser ? (
+                    <BizPermAssignmentView
+                      userId={selectedUser.id}
+                      savedOverride={savedOverride}
+                      onSaveSuccess={() => {
+                        if (selectedUser) {
+                          getAccountOverride(selectedUser.id).then((res) => {
+                            setSavedOverride(res);
+                            setDraftRoleTemplateId(res.roleTemplateId ?? null);
+                            setDraftAddKeys(new Set(res.addKeys ?? []));
+                            setDraftRemoveKeys(new Set(res.removeKeys ?? []));
+                            if (res.roleTemplateId != null) {
+                              getRolePermissions(res.roleTemplateId).then((keys) => setTemplateKeys(new Set(keys)));
+                            } else {
+                              setTemplateKeys(new Set());
+                            }
+                          }).catch(() => {});
+                        }
+                      }}
+                    />
+                  ) : (
+                    <p style={{ fontSize: 12, color: '#999' }}>请先选择账号</p>
+                  )
                 )}
               </div>
 
@@ -662,6 +695,13 @@ export default function AccountsTab() {
               )}
 
               {!treeUnavailable && (
+                <Collapse
+                  defaultActiveKey={[]}
+                  items={[
+                    {
+                      key: 'diff',
+                      label: '差异视图（高级）',
+                      children: (
                 <>
           <Space style={{ marginBottom: 12 }} wrap>
             <Button type="primary" onClick={handleSave} loading={overrideSaveLoading} disabled={!overrideDirty}>
@@ -801,6 +841,10 @@ export default function AccountsTab() {
           />
 
                 </>
+                      ),
+                    },
+                  ]}
+                />
               )}
 
           {/* 添加权限 弹窗 */}

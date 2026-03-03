@@ -19,7 +19,7 @@ import {
 
 const DICT_ITEM_VALUE_EXISTS = 'DICT_ITEM_VALUE_EXISTS';
 const DICT_ITEM_PARENT_INVALID = 'DICT_ITEM_PARENT_INVALID';
-const DICT_ITEM_DELETE_NOT_ALLOWED_HAS_CHILDREN = 'DICT_ITEM_DELETE_NOT_ALLOWED_HAS_CHILDREN';
+const DICT_ITEM_HAS_CHILDREN_CANNOT_BECOME_CHILD = 'DICT_ITEM_HAS_CHILDREN_CANNOT_BECOME_CHILD';
 const DICT_TYPE_NOT_FOUND = 'DICT_TYPE_NOT_FOUND';
 
 function showItemError(e: unknown) {
@@ -33,6 +33,10 @@ function showItemError(e: unknown) {
     message.error('父级无效（只能选择同类型的根节点）');
     return;
   }
+  if (code === DICT_ITEM_HAS_CHILDREN_CANNOT_BECOME_CHILD) {
+    message.error('该字典项已有子项，不能设为子项（仅支持一层级）');
+    return;
+  }
   if (code === DICT_TYPE_NOT_FOUND) {
     message.error('字典类型不存在或已删除');
     return;
@@ -40,7 +44,7 @@ function showItemError(e: unknown) {
   message.error(err?.response?.data?.message ?? err?.message ?? '操作失败，请重试');
 }
 
-type LocationState = { typeCode?: string; typeName?: string } | null;
+type LocationState = { typeCode?: string; typeName?: string; type?: string } | null;
 
 export default function DictionaryItemsPage() {
   const { typeId } = useParams<{ typeId: string }>();
@@ -52,11 +56,12 @@ export default function DictionaryItemsPage() {
   const actionRef = useRef<ActionType>(null);
   const searchQRef = useRef('');
   const enabledFilterRef = useRef<'all' | boolean>('all');
-  const parentFilterRef = useRef<number | null | 'all'>(null);
+  const parentFilterRef = useRef<number | null | 'all' | 'roots'>(null);
   const lastItemsRef = useRef<DictItem[]>([]);
 
   const [enabledFilter, setEnabledFilter] = useState<'all' | boolean>('all');
-  const [parentFilter, setParentFilter] = useState<number | null | 'all'>(null);
+  const [parentFilter, setParentFilter] = useState<number | null | 'all' | 'roots'>(null);
+  const isTypeD = state.type === 'D';
   const [rootItems, setRootItems] = useState<DictItem[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<DictItem | null>(null);
@@ -181,15 +186,15 @@ export default function DictionaryItemsPage() {
 
   const handleDelete = (row: DictItem) => {
     Modal.confirm({
-      title: '确认删除该字典项？',
-      content: '删除后不可恢复。若该字典项存在子项，将无法删除。',
-      okText: '确认删除',
+      title: '确认禁用',
+      content: '删除即设为禁用：该字典项将不再出现在下拉选项中，历史数据仍可正常显示。',
+      okText: '确认禁用',
       cancelText: '取消',
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
           await deleteDictItem(row.id);
-          message.success('已删除');
+          message.success('已禁用');
           if (parentFilter !== 'all' && parentFilter !== null && parentFilter === row.id) {
             parentFilterRef.current = 'all';
             setParentFilter('all');
@@ -202,17 +207,12 @@ export default function DictionaryItemsPage() {
           }
         } catch (err) {
           const e = err as { response?: { status?: number; data?: { machineCode?: string } } };
-          const code = e.response?.data?.machineCode;
           const status = e.response?.status;
-          if (code === DICT_ITEM_DELETE_NOT_ALLOWED_HAS_CHILDREN) {
-            message.error('该字典项存在子项，无法删除');
-            return;
-          }
           if (status === 403) {
             message.error('无权限');
             return;
           }
-          message.error('删除失败，请重试');
+          message.error('操作失败，请重试');
         }
       },
     });
@@ -225,7 +225,7 @@ export default function DictionaryItemsPage() {
   };
 
   const currentScopeParentId = (): number | null => {
-    if (parentFilter === 'all' || parentFilter === null) return null;
+    if (parentFilter === 'all' || parentFilter === 'roots' || parentFilter === null) return null;
     return parentFilter;
   };
 
@@ -253,8 +253,8 @@ export default function DictionaryItemsPage() {
   };
 
   const columns: ProColumns<DictItem>[] = [
-    { title: '值', dataIndex: 'itemValue', width: 120, ellipsis: true },
-    { title: '名称', dataIndex: 'itemLabel', width: 140, ellipsis: true },
+    { title: '编码（itemKey）', dataIndex: 'itemValue', width: 140, ellipsis: true },
+    { title: '标签', dataIndex: 'itemLabel', width: 140, ellipsis: true },
     { title: '备注', dataIndex: 'note', ellipsis: true, render: (v) => v ?? '—' },
     { title: '排序', dataIndex: 'sortOrder', width: 80 },
     {
@@ -307,7 +307,7 @@ export default function DictionaryItemsPage() {
             </Button>
           ),
           <Button key="delete" type="link" size="small" danger onClick={() => handleDelete(row)}>
-            删除
+            删除（即禁用）
           </Button>,
         ];
       },
@@ -335,7 +335,9 @@ export default function DictionaryItemsPage() {
         </span>
       </div>
       <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
-        请先选择父级后再排序子项；根节点可直接排序
+        {isTypeD
+          ? 'Type D 一层级：全部=全部项，仅根=仅根节点，选父级=该父下子项。'
+          : '请先选择父级后再排序子项；根节点可直接排序'}
       </div>
 
       <ProTable<DictItem>
@@ -345,16 +347,19 @@ export default function DictionaryItemsPage() {
         request={async ({ current = 1, pageSize = 20 }) => {
           const q = searchQRef.current?.trim() || undefined;
           const en = enabledFilterRef.current === 'all' ? undefined : enabledFilterRef.current;
-          const isRootsOnly =
-            parentFilterRef.current === 'all' || parentFilterRef.current === null;
+          const pf = parentFilterRef.current;
+          const rootsOnly =
+            isTypeD
+              ? pf === 'roots'
+              : pf === 'all' || pf === null;
           const parentId =
-            isRootsOnly ? undefined : (parentFilterRef.current as number);
+            typeof pf === 'number' ? pf : undefined;
           const res = await listItems(typeIdNum, {
             page: (current ?? 1) - 1,
             pageSize: pageSize ?? 20,
             q,
             enabled: en,
-            rootsOnly: isRootsOnly ? true : undefined,
+            rootsOnly: rootsOnly ? true : undefined,
             parentId: parentId ?? undefined,
           });
           lastItemsRef.current = res.items;
@@ -365,7 +370,7 @@ export default function DictionaryItemsPage() {
         toolBarRender={() => [
           <Input.Search
             key="search"
-            placeholder="搜索：值/名称"
+            placeholder="搜索：编码/标签"
             allowClear
             style={{ width: 200, marginRight: 8 }}
             onSearch={(v) => {
@@ -391,17 +396,18 @@ export default function DictionaryItemsPage() {
           />,
           <Select
             key="parent"
-            placeholder="父级"
+            placeholder={isTypeD ? '父级（全部/仅根/按父）' : '父级'}
             value={parentFilter === null ? 'all' : parentFilter}
             onChange={(v) => {
-              const val = v === 'all' ? 'all' : v;
+              const val = v === 'all' || v === 'roots' ? v : (v as number);
               parentFilterRef.current = val;
-              setParentFilter(val as number | 'all');
+              setParentFilter(val as number | 'all' | 'roots');
               runQuery();
             }}
-            style={{ width: 160, marginRight: 8 }}
+            style={{ width: isTypeD ? 180 : 160, marginRight: 8 }}
             options={[
-              { label: '全部', value: 'all' },
+              { label: isTypeD ? '全部' : '全部', value: 'all' },
+              ...(isTypeD ? [{ label: '仅根', value: 'roots' as const }] : []),
               ...rootItems.map((r) => ({ label: r.itemLabel, value: r.id })),
             ]}
           />,
@@ -424,15 +430,15 @@ export default function DictionaryItemsPage() {
         <Form form={form} layout="vertical">
           <Form.Item
             name="itemValue"
-            label="值"
-            rules={[{ required: !editingItem, message: '请输入值' }]}
+            label={editingItem ? '编码（itemKey，不可改）' : '编码（itemKey，创建后不可改）'}
+            rules={[{ required: !editingItem, message: '请输入编码' }]}
           >
             <Input placeholder="字母、数字、下划线、连字符" disabled={!!editingItem} />
           </Form.Item>
           <Form.Item
             name="itemLabel"
-            label="名称"
-            rules={[{ required: true, message: '请输入名称' }]}
+            label="标签"
+            rules={[{ required: true, message: '请输入标签' }]}
           >
             <Input placeholder="显示名称" />
           </Form.Item>
@@ -442,13 +448,16 @@ export default function DictionaryItemsPage() {
           <Form.Item name="sortOrder" label="排序">
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item name="parentId" label="父级">
+          <Form.Item name="parentId" label="父级（仅根节点可选，Type D 一层级）">
             <Select
               allowClear
               placeholder="无（根节点）"
               options={[
                 { label: '无', value: null },
-                ...rootItems.map((r) => ({ label: r.itemLabel, value: r.id })),
+                ...(isTypeD ? rootItems.filter((r) => r.enabled) : rootItems).map((r) => ({
+                  label: r.itemLabel,
+                  value: r.id,
+                })),
               ]}
             />
           </Form.Item>

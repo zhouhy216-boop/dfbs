@@ -1,5 +1,8 @@
 package com.dfbs.app.application.bizperm;
 
+import com.alibaba.excel.EasyExcel;
+import com.alibaba.excel.ExcelWriter;
+import com.alibaba.excel.write.metadata.WriteSheet;
 import com.dfbs.app.application.perm.PermAuditService;
 import com.dfbs.app.application.perm.PermPermissionTreeService;
 import com.dfbs.app.interfaces.bizperm.BizPermCatalogDto;
@@ -11,7 +14,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayOutputStream;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -350,4 +356,45 @@ public class BizPermCatalogService {
                 Boolean.TRUE.equals(e.getHandledOnly())
         );
     }
+
+    /**
+     * Export persisted catalog (nodes + op points) to XLSX for round-trip. Allowlist-only caller.
+     * Sheet 「节点」: 节点ID, 父节点ID, 中文名称, 排序. Sheet 「操作点」: 操作点ID, 节点ID(空=未归类), 权限键, 中文名称, 排序, 支持仅已处理(是/否).
+     */
+    @Transactional(readOnly = true)
+    public ExportResult exportToXlsx() {
+        List<BizPermCatalogNodeEntity> nodes = nodeRepo.findAllByOrderBySortOrderAscIdAsc();
+        List<BizPermOperationPointEntity> ops = operationPointRepo.findAll().stream()
+                .sorted(Comparator.comparing(BizPermOperationPointEntity::getNodeId, Comparator.nullsLast(Long::compareTo))
+                        .thenComparing(BizPermOperationPointEntity::getSortOrder, Comparator.nullsFirst(Integer::compareTo))
+                        .thenComparing(BizPermOperationPointEntity::getId))
+                .toList();
+
+        List<CatalogNodeExportRow> nodeRows = nodes.stream()
+                .map(n -> new CatalogNodeExportRow(n.getId(), n.getParentId(), n.getCnName(), n.getSortOrder() != null ? n.getSortOrder() : 0))
+                .toList();
+        List<CatalogOpPointExportRow> opRows = ops.stream()
+                .map(o -> new CatalogOpPointExportRow(
+                        o.getId(),
+                        o.getNodeId(),
+                        o.getPermissionKey(),
+                        o.getCnName(),
+                        o.getSortOrder() != null ? o.getSortOrder() : 0,
+                        Boolean.TRUE.equals(o.getHandledOnly()) ? "是" : "否"))
+                .toList();
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ExcelWriter excelWriter = EasyExcel.write(out).autoCloseStream(false).build();
+        WriteSheet nodeSheet = EasyExcel.writerSheet(0, "节点").head(CatalogNodeExportRow.class).build();
+        excelWriter.write(nodeRows, nodeSheet);
+        WriteSheet opSheet = EasyExcel.writerSheet(1, "操作点").head(CatalogOpPointExportRow.class).build();
+        excelWriter.write(opRows, opSheet);
+        excelWriter.finish();
+
+        String filename = "业务模块目录_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmm")) + ".xlsx";
+        auditService.log(PermAuditService.ACTION_BIZPERM_CATALOG_EXPORT, PermAuditService.TARGET_SYSTEM, null, null, "导出业务模块目录");
+        return new ExportResult(out.toByteArray(), filename);
+    }
+
+    public record ExportResult(byte[] bytes, String filename) {}
 }

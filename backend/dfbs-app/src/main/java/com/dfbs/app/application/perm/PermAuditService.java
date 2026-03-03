@@ -37,6 +37,9 @@ public class PermAuditService {
     public static final String ACTION_BIZPERM_OP_UPDATE = "BIZPERM_OP_UPDATE";
     public static final String ACTION_BIZPERM_OP_CLAIM = "BIZPERM_OP_CLAIM";
     public static final String ACTION_BIZPERM_OP_TOGGLE_HANDLED = "BIZPERM_OP_TOGGLE_HANDLED";
+    public static final String ACTION_BIZPERM_SCOPE_SET = "BIZPERM_SCOPE_SET";
+    public static final String ACTION_BIZPERM_CATALOG_EXPORT = "BIZPERM_CATALOG_EXPORT";
+    public static final String ACTION_BIZPERM_CATALOG_IMPORT = "BIZPERM_CATALOG_IMPORT";
 
     public static final String TARGET_ROLE = "ROLE";
     public static final String TARGET_USER = "USER";

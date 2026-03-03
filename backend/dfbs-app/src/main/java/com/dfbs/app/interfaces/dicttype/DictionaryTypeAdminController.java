@@ -4,6 +4,8 @@ import com.dfbs.app.application.dicttype.DictItemService;
 import com.dfbs.app.application.dicttype.DictItemService.DictItemParentInvalidException;
 import com.dfbs.app.application.dicttype.DictItemService.DictItemValueExistsException;
 import com.dfbs.app.application.dicttype.DictItemService.DictTypeNotFoundException;
+import com.dfbs.app.application.dicttype.DictTransitionService;
+import com.dfbs.app.application.dicttype.DictTransitionService.DictTransitionException;
 import com.dfbs.app.application.dicttype.DictTypeService;
 import com.dfbs.app.application.dicttype.DictTypeService.DictTypeCodeExistsException;
 import com.dfbs.app.application.dicttype.DictTypeService.DictTypeDeleteNotAllowedUsedException;
@@ -16,6 +18,9 @@ import com.dfbs.app.interfaces.dicttype.dto.DictItemDto;
 import com.dfbs.app.interfaces.dicttype.dto.DictItemListResponse;
 import com.dfbs.app.interfaces.dicttype.dto.DictTypeItemDto;
 import com.dfbs.app.interfaces.dicttype.dto.DictTypeListResponse;
+import com.dfbs.app.interfaces.dicttype.dto.TransitionEdgeRequest;
+import com.dfbs.app.interfaces.dicttype.dto.TransitionListResponse;
+import com.dfbs.app.interfaces.dicttype.dto.UpsertTransitionsRequest;
 import com.dfbs.app.interfaces.dicttype.dto.UpdateDictTypeRequest;
 import com.dfbs.app.modules.dicttype.DictItemEntity;
 import com.dfbs.app.modules.dicttype.DictTypeEntity;
@@ -39,11 +44,13 @@ public class DictionaryTypeAdminController {
     private final SuperAdminGuard superAdminGuard;
     private final DictTypeService dictTypeService;
     private final DictItemService dictItemService;
+    private final DictTransitionService dictTransitionService;
 
-    public DictionaryTypeAdminController(SuperAdminGuard superAdminGuard, DictTypeService dictTypeService, DictItemService dictItemService) {
+    public DictionaryTypeAdminController(SuperAdminGuard superAdminGuard, DictTypeService dictTypeService, DictItemService dictItemService, DictTransitionService dictTransitionService) {
         this.superAdminGuard = superAdminGuard;
         this.dictTypeService = dictTypeService;
         this.dictItemService = dictItemService;
+        this.dictTransitionService = dictTransitionService;
     }
 
     @GetMapping
@@ -66,6 +73,7 @@ public class DictionaryTypeAdminController {
                     request.typeCode(),
                     request.typeName(),
                     request.description(),
+                    request.type(),
                     request.enabled()
             );
             return ResponseEntity.ok(DictTypeItemDto.from(e));
@@ -77,7 +85,7 @@ public class DictionaryTypeAdminController {
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable Long id, @RequestBody UpdateDictTypeRequest request) {
         superAdminGuard.requireSuperAdmin();
-        DictTypeEntity e = dictTypeService.update(id, request.typeName(), request.description(), request.enabled());
+        DictTypeEntity e = dictTypeService.update(id, request.typeName(), request.description(), request.type(), request.enabled());
         return ResponseEntity.ok(DictTypeItemDto.from(e));
     }
 
@@ -152,5 +160,24 @@ public class DictionaryTypeAdminController {
         var entities = dictItemService.reorder(typeId, request.parentId(), request.orderedItemIds() != null ? request.orderedItemIds() : List.of());
         var items = entities.stream().map(DictItemDto::from).toList();
         return ResponseEntity.ok(new DictItemListResponse(items, items.size()));
+    }
+
+    /** Type B: list allowed transitions (from -> to) for a dict type. */
+    @GetMapping("/{typeId}/transitions")
+    public TransitionListResponse listTransitions(@PathVariable Long typeId) {
+        superAdminGuard.requireSuperAdmin();
+        return dictTransitionService.list(typeId);
+    }
+
+    /** Type B: batch upsert transitions (fromValue -> toValue, enabled). Self-loop disallowed. */
+    @PostMapping("/{typeId}/transitions")
+    public ResponseEntity<?> upsertTransitions(@PathVariable Long typeId, @RequestBody UpsertTransitionsRequest request) {
+        superAdminGuard.requireSuperAdmin();
+        try {
+            var list = request != null && request.transitions() != null ? request.transitions() : List.<TransitionEdgeRequest>of();
+            return ResponseEntity.ok(dictTransitionService.upsert(typeId, list));
+        } catch (DictTransitionException ex) {
+            return ResponseEntity.badRequest().body(ErrorResult.of(ex.getMessage(), ex.getMachineCode()));
+        }
     }
 }

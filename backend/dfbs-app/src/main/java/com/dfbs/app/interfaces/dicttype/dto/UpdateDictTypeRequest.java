@@ -1,3 +1,4 @@
 package com.dfbs.app.interfaces.dicttype.dto;
 
-public record UpdateDictTypeRequest(String typeName, String description, Boolean enabled) {}
+/** typeCode/stableKey not accepted; immutable after create. */
+public record UpdateDictTypeRequest(String typeName, String description, String type, Boolean enabled) {}

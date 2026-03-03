@@ -158,6 +158,9 @@ public class DictItemService {
             e.setEnabled(enabled);
         }
         if (parentId != null) {
+            if (itemRepo.countByParentId(id) > 0) {
+                throw new DictItemHasChildrenCannotBecomeChildException();
+            }
             validateParent(e.getTypeId(), parentId);
             e.setParentId(parentId);
         } else {
@@ -227,4 +230,7 @@ public class DictItemService {
     /** Thrown when delete is called but item has children; controller maps to 400 + DICT_ITEM_DELETE_NOT_ALLOWED_HAS_CHILDREN */
     @SuppressWarnings("serial")
     public static class DictItemDeleteNotAllowedHasChildrenException extends RuntimeException {}
+    /** Type D 1-level: item has children, cannot set parentId (would create multi-level). */
+    @SuppressWarnings("serial")
+    public static class DictItemHasChildrenCannotBecomeChildException extends RuntimeException {}
 }

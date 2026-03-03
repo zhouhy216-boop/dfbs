@@ -27,6 +27,7 @@ public class DictTypeService {
     private static final int DESCRIPTION_MAX = 512;
     /** type_code: letters, numbers, underscore, hyphen only */
     private static final Pattern TYPE_CODE_PATTERN = Pattern.compile("^[a-zA-Z0-9_-]+$");
+    private static final java.util.Set<String> VALID_TYPES = java.util.Set.of("A", "B", "C", "D");
 
     private final DictTypeRepo repo;
     private final DictItemRepo itemRepo;
@@ -85,8 +86,15 @@ public class DictTypeService {
         }
     }
 
+    private String normalizeType(String type) {
+        if (type == null || type.isBlank()) return "A";
+        String t = type.trim().toUpperCase();
+        if (VALID_TYPES.contains(t)) return t;
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "type 须为 A、B、C、D 之一");
+    }
+
     @Transactional
-    public DictTypeEntity create(String typeCode, String typeName, String description, Boolean enabled) {
+    public DictTypeEntity create(String typeCode, String typeName, String description, String type, Boolean enabled) {
         validateTypeCode(typeCode);
         validateTypeName(typeName);
         validateDescription(description);
@@ -97,6 +105,7 @@ public class DictTypeService {
         e.setTypeCode(typeCode.trim());
         e.setTypeName(typeName.trim());
         e.setDescription(description != null ? description.trim() : null);
+        e.setType(normalizeType(type));
         e.setEnabled(enabled != null ? enabled : true);
         e.setCreatedAt(Instant.now());
         e.setUpdatedAt(Instant.now());
@@ -104,7 +113,7 @@ public class DictTypeService {
     }
 
     @Transactional
-    public DictTypeEntity update(Long id, String typeName, String description, Boolean enabled) {
+    public DictTypeEntity update(Long id, String typeName, String description, String type, Boolean enabled) {
         DictTypeEntity e = repo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "字典类型不存在"));
         if (typeName != null) {
             validateTypeName(typeName);
@@ -113,6 +122,9 @@ public class DictTypeService {
         if (description != null) {
             validateDescription(description);
             e.setDescription(description.trim());
+        }
+        if (type != null && !type.isBlank()) {
+            e.setType(normalizeType(type));
         }
         if (enabled != null) {
             e.setEnabled(enabled);

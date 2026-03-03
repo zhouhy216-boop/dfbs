@@ -6,6 +6,8 @@ export interface DictTypeItem {
   typeCode: string;
   typeName: string;
   description: string | null;
+  /** Metadata type A/B/C/D. */
+  type?: string;
   enabled: boolean;
   createdAt: string;
   updatedAt: string;
@@ -22,13 +24,17 @@ export interface CreateDictTypeRequest {
   typeCode: string;
   typeName: string;
   description?: string | null;
+  /** A|B|C|D; default A */
+  type?: string;
   enabled?: boolean;
 }
 
-/** Update request body (typeCode immutable). */
+/** Update request body (typeCode/stableKey immutable). */
 export interface UpdateDictTypeRequest {
   typeName?: string;
   description?: string | null;
+  /** A|B|C|D */
+  type?: string;
   enabled?: boolean;
 }
 

@@ -21,4 +21,6 @@ public class BizPermCatalogException extends RuntimeException {
     public static final String PERMISSION_KEY_NOT_FOUND = "BIZPERM_PERMISSION_KEY_NOT_FOUND";
     public static final String OP_POINT_NOT_FOUND = "BIZPERM_OP_POINT_NOT_FOUND";
     public static final String REORDER_IDS_MISMATCH = "BIZPERM_REORDER_IDS_MISMATCH";
+    public static final String SCOPE_NOT_SUPPORTED = "BIZPERM_SCOPE_NOT_SUPPORTED";
+    public static final String USER_NOT_FOUND = "USER_NOT_FOUND";
 }
