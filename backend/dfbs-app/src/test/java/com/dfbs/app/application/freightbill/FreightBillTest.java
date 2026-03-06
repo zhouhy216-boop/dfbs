@@ -44,13 +44,15 @@ class FreightBillTest {
                 "收货", "13900000000", false, "地址", null
         );
         ShipmentEntity s = shipmentService.createNormal(req, operatorId);
-        shipmentService.accept(s.getId(), operatorId);
+        shipmentService.accept(s.getId(), operatorId, null);
         shipmentService.updateMachineIds(s.getId(), List.of(new MachineEntryDto("Model-A", "A01", null, 2, null)));
         ShipActionRequest shipReq = new ShipActionRequest(
                 "正常发货", LocalDate.now(), 2, "Model-A", true,
                 "提货", "13800000000", false, "提货地址",
                 "收货", "13900000000", false, "地址", carrier,
-                "https://example.com/pick-ticket.pdf"
+                "https://example.com/pick-ticket.pdf",
+                "LOG-FB",
+                null
         );
         shipmentService.ship(s.getId(), operatorId, shipReq);
         return s.getId();

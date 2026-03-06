@@ -21,7 +21,7 @@ public class TestDataCleanerExecuteService {
             Map.entry("dashboard", List.of()),
             Map.entry("quotes", List.of("quote_item", "quote_payment", "quote_workflow_history",
                     "quote_void_request", "quote_void_application", "quote_collector_history", "quote_version", "quote")),
-            Map.entry("shipments", List.of("shipment_machine", "shipment")),
+            Map.entry("shipments", List.of("shipment_exception_record", "shipment_machine", "shipment")),
             Map.entry("after-sales", List.of("after_sales")),
             Map.entry("work-orders", List.of("work_order_record", "work_order_part", "work_order")),
             Map.entry("finance", List.of("invoice_item_ref", "invoice_record", "invoice_application",

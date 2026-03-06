@@ -14,11 +14,14 @@ import {
   Select,
   message,
   Space,
+  Tooltip,
 } from 'antd';
 import { ArrowLeftOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import request from '@/shared/utils/request';
 import { useAuthStore } from '@/shared/stores/useAuthStore';
 import { useEffectivePermissions } from '@/shared/hooks/useEffectivePermissions';
+import { useSimulatedRoleStore } from '@/shared/stores/useSimulatedRoleStore';
+import { isWorkOrderActionAllowedForSimulatedRole } from '@/shared/config/roleToUiGatingMatrix';
 import dayjs from 'dayjs';
 
 interface WorkOrder {
@@ -97,11 +100,15 @@ function showError(e: unknown) {
   message.error(err?.response?.data?.message ?? err?.message ?? '操作失败');
 }
 
+const SIMULATOR_DISABLED_TOOLTIP = '该角色不可操作';
+
 export default function WorkOrderInternalDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const userInfo = useAuthStore((s) => s.userInfo);
   const { has } = useEffectivePermissions();
+  const simulatedRole = useSimulatedRoleStore((s) => s.simulatedRole);
+  const simulatorDisable = !isWorkOrderActionAllowedForSimulatedRole(simulatedRole);
   const [detail, setDetail] = useState<WorkOrderDetailDto | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -312,14 +319,30 @@ export default function WorkOrderInternalDetail() {
         extra={
           <Space wrap>
             {canDispatch && has('work_order:ASSIGN') && (
-              <Button type="primary" onClick={() => setDispatchOpen(true)}>
-                派单
-              </Button>
+              simulatorDisable ? (
+                <Tooltip title={SIMULATOR_DISABLED_TOOLTIP}>
+                  <span style={{ display: 'inline-block' }}>
+                    <Button type="primary" disabled>派单</Button>
+                  </span>
+                </Tooltip>
+              ) : (
+                <Button type="primary" onClick={() => setDispatchOpen(true)}>
+                  派单
+                </Button>
+              )
             )}
             {canAccept && has('work_order:SUBMIT') && (
-              <Button type="primary" onClick={handleAccept} loading={submitting}>
-                接单
-              </Button>
+              simulatorDisable ? (
+                <Tooltip title={SIMULATOR_DISABLED_TOOLTIP}>
+                  <span style={{ display: 'inline-block' }}>
+                    <Button type="primary" disabled>接单</Button>
+                  </span>
+                </Tooltip>
+              ) : (
+                <Button type="primary" onClick={handleAccept} loading={submitting}>
+                  接单
+                </Button>
+              )
             )}
             {canStart && has('work_order:EDIT') && (
               <Button type="primary" onClick={() => setRecordOpen(true)}>

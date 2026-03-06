@@ -1,6 +1,7 @@
 package com.dfbs.app.interfaces.shipment;
 
 import com.dfbs.app.application.carrier.CarrierService;
+import com.dfbs.app.application.perm.PermEnforcementService;
 import com.dfbs.app.application.shipment.*;
 import com.dfbs.app.modules.carrier.CarrierEntity;
 import com.dfbs.app.modules.shipment.ShipmentEntity;
@@ -15,22 +16,38 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Tag(name = "Shipment", description = "Shipment (发货) create, parse, export")
 @RestController
 @RequestMapping("/api/v1/shipments")
 public class ShipmentController {
 
+    /** Permission keys for shipment list/detail/workflow and step actions (follows shipment.shipments:ACTION). */
+    public static final String PERM_VIEW = "shipment.shipments:VIEW";
+    public static final String PERM_ACCEPT = "shipment.shipments:ACCEPT";
+    public static final String PERM_PREPARE = "shipment.shipments:PREPARE";
+    public static final String PERM_SHIP = "shipment.shipments:SHIP";
+    public static final String PERM_TRACKING = "shipment.shipments:TRACKING";
+    public static final String PERM_COMPLETE = "shipment.shipments:COMPLETE";
+    public static final String PERM_EXCEPTION = "shipment.shipments:EXCEPTION";
+    public static final String PERM_CANCEL = "shipment.shipments:CANCEL";
+    public static final String PERM_CLOSE = "shipment.shipments:CLOSE";
+
     private final ShipmentService shipmentService;
     private final ShipmentTypeService shipmentTypeService;
     private final CarrierService carrierService;
+    private final PermEnforcementService permEnforcement;
 
     public ShipmentController(ShipmentService shipmentService,
                                ShipmentTypeService shipmentTypeService,
-                               CarrierService carrierService) {
+                               CarrierService carrierService,
+                               PermEnforcementService permEnforcement) {
         this.shipmentService = shipmentService;
         this.shipmentTypeService = shipmentTypeService;
         this.carrierService = carrierService;
+        this.permEnforcement = permEnforcement;
     }
 
     @Operation(summary = "Create standalone shipment", description = "Creates a shipment from customerId and type (STANDARD/EXPRESS)")
@@ -132,13 +149,43 @@ public class ShipmentController {
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size
     ) {
+        permEnforcement.requirePermission(PERM_VIEW);
         ShipmentFilterRequest filter = new ShipmentFilterRequest(status, quoteId, initiatorId, page, size);
         return shipmentService.listWithCustomerName(filter);
     }
 
     @GetMapping("/{id}")
     public ShipmentEntity getDetail(@PathVariable Long id) {
+        permEnforcement.requirePermission(PERM_VIEW);
         return shipmentService.getDetail(id);
+    }
+
+    @Operation(summary = "Workflow state and next actions", description = "Current step (from status) + available actions aligned with transition require() rules; actions filtered by user permission")
+    @GetMapping("/{id}/workflow")
+    public ShipmentWorkflowDto getWorkflow(@PathVariable Long id) {
+        permEnforcement.requirePermission(PERM_VIEW);
+        ShipmentWorkflowDto dto = shipmentService.getWorkflow(id);
+        Set<String> keys = permEnforcement.getEffectiveKeysForCurrentUser();
+        List<WorkflowActionDto> filtered = dto.actions().stream()
+                .filter(a -> hasPermissionForAction(a.actionCode(), keys))
+                .collect(Collectors.toList());
+        return new ShipmentWorkflowDto(dto.shipmentId(), dto.status(), dto.stepCode(), dto.stepLabelCn(), filtered);
+    }
+
+    private static boolean hasPermissionForAction(String actionCode, Set<String> effectiveKeys) {
+        if (actionCode == null || actionCode.isBlank()) return false;
+        String key = switch (actionCode.trim()) {
+            case "ACCEPT" -> PERM_ACCEPT;
+            case "PREPARE" -> PERM_PREPARE;
+            case "SHIP" -> PERM_SHIP;
+            case "TRACKING" -> PERM_TRACKING;
+            case "COMPLETE" -> PERM_COMPLETE;
+            case "EXCEPTION" -> PERM_EXCEPTION;
+            case "CANCEL" -> PERM_CANCEL;
+            case "CLOSE" -> PERM_CLOSE;
+            default -> null;
+        };
+        return key != null && effectiveKeys.contains(key);
     }
 
     @Operation(summary = "List machines for shipment", description = "For after-sales machine selector")
@@ -147,36 +194,72 @@ public class ShipmentController {
         return shipmentService.getMachines(id);
     }
 
+    @Operation(summary = "List exception records for shipment", description = "Optional machineId filter; requires VIEW")
+    @GetMapping("/{id}/exceptions")
+    public List<ExceptionRecordDto> getExceptions(@PathVariable Long id,
+                                                  @RequestParam(required = false) Long machineId) {
+        permEnforcement.requirePermission(PERM_VIEW);
+        return shipmentService.listExceptionRecords(id, machineId);
+    }
+
     @PostMapping("/{id}/accept")
-    public ShipmentEntity accept(@PathVariable Long id, @RequestParam Long operatorId) {
-        return shipmentService.accept(id, operatorId);
+    public ShipmentEntity accept(@PathVariable Long id,
+                                 @RequestParam Long operatorId,
+                                 @RequestBody(required = false) AcceptSupplementRequest supplement) {
+        permEnforcement.requirePermission(PERM_ACCEPT);
+        return shipmentService.accept(id, operatorId, supplement);
+    }
+
+    @PostMapping("/{id}/prepare")
+    public ShipmentEntity prepare(@PathVariable Long id,
+                                  @RequestParam Long operatorId,
+                                  @RequestBody(required = false) PrepareRequest req) {
+        permEnforcement.requirePermission(PERM_PREPARE);
+        return shipmentService.prepare(id, operatorId, req);
     }
 
     @PostMapping("/{id}/ship")
     public ShipmentEntity ship(@PathVariable Long id,
                                @RequestParam Long operatorId,
                                @RequestBody ShipActionRequest req) {
+        permEnforcement.requirePermission(PERM_SHIP);
         return shipmentService.ship(id, operatorId, req);
     }
 
     @PostMapping("/{id}/complete")
     public ShipmentEntity complete(@PathVariable Long id, @RequestParam Long operatorId) {
+        permEnforcement.requirePermission(PERM_COMPLETE);
         return shipmentService.complete(id, operatorId);
+    }
+
+    @PostMapping("/{id}/tracking")
+    public ShipmentEntity tracking(@PathVariable Long id,
+                                   @RequestParam Long operatorId,
+                                   @RequestBody(required = false) TrackingRequest req) {
+        permEnforcement.requirePermission(PERM_TRACKING);
+        return shipmentService.tracking(id, operatorId, req);
     }
 
     @PostMapping("/{id}/exception")
     public ShipmentEntity exception(@PathVariable Long id,
                                     @RequestParam Long operatorId,
-                                    @RequestBody ReasonRequest req) {
-        return shipmentService.handleException(id, operatorId, req.reason());
+                                    @RequestBody ExceptionMarkRequest req) {
+        permEnforcement.requirePermission(PERM_EXCEPTION);
+        return shipmentService.handleException(id, operatorId, req);
     }
 
     @PostMapping("/{id}/cancel")
     public ShipmentEntity cancel(@PathVariable Long id,
                                  @RequestParam(required = false) Long operatorId,
                                  @RequestBody ReasonRequest req) {
-        // operatorId is accepted for symmetry with other endpoints; current cancel logic does not use it.
+        permEnforcement.requirePermission(PERM_CANCEL);
         return shipmentService.cancel(id, req.reason());
+    }
+
+    @PostMapping("/{id}/close")
+    public ShipmentEntity close(@PathVariable Long id, @RequestParam Long operatorId) {
+        permEnforcement.requirePermission(PERM_CLOSE);
+        return shipmentService.close(id, operatorId);
     }
 
     public record CreateFromQuoteRequest(

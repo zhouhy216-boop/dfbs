@@ -52,7 +52,7 @@ class DamageRecordTest {
                 "收货", "13900000000", false, "地址", null
         );
         ShipmentEntity s = shipmentService.createNormal(req, operatorId);
-        shipmentService.accept(s.getId(), operatorId);
+        shipmentService.accept(s.getId(), operatorId, null);
         List<MachineEntryDto> entries = List.of(
                 new MachineEntryDto("M1", "SN01", null, 2, null)
         );

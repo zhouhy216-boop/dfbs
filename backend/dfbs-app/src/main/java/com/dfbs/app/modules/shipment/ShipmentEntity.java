@@ -134,6 +134,9 @@ public class ShipmentEntity {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    @Column(name = "closed_at")
+    private LocalDateTime closedAt;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 

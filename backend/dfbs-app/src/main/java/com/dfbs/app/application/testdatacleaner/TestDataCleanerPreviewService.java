@@ -30,7 +30,7 @@ public class TestDataCleanerPreviewService {
             Map.entry("dashboard", List.of()),
             Map.entry("quotes", List.of("quote", "quote_item", "quote_version", "quote_workflow_history",
                     "quote_payment", "quote_collector_history", "quote_void_request", "quote_void_application")),
-            Map.entry("shipments", List.of("shipment", "shipment_machine")),
+            Map.entry("shipments", List.of("shipment", "shipment_machine", "shipment_exception_record")),
             Map.entry("after-sales", List.of("after_sales")),
             Map.entry("work-orders", List.of("work_order", "work_order_record", "work_order_part")),
             Map.entry("finance", List.of("payment", "payment_allocation", "account_statement", "account_statement_item",

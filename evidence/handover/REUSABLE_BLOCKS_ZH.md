@@ -1,149 +1,190 @@
-# 可复用轮子清单（业务视角）
+# REUSABLE_BLOCKS_ZH — 可复用模块一览（中文）
 
-- **As-of:** 2026-02-09 14:00
+- **As-of:** 2025-02-24 20:00
 - **Repo:** main
-- **Commit:** 1df603c5
-- **Verification method:** 与 REUSABLE_BLOCKS.md 对应；使用位置仅用页面/流程描述，不含代码路径。
+- **Commit:** 983df8e7
+- **Verification method:** Grep imports/usages in `frontend/dfbs-ui/src` for component and hook names.
 
-**Facts only.** 与 `REUSABLE_BLOCKS.md` 对应。使用位置仅用页面/流程描述，不含代码路径。组件名与位置指针保留。
-
----
-
-## 1. SmartInput（智能输入框）
-
-- **作用：** 带失焦自动清洗的输入框（去空格、仅保留字母、转大写等），并触发表单校验。
-- **位置：** `shared/components/SmartInput/index.tsx`
-- **目前使用位置：** 平台申请页面的新增/营企确认/管理员审核表单（联系人、手机号、邮箱、合同号、机构代码）；平台机构页面的表单（机构代码、联系电话、联系邮箱）。
-- **用户可见表现：** 失焦后自动按规则清洗内容并立即看到校验结果。
+**仅事实。** 路径均在 `frontend/dfbs-ui/src/` 下。用途以页面/流程描述，不列代码路径。
 
 ---
 
-## 2. SmartReferenceSelect（主数据引用选择框）
+## 1. SmartInput
 
-- **作用：** 从后台按实体类型（客户、合同等）拉取选项并支持搜索、选择，用于表单中引用主数据。
-- **位置：** `shared/components/SmartReferenceSelect/index.tsx`
-- **目前使用位置：** 平台申请页面的客户与合同选择；平台机构页面的机构/客户引用；工单（对外报修、内部工单）中的主数据选择；管理员确认中心的主数据选择。
-- **用户可见表现：** 用户通过下拉搜索选择已有客户、合同等主数据。
-
----
-
-## 3. DuplicateCheckModal（重复提醒弹窗）
-
-- **作用：** 展示重复命中列表的弹窗，支持自定义底部按钮（如「返回编辑」「确认新增」「我要开卡」）。
-- **位置：** `features/platform/components/DuplicateCheckModal/index.tsx`
-- **目前使用位置：** 平台申请的新增或营企确认流程中触发重复检查后；平台机构的新增/编辑流程中触发重复检查后。
-- **用户可见表现：** 用户看到命中记录列表，可选择返回编辑、确认继续新增或跳转开卡流程。
+- **用途：** 输入框，失焦时自动整理（去空格、仅字母、大写等），与表单联动。
+- **位置：** `shared/components/SmartInput/index.tsx`。
+- **使用场景：** 平台申请页（联系人、电话、邮箱、合同号、组织代码等）；平台组织页（组织代码、联系电话、邮箱）。
 
 ---
 
-## 4. HitAnalysisPanel（重复命中分析面板）
+## 2. SmartReferenceSelect
 
-- **作用：** 调用重复检查接口并展示命中列表（客户/电话/邮箱/机构等），可为重复提醒弹窗提供数据。
-- **位置：** `features/platform/components/HitAnalysisPanel/index.tsx`
-- **目前使用位置：** 平台申请管理员审核弹窗右侧的命中分析区域；平台机构页面的重复检查面板；重复提醒弹窗所展示的命中数据也来源于此。
-- **用户可见表现：** 用户或管理员能看到重复命中分析，据此决定下一步操作。
-
----
-
-## 5. validators（校验规则：手机/邮箱/合同号/机构代码）
-
-- **作用：** 统一管理手机号、邮箱、合同号、机构代码等字段的格式与必填校验规则（含按平台区分机构代码大写规则）。
-- **位置：** `features/platform/utils/validators.ts`
-- **目前使用位置：** 平台申请页面的表单；平台机构页面的表单。
-- **用户可见表现：** 用户在这些字段上看到统一的校验提示和允许的格式说明。
+- **用途：** 从后端智能选择接口按实体类型加载选项的下拉框，支持搜索与表单联动。
+- **位置：** `shared/components/SmartReferenceSelect/index.tsx`。
+- **使用场景：** 平台申请（客户、合同）；平台组织（组织/客户引用）；工单对外报修；工单对内；数据确认中心。
 
 ---
 
-## 6. request（请求与登录态）
+## 3. DuplicateCheckModal
 
-- **作用：** 所有前端请求走统一入口、带登录态；未登录或登录失效时自动跳转登录页。
-- **位置：** `shared/utils/request.ts`
-- **目前使用位置：** 登录页、客户、报价、运单、财务、售后、工单、仓库、导入中心、主数据各页、平台申请与机构、管理员确认中心、平台配置、组织架构相关页等所有调用后端的页面与能力。
-- **用户可见表现：** 未登录或会话过期时会被重定向到登录页；正常使用时请求均带登录态。
-
----
-
-## 7. adapters（分页数据转换）
-
-- **作用：** 将后端分页结果转换成列表页所需格式，供表格展示。
-- **位置：** `shared/utils/adapters.ts`
-- **目前使用位置：** 售后列表、客户列表、报价列表、运单列表、财务列表、主数据（合同、机型、型号配件、设备、Sim 卡、备件）列表及部分详情、平台机构列表。
-- **用户可见表现：** 上述列表页的表格能正确分页展示数据。
+- **用途：** 展示重复检查结果的弹窗，可自定义底部按钮（如返回编辑、确认新增、我要开卡）。
+- **位置：** `features/platform/components/DuplicateCheckModal/index.tsx`。
+- **使用场景：** 平台申请（创建/规划人提交前重复检查后）；平台组织（重复检查后）。
 
 ---
 
-## 8. AttachmentList（附件列表）
+## 4. HitAnalysisPanel
 
-- **作用：** 展示并管理附件列表（上传、列表、删除），用于支持附件的业务对象。
-- **位置：** `shared/components/AttachmentList.tsx`
-- **目前使用位置：** 报价页面的附件区域；运单页面的附件区域。
-- **用户可见表现：** 用户可在报价、运单上查看和上传附件。
-
----
-
-## 9. useAuthStore（登录态）
-
-- **作用：** 存放并同步登录态（token、用户信息），供布局、登录、登出与权限展示使用。
-- **位置：** `shared/stores/useAuthStore.ts`
-- **目前使用位置：** 登录页（登录动作）；整体布局（登录态、登出、用户信息）；内部工单详情页（用户信息）；权限控制展示。
-- **用户可见表现：** 登录后整站可用、登出后跳转登录；需要权限的地方按当前用户显示或隐藏。
+- **用途：** 调用重复检查接口并展示命中列表（客户/电话/邮箱/组织），可配合 DuplicateCheckModal。
+- **位置：** `features/platform/components/HitAnalysisPanel/index.tsx`。
+- **使用场景：** 平台申请（管理员弹窗右侧命中分析）；平台组织（重复检查面板）。
 
 ---
 
-## 10. platformConfig service（平台配置）
+## 5. validators（PhoneRule、EmailRule、ContractRule、OrgCodeRule 等）
 
-- **作用：** 拉取并缓存平台配置（选项、校验规则等），供页面展示与校验使用。
-- **位置：** `features/platform/services/platformConfig.ts`
-- **目前使用位置：** 平台申请页面（平台下拉与校验）；平台机构页面（平台下拉与校验）；系统-平台配置页（平台配置的维护与展示）。
-- **用户可见表现：** 平台申请与机构页显示平台选项及按平台区分的校验；系统-平台配置页可维护配置。
-
----
-
-## 11. Access（权限控制）
-
-- **作用：** 按权限决定是否展示子内容；提供 useAccess(permission) 钩子。
-- **位置：** `shared/components/Access.tsx`
-- **目前使用位置：** 与登录态/权限相关的展示逻辑。具体页面列表：Not verified。
-- **用户可见表现：** 有权限时展示内容，无权限时展示 fallback 或不展示。
+- **用途：** 统一校验规则（电话、邮箱、合同号、组织代码等），供表单使用。
+- **位置：** `features/platform/utils/validators.ts`。
+- **使用场景：** 平台申请；平台组织。
 
 ---
 
-## 12. TypeToConfirmModal（输入确认弹窗）
+## 6. request（axios 实例与 token 工具）
 
-- **作用：** 执行危险操作前要求用户输入确认文案，输入正确后才执行。
-- **位置：** `shared/components/TypeToConfirmModal/index.tsx`
-- **目前使用位置：** 层级配置页（重置/恢复默认等确认）；组织架构页（禁用、移动、删除节点等确认）；变更记录页（某操作确认）。
-- **用户可见表现：** 用户在进行重置、禁用、移动、删除等操作时需输入指定文案才能继续。
-
----
-
-## 13. SuperAdminGuard（超管守卫）
-
-- **作用：** 仅超管可访问的页面/菜单；非超管不展示入口或访问时被拦截。
-- **位置：** `shared/components/SuperAdminGuard.tsx`
-- **目前使用位置：** 系统菜单下仅超管可见的三个入口：层级配置、组织架构、变更记录；上述三个页面的路由由该守卫包裹。
-- **用户可见表现：** 只有超级管理员能看到并进入层级配置、组织架构、变更记录页面。
+- **用途：** 统一请求实例（baseURL /api）、从本地存储取 Bearer token、401 时清 token 并跳转登录；对字典只读接口请求附加 Cache-Control: no-cache。
+- **位置：** `shared/utils/request.ts`。
+- **使用场景：** 所有调用后端的页面与服务（客户、报价、发货、财务、售后、工单、仓储、导入、主数据、平台、系统/字典、登录等）。
 
 ---
 
-## 14. OrgTreeSelect（组织树选择）
+## 7. adapters（toProTableResult、SpringPage）
 
-- **作用：** 在组织树中选择一个节点，用于筛选或关联组织。
-- **位置：** `features/orgstructure/components/OrgTreeSelect.tsx`
-- **目前使用位置：** 变更记录页：按组织节点筛选变更记录。
-- **用户可见表现：** 用户在变更记录页通过选择组织节点查看该节点下的变更。
+- **用途：** 将 Spring 分页结果转成 ProTable 所需格式（data、total、success）。
+- **位置：** `shared/utils/adapters.ts`。
+- **使用场景：** 运输异常、客户、报价、发货、财务、主数据（合同、机器型号、型号BOM、机器、SIM卡、零部件）、平台组织等列表页。
 
 ---
 
-## 15. OrgPersonSelect（组织人员选择）
+## 8. AttachmentList
 
-- **作用：** 在组织架构下选择人员，用于负责人、经办人等关联。
-- **位置：** `features/orgstructure/components/OrgPersonSelect.tsx`
-- **目前使用位置：** 组织架构页：为节点选择负责人或关联人员时使用。
-- **用户可见表现：** 用户在组织架构页为节点选择或更换负责人/人员。
+- **用途：** 附件列表的展示与操作（上传、列表、删除），用于支持附件的业务实体。
+- **位置：** `shared/components/AttachmentList.tsx`。
+- **使用场景：** 报价单页；发货页。
+
+---
+
+## 9. useEffectivePermissions
+
+- **用途：** 获取当前用户有效权限键（调用 GET /api/v1/perm/me/effective-keys），用于按钮与路由的权限控制。
+- **位置：** `shared/hooks/useEffectivePermissions.ts`。
+- **使用场景：** 发货页（无 VIEW 不可进页、可执行操作按钮按权限过滤）；其他按权限键控制入口的页面。
+
+---
+
+## 10. useAuthStore
+
+- **用途：** 登录态（token、用户信息）的 Zustand 仓库，与 request 的 token 读写一致。
+- **位置：** `shared/stores/useAuthStore.ts`。
+- **使用场景：** 登录页；整体布局（头像、退出）；工单详情；权限控制组件 Access。
+
+---
+
+## 11. platformConfig 服务
+
+- **用途：** 拉取平台配置（选项、校验规则），供平台下拉与校验使用。
+- **位置：** `features/platform/services/platformConfig.ts`。
+- **使用场景：** 平台申请；平台组织；系统「平台配置」页。
+
+---
+
+## 12. Access
+
+- **用途：** 按权限控制子内容展示，无权限时显示 fallback；配合 useAccess(permission)。
+- **位置：** `shared/components/Access.tsx`。
+- **使用场景：** 用于按权限控制 UI。具体页面列表：未逐项核对。
+
+---
+
+## 13. TypeToConfirmModal
+
+- **用途：** 需用户输入指定确认文案后才执行危险操作的弹窗。
+- **位置：** `shared/components/TypeToConfirmModal/index.tsx`。
+- **使用场景：** 系统「层级配置」重置确认；「组织架构」禁用/移动/删除确认；「变更记录」确认操作。
+
+---
+
+## 14. SuperAdminGuard
+
+- **用途：** 仅超管可访问的子路由或内容，否则重定向或隐藏。
+- **位置：** `shared/components/SuperAdminGuard.tsx`。
+- **使用场景：** 路由：数据字典、层级配置、组织架构、变更记录、字典类型、字典项管理、状态流(迁移规则)、历史显示示例；侧栏中上述菜单项通过 useIsSuperAdmin() 控制显示。
+
+---
+
+## 15. PermSuperAdminGuard、AdminOrSuperAdminGuard、PlatformViewGuard、WorkOrderViewGuard
+
+- **用途：** 路由守卫：角色与权限（Perm 白名单）；账号与权限（管理员或超管）；平台管理/申请管理（按权限）；工单管理（work_order:VIEW）。
+- **位置：** `shared/components/` 下对应 Guard 组件。
+- **使用场景：** 角色与权限页；账号与权限页；平台管理、申请管理；工单列表与工单详情。
+
+---
+
+## 16. TestDataCleanerModal
+
+- **用途：** 测试数据清理器弹窗（预览/执行），仅超管可见。
+- **位置：** `shared/components/TestDataCleaner/Modal.tsx`。
+- **使用场景：** 布局右上角「测试数据清理器」链接（仅超管显示）。
+
+---
+
+## 17. OrgTreeSelect
+
+- **用途：** 从组织树中选择组织节点。
+- **位置：** `features/orgstructure/components/OrgTreeSelect.tsx`。
+- **使用场景：** 系统「变更记录」按组织节点筛选。
+
+---
+
+## 18. OrgPersonSelect
+
+- **用途：** 从组织架构中选择人员。
+- **位置：** `features/orgstructure/components/OrgPersonSelect.tsx`。
+- **使用场景：** 系统「组织架构」中为节点分配人员等。
+
+---
+
+## 19. useDictionaryItems
+
+- **用途：** 按字典类型编码拉取字典项；每次 reload() 都会发请求；可传是否含禁用、父级、搜索等参数。
+- **位置：** `features/dicttype/hooks/useDictionaryItems.ts`。
+- **使用场景：** 系统「字典类型」页的读取示例折叠面板。
+
+---
+
+## 20. getDictionaryItems
+
+- **用途：** 按字典类型编码拉取字典项（只读接口，无需登录）。
+- **位置：** `features/dicttype/services/dictRead.ts`。
+- **使用场景：** 字典类型页读取示例；历史显示示例页；报价单页费用类型下拉。
+
+---
+
+## 21. getTransitionsRead、listTransitionsAdmin、upsertTransitionsAdmin
+
+- **用途：** getTransitionsRead：业务侧只读「允许的状态迁移」；listTransitionsAdmin/upsertTransitionsAdmin：超管维护某类型的迁移规则（列表与批量保存）。
+- **位置：** `features/dicttype/services/dictTransition.ts`。
+- **使用场景：** 状态流(迁移规则)页：底部「业务读取预览」用 getTransitionsRead；列表加载与保存用 listTransitionsAdmin、upsertTransitionsAdmin。
+
+---
+
+## 22. useSimulatedRoleStore、roleToUiGatingMatrix
+
+- **用途：** 仅界面层面的角色模拟：顶栏下拉选中的模拟角色存入 store；矩阵与辅助函数负责左侧菜单与各页操作按钮按模拟角色显隐/禁用及 tooltip「该角色不可操作」。
+- **位置：** `shared/stores/useSimulatedRoleStore.ts`；`shared/config/roleToUiGatingMatrix.ts`。
+- **使用场景：** 顶栏（模拟角色下拉、角标、免责说明、角色-界面矩阵查看）；发货列表页（可执行操作按钮）；工单管理列表与详情（新建工单、受理、派单、驳回、接单）；平台管理页（销售申请、服务申请、营企申请、新建机构、编辑、删除）；申请管理页（通过、驳回、提交至管理员、关闭申请）。
 
 ---
 
 ## Not verified
 
-- Access 组件：具体使用该组件做权限控制的页面列表未逐一核实。
+- Access 组件：具体哪些页面用其做权限控制未逐项枚举。

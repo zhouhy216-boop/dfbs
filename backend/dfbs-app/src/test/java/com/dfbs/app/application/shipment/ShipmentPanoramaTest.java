@@ -98,7 +98,7 @@ class ShipmentPanoramaTest {
         assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.CREATED);
         assertThat(shipment.getContractNo()).isEqualTo("CONTRACT-001");
 
-        shipment = shipmentService.accept(shipment.getId(), operatorId);
+        shipment = shipmentService.accept(shipment.getId(), operatorId, null);
         assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.PENDING_SHIP);
 
         List<MachineEntryDto> machineEntries = List.of(
@@ -125,17 +125,13 @@ class ShipmentPanoramaTest {
                 false,
                 "北京市朝阳区某某路1号",
                 "承运方A",
-                "https://example.com/pick-ticket.pdf"
+                "https://example.com/pick-ticket.pdf",
+                "LOG-PANORAMA",
+                null
         );
         shipment = shipmentService.ship(shipment.getId(), operatorId, shipReq);
         assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.SHIPPED);
 
-        Long shipmentIdForComplete = shipment.getId();
-        assertThatThrownBy(() -> shipmentService.complete(shipmentIdForComplete, operatorId))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Missing required attachment");
-
-        shipmentService.setReceiptUrl(shipment.getId(), "https://example.com/receipt.jpg");
         shipment = shipmentService.complete(shipment.getId(), operatorId);
         assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.COMPLETED);
     }
@@ -170,12 +166,14 @@ class ShipmentPanoramaTest {
         assertThat(shipment.getQuoteId()).isEqualTo(quoteId);
         assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.CREATED);
 
-        shipment = shipmentService.accept(shipment.getId(), assigneeId);
+        shipment = shipmentService.accept(shipment.getId(), assigneeId, null);
         ShipActionRequest shipReq = new ShipActionRequest(
                 null, null, null, null, null,
                 null, null, null, null,
                 null, null, null, null,
                 "承运方B",
+                null,
+                "LOG-ENTRUST",
                 null
         );
         shipment = shipmentService.ship(shipment.getId(), assigneeId, shipReq);
@@ -212,7 +210,7 @@ class ShipmentPanoramaTest {
                 "收货", "13900003333", false, "地址", null
         );
         ShipmentEntity shipment = shipmentService.createNormal(createReq, operatorId);
-        shipment = shipmentService.accept(shipment.getId(), operatorId);
+        shipment = shipmentService.accept(shipment.getId(), operatorId, null);
 
         List<MachineEntryDto> entries = List.of(
                 new MachineEntryDto("M1", "SN01", null, 3, null)

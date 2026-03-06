@@ -20,7 +20,9 @@ public record ShipActionRequest(
         Boolean needUnloading,
         String deliveryAddress,
         String carrier,
-        String ticketUrl
+        String ticketUrl,
+        String logisticsNo,
+        String receiptUrl
 ) {
 }
 

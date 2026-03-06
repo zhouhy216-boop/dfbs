@@ -75,6 +75,11 @@ request.interceptors.request.use((config) => {
   if (userId) {
     config.headers['X-User-Id'] = userId;
   }
+  // Dictionary read APIs: request no-cache so responses reflect admin changes immediately.
+  const url = config.url ?? '';
+  if (config.method?.toLowerCase() === 'get' && url.includes('/v1/dictionaries/') && (url.includes('/items') || url.includes('/transitions'))) {
+    config.headers['Cache-Control'] = 'no-cache';
+  }
   return config;
 });
 

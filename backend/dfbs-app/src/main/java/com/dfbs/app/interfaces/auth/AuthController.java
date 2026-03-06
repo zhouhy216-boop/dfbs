@@ -1,11 +1,13 @@
 package com.dfbs.app.interfaces.auth;
 
 import com.dfbs.app.application.account.DefaultPasswordService;
+import com.dfbs.app.config.CurrentUserProvider;
 import com.dfbs.app.modules.user.UserEntity;
 import com.dfbs.app.modules.user.UserRepo;
 import lombok.Data;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,11 +29,36 @@ public class AuthController {
     private final UserRepo userRepo;
     private final PasswordEncoder passwordEncoder;
     private final DefaultPasswordService defaultPasswordService;
+    private final CurrentUserProvider currentUserProvider;
 
-    public AuthController(UserRepo userRepo, PasswordEncoder passwordEncoder, DefaultPasswordService defaultPasswordService) {
+    public AuthController(UserRepo userRepo, PasswordEncoder passwordEncoder, DefaultPasswordService defaultPasswordService,
+                         CurrentUserProvider currentUserProvider) {
         this.userRepo = userRepo;
         this.passwordEncoder = passwordEncoder;
         this.defaultPasswordService = defaultPasswordService;
+        this.currentUserProvider = currentUserProvider;
+    }
+
+    /** GET /api/auth/me — return current user (id, username, nickname, roles) from X-User-Id. Used by frontend to refresh userInfo after load/restart. */
+    @GetMapping("/me")
+    public UserInfo me() {
+        String userIdStr = currentUserProvider.getCurrentUser();
+        if (userIdStr == null || userIdStr.isBlank() || "system".equals(userIdStr)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+        Long userId;
+        try {
+            userId = Long.parseLong(userIdStr.trim());
+        } catch (NumberFormatException e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid user id");
+        }
+        UserEntity user = userRepo.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+        if (Boolean.FALSE.equals(user.getEnabled())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account disabled");
+        }
+        List<String> roles = parseAuthorities(user.getAuthorities());
+        return new UserInfo(user.getId(), user.getUsername(), user.getNickname(), roles);
     }
 
     @PostMapping("/login")

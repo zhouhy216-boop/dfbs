@@ -178,17 +178,17 @@ class AttachmentRuleTest {
     }
 
     /**
-     * Test 5 (Integration - Shipment): Ship Normal without ticketUrl -> Fail. Complete Normal without receiptUrl -> Fail.
+     * Test 5 (Integration - Shipment): Ship Normal without ticketUrl -> Fail. Complete Normal without receiptUrl -> allowed (v1 receiptUrl optional).
      */
     @Test
-    void test5_integration_shipment_shipNormalWithoutTicket_fail_completeWithoutReceipt_fail() {
+    void test5_integration_shipment_shipNormalWithoutTicket_fail_completeWithoutReceipt_allowed() {
         NormalShipmentCreateRequest createReq = new NormalShipmentCreateRequest(
                 "FB-C", "销售", PackagingType.A,
                 "收货", "13900000000", false, "地址", null
         );
         ShipmentEntity shipment = shipmentService.createNormal(createReq, operatorId);
         Long shipmentId = shipment.getId();
-        shipmentService.accept(shipmentId, operatorId);
+        shipmentService.accept(shipmentId, operatorId, null);
         shipmentService.updateMachineIds(shipmentId, List.of(
                 new MachineEntryDto("Model-A", "A01", null, 1, null)));
 
@@ -196,7 +196,9 @@ class AttachmentRuleTest {
                 "事项", LocalDate.now(), 1, "Model-A", true,
                 "提货", "13800000000", false, "提货地址",
                 "收货", "13900000000", false, "地址", "Carrier",
-                null   // no ticketUrl
+                null,   // no ticketUrl
+                "LOG-ATT",
+                null
         );
         assertThatThrownBy(() -> shipmentService.ship(shipmentId, operatorId, shipReqNoTicket))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -206,14 +208,15 @@ class AttachmentRuleTest {
                 "事项", LocalDate.now(), 1, "Model-A", true,
                 "提货", "13800000000", false, "提货地址",
                 "收货", "13900000000", false, "地址", "Carrier",
-                "https://example.com/ticket.pdf"
+                "https://example.com/ticket.pdf",
+                "LOG-ATT",
+                null
         );
         shipment = shipmentService.ship(shipmentId, operatorId, shipReqWithTicket);
         assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.SHIPPED);
 
-        assertThatThrownBy(() -> shipmentService.complete(shipmentId, operatorId))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Missing required attachment");
+        shipment = shipmentService.complete(shipmentId, operatorId);
+        assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.COMPLETED);
     }
 
     /**
@@ -236,13 +239,15 @@ class AttachmentRuleTest {
         NormalShipmentCreateRequest createReq = new NormalShipmentCreateRequest(
                 "FB-D", "销售", PackagingType.A, "收货", "13900000000", false, "地址", null);
         ShipmentEntity s = shipmentService.createNormal(createReq, operatorId);
-        shipmentService.accept(s.getId(), operatorId);
+        shipmentService.accept(s.getId(), operatorId, null);
         shipmentService.updateMachineIds(s.getId(), List.of(new MachineEntryDto("M", "SN1", null, 1, null)));
         ShipActionRequest shipReq = new ShipActionRequest(
                 "事项", LocalDate.now(), 1, "M", true,
                 "提货", "13800000000", false, "提货地址",
                 "收货", "13900000000", false, "地址", "Carrier",
-                "https://example.com/ticket.pdf"
+                "https://example.com/ticket.pdf",
+                "LOG-DMG",
+                null
         );
         shipmentService.ship(s.getId(), operatorId, shipReq);
         shipmentIdForDamage = s.getId();

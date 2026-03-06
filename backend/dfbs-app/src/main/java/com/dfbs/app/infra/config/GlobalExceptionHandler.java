@@ -3,6 +3,7 @@ package com.dfbs.app.infra.config;
 import com.dfbs.app.application.dicttype.DictTypeNotFoundException;
 import com.dfbs.app.application.perm.PermForbiddenException;
 import com.dfbs.app.application.quote.QuoteValidationException;
+import com.dfbs.app.application.shipment.ShipmentValidationException;
 import com.dfbs.app.infra.dto.ErrorResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,6 +64,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .body(ErrorResult.of(ex.getMessage(), PermForbiddenException.MACHINE_CODE));
+    }
+
+    @ExceptionHandler(ShipmentValidationException.class)
+    public ResponseEntity<ErrorResult> handleShipmentValidation(ShipmentValidationException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResult.of(ex.getMessage(), ex.getMachineCode()));
     }
 
     @ExceptionHandler(ResponseStatusException.class)

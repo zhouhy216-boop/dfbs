@@ -1,11 +1,11 @@
 # API_SURFACE — REST endpoints by controller
 
-- **As-of:** 2026-02-09 14:00
+- **As-of:** 2025-02-24 20:00
 - **Repo:** main
-- **Commit:** 1df603c5
-- **Verification method:** grep `@RequestMapping`, `@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping`, `@PatchMapping` under `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/`.
+- **Commit:** 983df8e7
+- **Verification method:** Grep of `@RequestMapping`, `@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping`, `@PatchMapping` under `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/` and `HealthController.java`.
 
-**Facts only.** Enumerated from controller classes. Frontend uses `baseURL: '/api'`. Auth/role: Not verified per-endpoint; most protected routes expect Bearer token (see `request.ts`).
+**Facts only.** Enumerated from controller classes. Frontend uses `baseURL: '/api'` (`frontend/dfbs-ui/src/shared/utils/request.ts`). Auth: Bearer token from request interceptor for protected routes; admin dictionary/org/perm routes guarded by SuperAdminGuard or equivalent on frontend; backend may enforce via `SuperAdminGuard.requireSuperAdmin()` (e.g. `DictionaryTypeAdminController`, `DictionaryItemAdminController`, `TestDataCleanerAdminController`). Response schema pointers: DTOs in controller package or `application/` (e.g. `QuoteResponseDto`, `CreateQuoteRequest`).
 
 ---
 
@@ -14,6 +14,7 @@
 | Method | Path |
 |--------|------|
 | POST | /api/auth/login |
+| GET | /api/auth/me |
 
 ---
 
@@ -457,6 +458,8 @@
 
 ## ShipmentController — `interfaces/shipment/ShipmentController.java`
 
+Guarding: list/detail/workflow/exceptions require `shipment.shipments:VIEW`; accept/prepare/ship/complete/tracking/exception/cancel/close require respective `shipment.shipments:*` permission (PermEnforcementService). 403 → PERM_FORBIDDEN.
+
 | Method | Path |
 |--------|------|
 | POST | /api/v1/shipments |
@@ -470,12 +473,17 @@
 | POST | /api/v1/shipments/create-from-quote |
 | GET | /api/v1/shipments |
 | GET | /api/v1/shipments/{id} |
+| GET | /api/v1/shipments/{id}/workflow |
 | GET | /api/v1/shipments/{id}/machines |
+| GET | /api/v1/shipments/{id}/exceptions |
 | POST | /api/v1/shipments/{id}/accept |
+| POST | /api/v1/shipments/{id}/prepare |
 | POST | /api/v1/shipments/{id}/ship |
 | POST | /api/v1/shipments/{id}/complete |
+| POST | /api/v1/shipments/{id}/tracking |
 | POST | /api/v1/shipments/{id}/exception |
 | POST | /api/v1/shipments/{id}/cancel |
+| POST | /api/v1/shipments/{id}/close |
 
 ---
 
@@ -631,6 +639,64 @@
 | GET | /api/v1/dictionary/fee-types |
 | GET | /api/v1/dictionary/fee-types/active |
 | GET | /api/v1/dictionary/units |
+
+---
+
+## DictionaryReadController — `interfaces/dicttype/DictionaryReadController.java`
+
+Read-only; no auth required. Response headers include Cache-Control/Pragma/Expires no-cache for items and transitions.
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/dictionaries/types |
+| GET | /api/v1/dictionaries/{typeCode}/items |
+| GET | /api/v1/dictionaries/{typeCode}/transitions |
+
+Query params: types — includeDisabled, q; items — includeDisabled, parentValue, q; transitions — includeDisabled. Response: DictionaryTypesResponse, DictionaryItemsResponse, TransitionsReadResponse (DTOs in interfaces/dicttype/dto).
+
+---
+
+## DictionaryTypeAdminController — `interfaces/dicttype/DictionaryTypeAdminController.java`
+
+Super-admin guarded (`SuperAdminGuard.requireSuperAdmin()`).
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/admin/dictionary-types |
+| POST | /api/v1/admin/dictionary-types |
+| PUT | /api/v1/admin/dictionary-types/{id} |
+| PATCH | /api/v1/admin/dictionary-types/{id}/enable |
+| PATCH | /api/v1/admin/dictionary-types/{id}/disable |
+| DELETE | /api/v1/admin/dictionary-types/{id} |
+| GET | /api/v1/admin/dictionary-types/{typeId}/items |
+| POST | /api/v1/admin/dictionary-types/{typeId}/items |
+| PATCH | /api/v1/admin/dictionary-types/{typeId}/items/reorder |
+| GET | /api/v1/admin/dictionary-types/{typeId}/transitions |
+| POST | /api/v1/admin/dictionary-types/{typeId}/transitions |
+
+---
+
+## DictionaryItemAdminController — `interfaces/dicttype/DictionaryItemAdminController.java`
+
+Super-admin guarded.
+
+| Method | Path |
+|--------|------|
+| PUT | /api/v1/admin/dictionary-items/{id} |
+| PATCH | /api/v1/admin/dictionary-items/{id}/enable |
+| PATCH | /api/v1/admin/dictionary-items/{id}/disable |
+| DELETE | /api/v1/admin/dictionary-items/{id} |
+
+---
+
+## DictionarySnapshotDemoController — `interfaces/dicttype/DictionarySnapshotDemoController.java`
+
+Super-admin guarded.
+
+| Method | Path |
+|--------|------|
+| POST | /api/v1/admin/dictionary-snapshot-demo/records |
+| GET | /api/v1/admin/dictionary-snapshot-demo/records |
 
 ---
 

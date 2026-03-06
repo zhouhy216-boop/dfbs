@@ -1,9 +1,9 @@
 # REUSABLE_BLOCKS — Inventory of reusable building blocks
 
-- **As-of:** 2026-02-09 14:00
+- **As-of:** 2025-02-24 20:00
 - **Repo:** main
-- **Commit:** 1df603c5
-- **Verification method:** grep imports/usages in `frontend/dfbs-ui/src` for component and service names.
+- **Commit:** 983df8e7
+- **Verification method:** Grep imports/usages in `frontend/dfbs-ui/src` for component and hook names.
 
 **Facts only.** Usage sites from repo. Paths under `frontend/dfbs-ui/src/`.
 
@@ -56,9 +56,9 @@
 
 ## 6. request (axios instance + token helpers)
 
-- **Purpose:** Axios instance with baseURL `/api`, Bearer token from localStorage; 401 clears token and redirects to login.
+- **Purpose:** Axios instance with baseURL `/api`, Bearer token from localStorage; 401 clears token and redirects to login. Adds Cache-Control: no-cache for GET to /v1/dictionaries/.../items and .../transitions.
 - **Location:** `shared/utils/request.ts`.
-- **Usage sites:** Most pages and services that call the backend (Customer, Quote, Shipment, Finance, AfterSales, WorkOrder, Warehouse, ImportCenter, MasterData/*, Platform/*, Admin, Login, SmartReferenceSelect, HitAnalysisPanel, platformConfig).
+- **Usage sites:** Most pages and services that call the backend (Customer, Quote, Shipment, Finance, AfterSales, WorkOrder, Warehouse, ImportCenter, MasterData/*, Platform/*, Admin, Login, SmartReferenceSelect, HitAnalysisPanel, platformConfig, dictRead, dictTransition).
 - **Key interface:** Default axios instance; getStoredToken, setStoredToken, clearStoredToken.
 
 ---
@@ -81,7 +81,16 @@
 
 ---
 
-## 9. useAuthStore
+## 9. useEffectivePermissions
+
+- **Purpose:** Hook that loads effective permission keys for current user (GET /api/v1/perm/me/effective-keys); used for button/route gating.
+- **Location:** `shared/hooks/useEffectivePermissions.ts`.
+- **Usage sites:** Shipment page (VIEW gating + action button filter); other pages that gate by permission key.
+- **Key interface:** useEffectivePermissions() → { has(key), loading, ... }.
+
+---
+
+## 10. useAuthStore
 
 - **Purpose:** Zustand store for auth state; token, userInfo; getStoredToken/setStoredToken/clearStoredToken from request.
 - **Location:** `shared/stores/useAuthStore.ts`.
@@ -90,7 +99,7 @@
 
 ---
 
-## 10. platformConfig service
+## 11. platformConfig service
 
 - **Purpose:** Fetches platform config (options, rules) for platform dropdown and validation.
 - **Location:** `features/platform/services/platformConfig.ts`.
@@ -99,7 +108,7 @@
 
 ---
 
-## 11. Access
+## 12. Access
 
 - **Purpose:** Renders children when accessible (permission); fallback otherwise; useAccess(permission) hook.
 - **Location:** `shared/components/Access.tsx`.
@@ -108,7 +117,7 @@
 
 ---
 
-## 12. TypeToConfirmModal
+## 13. TypeToConfirmModal
 
 - **Purpose:** Modal that requires user to type a confirmation string before executing a destructive action.
 - **Location:** `shared/components/TypeToConfirmModal/index.tsx`.
@@ -117,16 +126,34 @@
 
 ---
 
-## 13. SuperAdminGuard
+## 14. SuperAdminGuard
 
 - **Purpose:** Renders children only when current user is super admin; otherwise redirect or hide.
 - **Location:** `shared/components/SuperAdminGuard.tsx`.
-- **Usage sites:** App.tsx (wraps routes /admin/org-levels, /admin/org-tree, /admin/org-change-logs); BasicLayout (useIsSuperAdmin() to show org-structure menu items).
+- **Usage sites:** App.tsx (wraps routes /admin/data-dictionary, /admin/org-levels, /admin/org-tree, /admin/org-change-logs, /admin/dictionary-types, /admin/dictionary-types/:typeId/items, /admin/dictionary-types/:typeId/transitions, /admin/dictionary-snapshot-demo); BasicLayout (useIsSuperAdmin() to show org-structure menu items).
 - **Key interface:** SuperAdminGuard({ children }); useIsSuperAdmin() hook.
 
 ---
 
-## 14. OrgTreeSelect
+## 15. PermSuperAdminGuard, AdminOrSuperAdminGuard, PlatformViewGuard, WorkOrderViewGuard
+
+- **Purpose:** Route guards: PermSuperAdminGuard (roles-permissions); AdminOrSuperAdminGuard (account-permissions); PlatformViewGuard (platform orgs/applications by permission); WorkOrderViewGuard (work_order:VIEW).
+- **Location:** `shared/components/PermSuperAdminGuard.tsx`, `AdminOrSuperAdminGuard.tsx`, `PlatformViewGuard.tsx`, `WorkOrderViewGuard.tsx`.
+- **Usage sites:** App.tsx (wraps /admin/roles-permissions, /admin/account-permissions, /platform/orgs, /platform/applications, /work-orders, /work-orders/:id); BasicLayout (useIsPermSuperAdmin, useIsAdminOrSuperAdmin, hasPermission for menu).
+- **Key interface:** Guard({ children }); useIsPermSuperAdmin(), useIsAdminOrSuperAdmin(); PlatformViewGuard requiredPermission; WorkOrderViewGuard.
+
+---
+
+## 16. TestDataCleanerModal
+
+- **Purpose:** Modal for test data cleaner (preview/execute); Super Admin only.
+- **Location:** `shared/components/TestDataCleaner/Modal.tsx`.
+- **Usage sites:** BasicLayout (header link "测试数据清理器" when useIsSuperAdmin() true).
+- **Key interface:** Props (open, onClose) — see component file.
+
+---
+
+## 17. OrgTreeSelect
 
 - **Purpose:** Selector for org node from tree.
 - **Location:** `features/orgstructure/components/OrgTreeSelect.tsx`; exported from `features/orgstructure/index.ts`.
@@ -135,12 +162,48 @@
 
 ---
 
-## 15. OrgPersonSelect
+## 18. OrgPersonSelect
 
 - **Purpose:** Selector for person in org structure.
 - **Location:** `features/orgstructure/components/OrgPersonSelect.tsx`; exported from `features/orgstructure/index.ts`.
 - **Usage sites:** Admin OrgTree (assign person to node or similar).
 - **Key interface:** OrgPersonSelectProps — see component file.
+
+---
+
+## 19. useDictionaryItems
+
+- **Purpose:** Hook to fetch dictionary items by typeCode; reload() always triggers network request; params include includeDisabled, parentValue, q.
+- **Location:** `features/dicttype/hooks/useDictionaryItems.ts`.
+- **Usage sites:** Admin DictionaryTypes page (read demo panel).
+- **Key interface:** useDictionaryItems(typeCode, params?) → { loading, error, items, typeCode, reload }. Params: GetDictionaryItemsParams (includeDisabled, parentValue, q).
+
+---
+
+## 20. getDictionaryItems
+
+- **Purpose:** Fetches dictionary items by typeCode (GET /api/v1/dictionaries/{typeCode}/items). No auth required.
+- **Location:** `features/dicttype/services/dictRead.ts`.
+- **Usage sites:** useDictionaryItems (hook); Admin DictionarySnapshotDemo page; Quote page (quote_expense_type options).
+- **Key interface:** getDictionaryItems(typeCode, params?) → Promise<DictionaryItemsResponse>. Params: includeDisabled, parentValue, q.
+
+---
+
+## 21. getTransitionsRead, listTransitionsAdmin, upsertTransitionsAdmin
+
+- **Purpose:** getTransitionsRead: public read GET /api/v1/dictionaries/{typeCode}/transitions. listTransitionsAdmin / upsertTransitionsAdmin: admin list and batch upsert for Type B transitions.
+- **Location:** `features/dicttype/services/dictTransition.ts`.
+- **Usage sites:** getTransitionsRead — Admin DictionaryTransitions page (read preview). listTransitionsAdmin, upsertTransitionsAdmin — Admin DictionaryTransitions page (load/save transitions).
+- **Key interface:** getTransitionsRead(typeCode, includeDisabled?) → Promise<TransitionsReadResponse>; listTransitionsAdmin(typeId) → Promise<TransitionListResponse>; upsertTransitionsAdmin(typeId, body) → Promise<TransitionListResponse>.
+
+---
+
+## 22. useSimulatedRoleStore, roleToUiGatingMatrix
+
+- **Purpose:** UI-only role simulator: store holds current simulated role (from top bar dropdown); matrix and helpers (isShipmentWorkflowActionAllowedForSimulatedRole, isWorkOrderActionAllowedForSimulatedRole, isPlatformOrgActionAllowedForSimulatedRole, isPlatformApplicationActionAllowedForSimulatedRole, filterMenuBySimulatedRole) gate left nav and action buttons by simulated role.
+- **Location:** `shared/stores/useSimulatedRoleStore.ts`; `shared/config/roleToUiGatingMatrix.ts`.
+- **Usage sites:** BasicLayout (menu filter, dropdown, badge, matrix review modal); Shipment page (workflow buttons disable + tooltip); WorkOrder Internal list and Detail (新建工单, 受理, 派单, 驳回, 接单); Platform Org (销售申请, 服务申请, 营企申请, 新建机构, 编辑, 删除); Platform Application (通过, 驳回, 提交至管理员, 关闭申请).
+- **Key interface:** useSimulatedRoleStore((s) => s.simulatedRole), .setSimulatedRole; getRoleToUiGatingEntry(id), isRouteVisibleForSimulatedRole(path, role), filterMenuBySimulatedRole(routes, role), is*ActionAllowedForSimulatedRole(role).
 
 ---
 

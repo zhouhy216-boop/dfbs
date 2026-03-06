@@ -14,8 +14,8 @@ export interface UseDictionaryItemsResult {
 }
 
 /**
- * Fetch dictionary items by typeCode. No client caching; reload() always fetches fresh.
- * Params (includeDisabled, parentValue, q) are passed through to getDictionaryItems; omit parentValue for all items (Type D: filter roots client-side by parentValue null/empty).
+ * Fetch dictionary items by typeCode. No client caching; reload() always triggers a network request and returns fresh data.
+ * Params (includeDisabled, parentValue, q) are passed through to getDictionaryItems; dependency array ensures param changes apply on next reload().
  * Error is user-friendly Chinese: 字典类型不存在 or 加载失败，请重试.
  */
 export function useDictionaryItems(

@@ -1,5 +1,6 @@
+# FILE: DFBS_TPL_DELIVERY.md  (REPLACE WHOLE FILE)
 # DFBS_TPL_DELIVERY.md
-> Template library for **Delivery Manager (C)** only.  
+> Template library for **Delivery Manager (C)** only.
 > Locate templates fast via `## TEMPLATE: <TID>` and Ctrl+F.
 
 ---
@@ -12,8 +13,26 @@ Parent Frozen ID: <AUTO_KEY-YYMMDD-NNN>
 Parent Step ID: <AUTO_KEY-YYMMDD-NNN-01>
 Title: <short>
 
+ALIGNMENT ANCHORS (MANDATORY — prevent drift):
+- Anchor Pack refs:
+  - docs/product/MODULE_ROUTE_ANCHORS_v0.1.md
+  - docs/product/BUSINESS_MAP_v0.1.md
+  - docs/product/PROCESS_MAP_v0.1.md
+  - docs/product/OBJECT_MAP_v0.1.md
+- Business module (from BUSINESS_MAP): <e.g., M04 交付发货 / M08 平台&SIM>
+- Route anchor(s) (from MODULE_ROUTE_ANCHORS): <e.g., /shipments, /platform/applications/sim-activation>
+- Process node(s) (from PROCESS_MAP): <e.g., 入网准备协作 / 交付签收关闭>
+- Object scope (from OBJECT_MAP): <e.g., 设备, 入网准备记录, SIM卡, 平台账号记录>
+- Anchor gap (if any): <none / describe; do not guess>
+
 GOAL (user-visible):
 - <plain user-visible outcome>
+
+UI ACCEPTANCE HOOK (CEO must be able to verify in UI; no API steps):
+- UI entry (menu path + route anchor): ...
+- UI actions (buttons/tabs/modals): ...
+- Expected visible outcomes (status labels/list rows/toast/etc.): ...
+- Negative checks (must NOT happen): ...
 
 SCOPE (do now):
 - ...
@@ -22,11 +41,12 @@ NON-GOALS (explicitly NOT now):
 - ...
 
 CONSTRAINTS (must/never):
-- Must: ...
 - Must: keep WIP=1 (this ticket only)
 - Must: keep output short (see OUTPUT REQUIREMENTS)
+- Must: if backend changes are required, ensure UI has a minimal hook for CEO acceptance
 - Never: implement anything outside Scope
 - Never: change unrelated behavior
+- Never: require CEO to run API/DB/migration verification
 
 UNKNOWNs (do not guess):
 - ...
@@ -35,11 +55,15 @@ IMPLEMENTATION NOTES (engineering-facing, still concise):
 - <where to change / expected approach / files/areas if known>
 - If uncertain, ask 1 blocker question only.
 
+TECHNICAL SELF-VERIFY (Cursor-only; CEO will not do technical checks):
+- If API/DB verification is needed, run locally and summarize in receipt as 1 bullet.
+- Run build/tests as required by project baseline.
+
 OUTPUT REQUIREMENTS (keep it short):
 - Completed? (Yes/No)
 - Full-suite build PASS/FAIL (command used)
 - Changed areas (very short: pages/modules/files)
-- What to verify (1–3 bullets)
+- What to verify (1–3 bullets; UI-oriented if possible)
 - 1 blocker question max (only if truly blocking)
 - Appendix only if FAIL or explicitly requested
 
@@ -55,10 +79,22 @@ Parent Step ID: <AUTO_KEY-YYMMDD-NNN-01>
 Related Exec Ticket: <AUTO_KEY-YYMMDD-NNN-01.a>
 Title: <short>
 
+ALIGNMENT ANCHORS (MANDATORY):
+- Business module (from BUSINESS_MAP): ...
+- Route anchor(s) (from MODULE_ROUTE_ANCHORS): ...
+- Process node(s) (from PROCESS_MAP): ...
+- Object scope (from OBJECT_MAP): ...
+- Anchor gap (if any): ...
+
 BUG (observed):
 - User observed: ...
 - Expected: ...
 - Actual: ...
+
+UI ACCEPTANCE HOOK (CEO UI-only):
+- UI entry (menu path + route): ...
+- Steps to reproduce (UI): ...
+- Expected visible result after fix: ...
 
 SCOPE (fix only):
 - Fix the described behavior to match Expected.
@@ -81,7 +117,7 @@ OUTPUT REQUIREMENTS (keep it short):
 - Full-suite build PASS/FAIL (command used)
 - Root cause (1–3 lines max)
 - Fix summary (1–3 bullets)
-- What to verify (1–3 bullets)
+- What to verify (1–3 bullets; UI-oriented if possible)
 - Appendix only if FAIL or explicitly requested
 
 [/BUGFIX TICKET -> Execution Engineer]
@@ -92,6 +128,12 @@ OUTPUT REQUIREMENTS (keep it short):
 [EVIDENCE ONLY — DO NOT MODIFY ANYTHING]
 Request ID: <AUTO_KEY-YYMMDD-NNN-EVID>    // e.g., PASTE-260210-112-EVID
 Purpose: collect real project facts (no guessing)
+
+ALIGNMENT ANCHORS (if relevant):
+- Business module: ...
+- Route anchor(s): ...
+- Process node(s): ...
+- Object scope: ...
 
 Need evidence (exact items):
 - Item 1: <what + expected location (paths/pages) if known>
@@ -122,10 +164,17 @@ Prohibited:
 [/EVIDENCE ONLY]
 ```text
 
-## [IMPACT CHECK — FACTS ONLY]
+## TEMPLATE: TPL.DELIVERY.IMPACT_CHECK.TO_EXECUTOR
 ```text
+[IMPACT CHECK — FACTS ONLY]
 Request ID: <AUTO_KEY-YYMMDD-NNN-IMP>    // e.g., PASTE-260210-112-IMP
 Related Work: <Parent Frozen ID / Step ID / Exec Ticket ID>
+
+ALIGNMENT ANCHORS:
+- Business module: ...
+- Route anchor(s): ...
+- Process node(s): ...
+- Object scope: ...
 
 Goal:
 - Provide a short, fact-based impact + regression checklist BEFORE implementation.
@@ -154,18 +203,23 @@ Output requirements (short):
 ## TEMPLATE: TPL.DELIVERY.ACCEPTANCE_STEPS.TO_CEO_CN
 ```text
 [验收步骤]
-（只在你把 Cursor 输出贴回来之后才使用；不新增需求）
+（只在你把 Cursor 输出贴回来之后才使用；不新增需求；只允许 UI 点验）
 
-请按顺序点验：
+【入口（必须写清）】
+- 菜单路径：...
+- 页面地址（路由锚点）：...
+
+【请按顺序点验（3–8 条，越短越好）】
 1) ...
 2) ...
 3) ...
 4) ...
-（共 3–8 条，越短越好）
 
-验收口径：
-- 你看到的现象应当是：...
-- 不应出现：...
+【你应该看到】
+- ...（1–3 条即可）
+
+【不应出现】
+- ...（1–3 条即可）
 
 请你回复：
 - PASS 或 FAIL
@@ -208,6 +262,7 @@ Sub-tickets (engineering execution units):
 
 Notes:
 - Why this split exists (1–3 lines): ...
+- Alignment anchors per sub-ticket: must include Business module + Route anchors + Process nodes + Object scope
 - Unknowns (if any): ...
 - Next CURRENT ticket: <...-01.a>
 
@@ -215,4 +270,3 @@ Change log (optional, short):
 - <date>: <created/cancelled/merged> <ticket id> because ...
 [/SPLIT MAP — FULL]
 ```text
-

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { ProLayout } from '@ant-design/pro-components';
+import { Button, Dropdown, Modal, Table } from 'antd';
+import type { MenuProps } from 'antd';
 import { useAuthStore } from '@/shared/stores/useAuthStore';
 import {
   DashboardOutlined,
@@ -23,11 +25,31 @@ import {
   AuditOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
-import { getStoredToken } from '@/shared/utils/request';
+import request, { getStoredToken } from '@/shared/utils/request';
 import { useIsSuperAdmin } from '@/shared/components/SuperAdminGuard';
 import { useIsPermSuperAdmin } from '@/shared/components/PermSuperAdminGuard';
 import { useIsAdminOrSuperAdmin } from '@/shared/components/AdminOrSuperAdminGuard';
 import { useEffectivePermissions } from '@/shared/hooks/useEffectivePermissions';
+import {
+  ROLE_TO_UI_GATING_MATRIX,
+  SUPPORT_NONE_ENTRY_IDS,
+  filterMenuBySimulatedRole,
+  type MenuRouteItem,
+  type RoleToUiGatingEntry,
+} from '@/shared/config/roleToUiGatingMatrix';
+import { useSimulatedRoleStore } from '@/shared/stores/useSimulatedRoleStore';
+
+/** Re-export for consumers that need the storage key. */
+export { SIMULATED_ROLE_STORAGE_KEY } from '@/shared/stores/useSimulatedRoleStore';
+
+/** Temporary UI list for role simulator shell; not wired to backend roles. */
+const SIMULATOR_ROLE_OPTIONS: { label: string; key: string }[] = [
+  { label: 'Super Admin', key: 'Super Admin' },
+  { label: 'Admin', key: 'Admin' },
+  { label: 'Operator', key: 'Operator' },
+  { label: 'Viewer', key: 'Viewer' },
+  { label: 'None', key: '__none__' },
+];
 
 const PERM_ORGS_VIEW = 'platform_application.orgs:VIEW';
 const PERM_APPS_VIEW = 'platform_application.applications:VIEW';
@@ -98,45 +120,40 @@ const MENU_ROUTES_BASE = [
   },
 ];
 
-/** Super Admin only: 数据字典、层级配置、组织架构、变更记录、字典类型（人员视图已并入组织架构右侧） */
+/** Super Admin only: 数据字典、层级配置、组织架构、变更记录（保留数据字典，移除重复入口字典类型） */
 const ORG_STRUCTURE_MENU = [
   { path: '/admin/data-dictionary', name: '数据字典' },
   { path: '/admin/org-levels', name: '层级配置' },
   { path: '/admin/org-tree', name: '组织架构' },
   { path: '/admin/org-change-logs', name: '变更记录' },
-  { path: '/admin/dictionary-types', name: '字典类型' },
   { path: '/admin/dictionary-snapshot-demo', name: '历史显示示例' },
 ];
 
-/** PERM allowlist only: 角色与权限 */
-const PERM_MENU = [{ path: '/admin/roles-permissions', name: '角色与权限' }];
-
-/** Admin or Super-admin: 账号与权限 (new primary entry) */
+/** Admin or Super-admin: 账号与权限（保留；角色与权限已从左侧菜单移除，避免重复） */
 const ACCOUNT_PERMISSIONS_MENU = [{ path: '/admin/account-permissions', name: '账号与权限' }];
 
 function buildMenuRoutes(
   isSuperAdmin: boolean,
-  permAllowed: boolean,
+  _permAllowed: boolean,
   isAdminOrSuperAdmin: boolean,
   hasPermission: (key: string) => boolean
 ) {
   const adminExtras = [
     ...(isAdminOrSuperAdmin ? ACCOUNT_PERMISSIONS_MENU : []),
-    ...(permAllowed ? PERM_MENU : []),
     ...(isSuperAdmin ? ORG_STRUCTURE_MENU : []),
   ];
   return MENU_ROUTES_BASE.map((r) => {
     if (r.key === 'platform-group' && r.routes) {
       const platformRoutes = (r.routes as { path: string; name: string }[]).filter((item) => {
-        if (item.path === '/platform/orgs') return hasPermission(PERM_ORGS_VIEW);
-        if (item.path === '/platform/applications') return hasPermission(PERM_APPS_VIEW);
+        if (item.path === '/platform/orgs') return hasPermission(PERM_ORGS_VIEW) || isAdminOrSuperAdmin;
+        if (item.path === '/platform/applications') return hasPermission(PERM_APPS_VIEW) || isAdminOrSuperAdmin;
         return true;
       });
       return { ...r, routes: platformRoutes };
     }
     if (r.key === 'after-sales-service-group' && r.routes) {
       const workOrderRoutes = (r.routes as { path: string; name: string }[]).filter((item) => {
-        if (item.path === '/work-orders') return hasPermission(PERM_WORK_ORDER_VIEW);
+        if (item.path === '/work-orders') return hasPermission(PERM_WORK_ORDER_VIEW) || isAdminOrSuperAdmin;
         return true;
       });
       return { ...r, routes: workOrderRoutes };
@@ -153,6 +170,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const token = useAuthStore((s) => s.token);
   const hydrateFromStorage = useAuthStore((s) => s.hydrateFromStorage);
+  const setUserInfoFromMe = useAuthStore((s) => s.setUserInfoFromMe);
   const stored = getStoredToken();
   const isLogin = location.pathname === '/login';
   const isPublicRepair = location.pathname === '/public/repair';
@@ -169,6 +187,19 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, isLogin, isPublicRepair, navigate]);
 
+  // Refresh userInfo from server so role-dependent UI (e.g. simulator) uses server-authoritative roles after load/restart, not stale localStorage.
+  useEffect(() => {
+    if (!isAuthenticated || isLogin || isPublicRepair) return;
+    request
+      .get<{ id?: number; username?: string; nickname?: string; roles?: string[] }>('/auth/me')
+      .then((res) => {
+        if (res.data && typeof res.data === 'object') {
+          setUserInfoFromMe({ id: res.data.id, username: res.data.username, roles: res.data.roles });
+        }
+      })
+      .catch(() => {});
+  }, [isAuthenticated, isLogin, isPublicRepair, setUserInfoFromMe]);
+
   if (isLogin || isPublicRepair) return <>{children}</>;
   if (!isAuthenticated) return null;
   return <>{children}</>;
@@ -178,16 +209,33 @@ export default function BasicLayout() {
   const navigate = useNavigate();
   const logout = useAuthStore((s) => s.logout);
   const userInfo = useAuthStore((s) => s.userInfo);
+  const userInfoRefreshedFromServer = useAuthStore((s) => s.userInfoRefreshedFromServer);
   const isSuperAdmin = useIsSuperAdmin();
   const { allowed: permAllowed } = useIsPermSuperAdmin();
   const isAdminOrSuperAdmin = useIsAdminOrSuperAdmin();
   const { has: hasPermission } = useEffectivePermissions();
   const [testDataCleanerOpen, setTestDataCleanerOpen] = useState(false);
+  const [matrixReviewOpen, setMatrixReviewOpen] = useState(false);
+  const simulatedRole = useSimulatedRoleStore((s) => s.simulatedRole);
+  const setSimulatedRole = useSimulatedRoleStore((s) => s.setSimulatedRole);
   const displayName = userInfo?.username ?? 'User';
-  const menuRoutes = useMemo(
-    () => buildMenuRoutes(isSuperAdmin, permAllowed, isAdminOrSuperAdmin, hasPermission),
-    [isSuperAdmin, permAllowed, isAdminOrSuperAdmin, hasPermission]
-  );
+  const menuRoutes = useMemo(() => {
+    const base = buildMenuRoutes(isSuperAdmin, permAllowed, isAdminOrSuperAdmin, hasPermission);
+    return filterMenuBySimulatedRole(base as MenuRouteItem[], simulatedRole);
+  }, [isSuperAdmin, permAllowed, isAdminOrSuperAdmin, hasPermission, simulatedRole]);
+  const showSimulator =
+    Boolean(userInfoRefreshedFromServer && userInfo && Array.isArray(userInfo.roles) &&
+      (userInfo.roles.includes('ADMIN') || userInfo.roles.includes('SUPER_ADMIN')));
+
+  const onSimulatedRoleSelect: MenuProps['onClick'] = ({ key }) => {
+    const value = key === '__none__' ? null : key;
+    setSimulatedRole(value);
+  };
+
+  const simulatorMenuItems: MenuProps['items'] = SIMULATOR_ROLE_OPTIONS.map((opt) => ({
+    key: opt.key,
+    label: opt.label,
+  }));
 
   return (
     <div style={{ height: '100vh', minHeight: '100vh' }}>
@@ -203,6 +251,52 @@ export default function BasicLayout() {
           title: displayName,
         }}
         actionsRender={() => [
+          ...(showSimulator
+            ? [
+                ...(simulatedRole
+                  ? [
+                      <span
+                        key="sim-badge"
+                        style={{
+                          marginRight: 12,
+                          padding: '2px 8px',
+                          background: '#faad14',
+                          color: '#000',
+                          borderRadius: 4,
+                          fontSize: 12,
+                          fontWeight: 500,
+                        }}
+                      >
+                        SIMULATING: {simulatedRole}
+                      </span>,
+                    ]
+                  : []),
+                <span
+                  key="sim-disclaimer"
+                  style={{ marginRight: 8, fontSize: 11, color: '#8c8c8c' }}
+                  title="UI-only simulation; does not change real permissions or security."
+                >
+                  仅界面模拟，不改变实际权限
+                </span>,
+                <Dropdown
+                  key="simulated-role"
+                  menu={{ items: simulatorMenuItems, onClick: onSimulatedRoleSelect }}
+                  trigger={['click']}
+                >
+                  <a onClick={(e) => e.preventDefault()} style={{ marginRight: 8 }}>
+                    Simulated Role
+                  </a>
+                </Dropdown>,
+                <a
+                  key="matrix-review"
+                  onClick={() => setMatrixReviewOpen(true)}
+                  style={{ marginRight: 8 }}
+                  title="Read-only review of Role-to-UI gating matrix"
+                >
+                  角色-界面矩阵（查看）
+                </a>,
+              ]
+            : []),
           ...(isSuperAdmin
             ? [
                 <a
@@ -231,6 +325,62 @@ export default function BasicLayout() {
         open={testDataCleanerOpen}
         onClose={() => setTestDataCleanerOpen(false)}
       />
+      <Modal
+        title="Role-to-UI gating matrix（只读查看）"
+        open={matrixReviewOpen}
+        onCancel={() => setMatrixReviewOpen(false)}
+        footer={<Button type="primary" onClick={() => setMatrixReviewOpen(false)}>关闭</Button>}
+        width={1000}
+        destroyOnClose
+      >
+        <div style={{ marginBottom: 12 }}>
+          <strong>总条目数：</strong>{ROLE_TO_UI_GATING_MATRIX.length}
+          <span style={{ marginLeft: 16 }}>
+            <strong>使用 Support/none 的条目：</strong>{SUPPORT_NONE_ENTRY_IDS.length} 个 — {SUPPORT_NONE_ENTRY_IDS.join(', ')}
+          </span>
+        </div>
+        <Table<RoleToUiGatingEntry>
+          size="small"
+          pagination={false}
+          scroll={{ x: 900 }}
+          dataSource={ROLE_TO_UI_GATING_MATRIX}
+          rowKey="id"
+          columns={[
+            { title: 'id', dataIndex: 'id', width: 180, ellipsis: true },
+            { title: 'UI 区域', dataIndex: 'uiAreaName', width: 220, ellipsis: true },
+            {
+              title: '业务模块',
+              dataIndex: 'businessModuleCodes',
+              width: 100,
+              render: (v: string[]) => (Array.isArray(v) ? v.join(', ') : ''),
+            },
+            {
+              title: '路由锚点',
+              dataIndex: 'routeAnchors',
+              width: 140,
+              render: (v: string[]) => (Array.isArray(v) ? v.join(', ') : ''),
+            },
+            {
+              title: '流程节点',
+              dataIndex: 'processNodes',
+              width: 120,
+              render: (v: string[]) => (Array.isArray(v) ? v.join(', ') : ''),
+            },
+            {
+              title: '对象范围',
+              dataIndex: 'objectScope',
+              width: 140,
+              render: (v: string[]) => (Array.isArray(v) ? v.join(', ') : '—'),
+            },
+            {
+              title: '可见角色集',
+              dataIndex: 'allowedSimulatedRoleSet',
+              width: 160,
+              render: (v: string[]) => (Array.isArray(v) ? v.join(', ') : ''),
+            },
+          ]}
+        />
+      </Modal>
     </div>
   );
 }

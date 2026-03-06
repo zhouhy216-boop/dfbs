@@ -18,6 +18,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,18 +34,21 @@ public class ShipmentService {
     private final QuoteRepo quoteRepo;
     private final ShipmentRepo shipmentRepo;
     private final ShipmentMachineRepo shipmentMachineRepo;
+    private final ShipmentExceptionRecordRepo exceptionRecordRepo;
     private final NotificationService notificationService;
     private final AttachmentRuleService ruleService;
     private final CustomerRepo customerRepo;
 
     public ShipmentService(QuoteRepo quoteRepo, ShipmentRepo shipmentRepo,
                            ShipmentMachineRepo shipmentMachineRepo,
+                           ShipmentExceptionRecordRepo exceptionRecordRepo,
                            NotificationService notificationService,
                            AttachmentRuleService ruleService,
                            CustomerRepo customerRepo) {
         this.quoteRepo = quoteRepo;
         this.shipmentRepo = shipmentRepo;
         this.shipmentMachineRepo = shipmentMachineRepo;
+        this.exceptionRecordRepo = exceptionRecordRepo;
         this.notificationService = notificationService;
         this.ruleService = ruleService;
         this.customerRepo = customerRepo;
@@ -326,6 +330,83 @@ public class ShipmentService {
                 .orElseThrow(() -> new IllegalStateException("Shipment not found: id=" + id));
     }
 
+    private static final String WORKFLOW_BASE = "/api/v1/shipments";
+
+    /** Workflow step mapping: status -> stepCode + stepLabelCn (computed, not stored). */
+    private static String stepCodeFor(ShipmentStatus status) {
+        return switch (status) {
+            case CREATED -> "REQUEST";
+            case PENDING_SHIP -> "PREPARE";
+            case SHIPPED -> "SHIP";
+            case COMPLETED -> "SIGN_CLOSE";
+            case EXCEPTION -> "EXCEPTION";
+            case CANCELLED -> "CANCELLED";
+        };
+    }
+
+    private static String stepLabelCnFor(ShipmentStatus status, LocalDateTime closedAt) {
+        if (status == ShipmentStatus.COMPLETED) {
+            return closedAt != null ? "已关闭" : "已签收（待关闭）";
+        }
+        return switch (status) {
+            case CREATED -> "申请";
+            case PENDING_SHIP -> "备货";
+            case SHIPPED -> "运输中";
+            case EXCEPTION -> "异常";
+            case CANCELLED -> "已取消";
+            default -> "签收完成";
+        };
+    }
+
+    /** Available next actions aligned with require() and step actions (prepare, tracking, close). */
+    private static List<WorkflowActionDto> allowedActions(ShipmentEntity s) {
+        Long shipmentId = s.getId();
+        String base = WORKFLOW_BASE + "/" + shipmentId;
+        ShipmentStatus status = s.getStatus();
+        List<WorkflowActionDto> list = new ArrayList<>();
+        switch (status) {
+            case CREATED -> {
+                list.add(new WorkflowActionDto("ACCEPT", "审核并补充", "POST", base + "/accept", "确认接单并补充信息？"));
+                list.add(new WorkflowActionDto("EXCEPTION", "标记异常", "POST", base + "/exception", "请输入异常原因"));
+                list.add(new WorkflowActionDto("CANCEL", "取消", "POST", base + "/cancel", "确认取消？"));
+            }
+            case PENDING_SHIP -> {
+                list.add(new WorkflowActionDto("PREPARE", "备货确认", "POST", base + "/prepare", null));
+                list.add(new WorkflowActionDto("SHIP", "发运", "POST", base + "/ship", null));
+                list.add(new WorkflowActionDto("EXCEPTION", "标记异常", "POST", base + "/exception", "请输入异常原因"));
+                list.add(new WorkflowActionDto("CANCEL", "取消", "POST", base + "/cancel", "确认取消？"));
+            }
+            case SHIPPED -> {
+                list.add(new WorkflowActionDto("TRACKING", "更新物流信息", "POST", base + "/tracking", null));
+                list.add(new WorkflowActionDto("COMPLETE", "签收确认", "POST", base + "/complete", "确认签收完成？"));
+                list.add(new WorkflowActionDto("EXCEPTION", "标记异常", "POST", base + "/exception", "请输入异常原因"));
+                list.add(new WorkflowActionDto("CANCEL", "取消", "POST", base + "/cancel", "确认取消？"));
+            }
+            case COMPLETED -> {
+                if (s.getClosedAt() == null) {
+                    list.add(new WorkflowActionDto("CLOSE", "关闭", "POST", base + "/close", "确认关闭？"));
+                }
+                list.add(new WorkflowActionDto("CANCEL", "取消", "POST", base + "/cancel", "确认取消？"));
+            }
+            case EXCEPTION ->
+                list.add(new WorkflowActionDto("CANCEL", "取消", "POST", base + "/cancel", "确认取消？"));
+            case CANCELLED -> {}
+        }
+        return list;
+    }
+
+    @Transactional(readOnly = true)
+    public ShipmentWorkflowDto getWorkflow(Long id) {
+        ShipmentEntity s = getDetail(id);
+        return new ShipmentWorkflowDto(
+                s.getId(),
+                s.getStatus(),
+                stepCodeFor(s.getStatus()),
+                stepLabelCnFor(s.getStatus(), s.getClosedAt()),
+                allowedActions(s)
+        );
+    }
+
     @Transactional(readOnly = true)
     public List<ShipmentMachineEntity> getMachines(Long shipmentId) {
         return shipmentMachineRepo.findByShipmentIdOrderByIdAsc(shipmentId);
@@ -344,11 +425,48 @@ public class ShipmentService {
     }
 
     @Transactional
-    public ShipmentEntity accept(Long id, Long operatorId) {
+    public ShipmentEntity accept(Long id, Long operatorId, AcceptSupplementRequest supplement) {
         ShipmentEntity s = getDetail(id);
         require(s.getStatus() == ShipmentStatus.CREATED, "只有新建状态的发货单可以接单");
+        if (supplement != null) {
+            if (supplement.contractNo() != null && !supplement.contractNo().isBlank())
+                s.setContractNo(supplement.contractNo());
+            if (supplement.receiverName() != null && !supplement.receiverName().isBlank())
+                s.setReceiverName(supplement.receiverName());
+            if (supplement.receiverPhone() != null && !supplement.receiverPhone().isBlank())
+                s.setReceiverPhone(supplement.receiverPhone());
+            if (supplement.deliveryAddress() != null && !supplement.deliveryAddress().isBlank())
+                s.setDeliveryAddress(supplement.deliveryAddress());
+            if (supplement.remark() != null) s.setRemark(supplement.remark());
+            if (supplement.shipDate() != null) s.setShipDate(supplement.shipDate());
+        }
+        boolean hasReceiver = (s.getReceiverName() != null && !s.getReceiverName().isBlank())
+                || (s.getReceiverContact() != null && !s.getReceiverContact().isBlank());
+        if (!hasReceiver)
+            throw new ShipmentValidationException("收货人/收货联系人不能为空", ShipmentValidationException.SHIPMENT_MISSING_RECEIVER);
+        if (s.getDeliveryAddress() == null || s.getDeliveryAddress().isBlank())
+            throw new ShipmentValidationException("收货地址不能为空", ShipmentValidationException.SHIPMENT_MISSING_DELIVERY_ADDRESS);
         s.setStatus(ShipmentStatus.PENDING_SHIP);
         s.setAcceptedAt(LocalDateTime.now());
+        return shipmentRepo.save(s);
+    }
+
+    @Transactional
+    public ShipmentEntity prepare(Long id, Long operatorId, PrepareRequest req) {
+        ShipmentEntity s = getDetail(id);
+        require(s.getStatus() == ShipmentStatus.PENDING_SHIP, "只有备货状态的发货单可执行备货确认");
+        if (req != null) {
+            if (req.quantity() != null) s.setQuantity(req.quantity());
+            if (req.model() != null && !req.model().isBlank()) s.setModel(req.model());
+            if (req.needPackaging() != null) s.setNeedPackaging(req.needPackaging());
+            if (req.entrustMatter() != null && !req.entrustMatter().isBlank()) s.setEntrustMatter(req.entrustMatter());
+            if (req.pickupContact() != null && !req.pickupContact().isBlank()) s.setPickupContact(req.pickupContact());
+            if (req.pickupPhone() != null && !req.pickupPhone().isBlank()) s.setPickupPhone(req.pickupPhone());
+            if (req.needLoading() != null) s.setNeedLoading(req.needLoading());
+            if (req.pickupAddress() != null && !req.pickupAddress().isBlank()) s.setPickupAddress(req.pickupAddress());
+            if (req.deliveryAddress() != null && !req.deliveryAddress().isBlank()) s.setDeliveryAddress(req.deliveryAddress());
+            if (req.remark() != null) s.setRemark(req.remark());
+        }
         return shipmentRepo.save(s);
     }
 
@@ -417,8 +535,14 @@ public class ShipmentService {
         s.setDeliveryAddress(deliveryAddress);
 
         String carrier = req.carrier() != null ? req.carrier() : s.getCarrier();
-        requireNotBlank(carrier, "承运方(carrier)不能为空");
         s.setCarrier(carrier);
+        String logisticsNo = req.logisticsNo() != null && !req.logisticsNo().isBlank() ? req.logisticsNo() : s.getLogisticsNo();
+        s.setLogisticsNo(logisticsNo);
+        if (req.receiptUrl() != null) s.setReceiptUrl(req.receiptUrl());
+        if (s.getCarrier() == null || s.getCarrier().isBlank())
+            throw new ShipmentValidationException("承运方不能为空", ShipmentValidationException.SHIPMENT_MISSING_CARRIER);
+        if (s.getLogisticsNo() == null || s.getLogisticsNo().isBlank())
+            throw new ShipmentValidationException("物流单号不能为空", ShipmentValidationException.SHIPMENT_MISSING_LOGISTICS_NO);
 
         s.setStatus(ShipmentStatus.SHIPPED);
         s.setShippedAt(LocalDateTime.now());
@@ -431,11 +555,36 @@ public class ShipmentService {
         require(s.getStatus() == ShipmentStatus.SHIPPED, "只有已发货的发货单可以完结");
         if (s.getType() == ShipmentType.NORMAL) {
             String receiptUrl = s.getReceiptUrl();
-            ruleService.validate(AttachmentTargetType.SHIPMENT_NORMAL, AttachmentPoint.COMPLETE_RECEIPT,
-                    receiptUrl != null && !receiptUrl.isBlank() ? List.of(receiptUrl) : List.of());
+            if (receiptUrl != null && !receiptUrl.isBlank()) {
+                ruleService.validate(AttachmentTargetType.SHIPMENT_NORMAL, AttachmentPoint.COMPLETE_RECEIPT, List.of(receiptUrl));
+            }
         }
         s.setStatus(ShipmentStatus.COMPLETED);
         s.setCompletedAt(LocalDateTime.now());
+        return shipmentRepo.save(s);
+    }
+
+    @Transactional
+    public ShipmentEntity close(Long id, Long operatorId) {
+        ShipmentEntity s = getDetail(id);
+        require(s.getStatus() == ShipmentStatus.COMPLETED, "只有已签收的发货单可以关闭");
+        if (s.getClosedAt() != null) {
+            return s;
+        }
+        s.setClosedAt(LocalDateTime.now());
+        return shipmentRepo.save(s);
+    }
+
+    @Transactional
+    public ShipmentEntity tracking(Long id, Long operatorId, TrackingRequest req) {
+        ShipmentEntity s = getDetail(id);
+        require(s.getStatus() == ShipmentStatus.SHIPPED, "只有运输中的发货单可更新物流信息");
+        if (req != null) {
+            if (req.logisticsNo() != null && !req.logisticsNo().isBlank()) s.setLogisticsNo(req.logisticsNo());
+            if (req.ticketUrl() != null) s.setTicketUrl(req.ticketUrl());
+            if (req.receiptUrl() != null) s.setReceiptUrl(req.receiptUrl());
+            if (req.remark() != null) s.setRemark(req.remark());
+        }
         return shipmentRepo.save(s);
     }
 
@@ -489,14 +638,59 @@ public class ShipmentService {
     }
 
     @Transactional
-    public ShipmentEntity handleException(Long id, Long operatorId, String reason) {
+    public ShipmentEntity handleException(Long id, Long operatorId, ExceptionMarkRequest req) {
+        if (req == null) throw new IllegalArgumentException("请求体不能为空");
+        String description = req.description();
+        requireNotBlank(description, "异常原因不能为空");
         ShipmentEntity s = getDetail(id);
         require(s.getStatus() != ShipmentStatus.COMPLETED && s.getStatus() != ShipmentStatus.CANCELLED,
                 "已完结或已取消的发货单不能标记异常");
-        requireNotBlank(reason, "异常原因不能为空");
+        if (req.machineId() != null) {
+            ShipmentMachineEntity machine = shipmentMachineRepo.findById(req.machineId())
+                    .orElseThrow(() -> new ShipmentValidationException("设备不属于本发运单或不存在", ShipmentValidationException.SHIPMENT_MACHINE_NOT_FOUND));
+            if (!machine.getShipmentId().equals(id)) {
+                throw new ShipmentValidationException("设备不属于本发运单", ShipmentValidationException.SHIPMENT_MACHINE_NOT_FOUND);
+            }
+        }
         s.setStatus(ShipmentStatus.EXCEPTION);
-        s.setExceptionReason(reason);
-        return shipmentRepo.save(s);
+        s.setExceptionReason(req.reason() != null ? req.reason().trim() : description);
+        ShipmentEntity saved = shipmentRepo.save(s);
+        ShipmentExceptionRecordEntity record = new ShipmentExceptionRecordEntity();
+        record.setShipmentId(id);
+        record.setMachineId(req.machineId());
+        record.setExceptionType(trimToNull(req.exceptionType(), 64));
+        record.setDescription(description);
+        record.setResponsibility(trimToNull(req.responsibility(), 128));
+        record.setEvidenceUrl(req.evidenceUrl() != null && !req.evidenceUrl().isBlank() ? req.evidenceUrl().trim() : null);
+        record.setOperatorId(operatorId);
+        exceptionRecordRepo.save(record);
+        return saved;
+    }
+
+    private static String trimToNull(String value, int maxLen) {
+        if (value == null || value.isBlank()) return null;
+        String t = value.trim();
+        return t.length() > maxLen ? t.substring(0, maxLen) : t;
+    }
+
+    @Transactional(readOnly = true)
+    public List<ExceptionRecordDto> listExceptionRecords(Long shipmentId, Long machineId) {
+        getDetail(shipmentId);
+        List<ShipmentExceptionRecordEntity> list = machineId != null
+                ? exceptionRecordRepo.findByShipmentIdAndMachineIdOrderByCreatedAtDesc(shipmentId, machineId)
+                : exceptionRecordRepo.findByShipmentIdOrderByCreatedAtDesc(shipmentId);
+        return list.stream()
+                .map(r -> new ExceptionRecordDto(
+                        r.getId(),
+                        r.getMachineId(),
+                        r.getExceptionType(),
+                        r.getDescription(),
+                        r.getResponsibility(),
+                        r.getEvidenceUrl(),
+                        r.getOperatorId(),
+                        r.getCreatedAt()
+                ))
+                .toList();
     }
 
     /**

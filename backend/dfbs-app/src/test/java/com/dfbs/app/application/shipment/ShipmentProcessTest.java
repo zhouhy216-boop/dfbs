@@ -94,7 +94,7 @@ class ShipmentProcessTest {
         ShipmentEntity shipment = shipmentService.create(createReq, assigneeId);
         assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.CREATED);
 
-        shipment = shipmentService.accept(shipment.getId(), assigneeId);
+        shipment = shipmentService.accept(shipment.getId(), assigneeId, null);
         assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.PENDING_SHIP);
         assertThat(shipment.getAcceptedAt()).isNotNull();
 
@@ -113,7 +113,9 @@ class ShipmentProcessTest {
                 null,
                 null,
                 "Carrier A",
-                "https://example.com/pick-ticket.pdf"
+                "https://example.com/pick-ticket.pdf",
+                "LOG-001",
+                null
         );
         shipment = shipmentService.ship(shipment.getId(), assigneeId, shipReq);
         assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.SHIPPED);
@@ -123,6 +125,51 @@ class ShipmentProcessTest {
         shipment = shipmentService.complete(shipment.getId(), assigneeId);
         assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.COMPLETED);
         assertThat(shipment.getCompletedAt()).isNotNull();
+
+        shipment = shipmentService.close(shipment.getId(), assigneeId);
+        assertThat(shipment.getClosedAt()).isNotNull();
+    }
+
+    @Test
+    void close_whenNotCompleted_throws() {
+        Long assigneeId = 102L;
+        Long quoteId = createConfirmedQuoteWithAssignee(assigneeId);
+        ShipmentEntity shipment = shipmentService.create(
+                new ShipmentCreateRequest(
+                        quoteId,
+                        "Entrust",
+                        LocalDate.now().plusDays(1),
+                        1,
+                        "Model X",
+                        true,
+                        "Pickup",
+                        "13800000000",
+                        true,
+                        "Pickup Addr",
+                        "Receiver",
+                        "13900000000",
+                        false,
+                        "Delivery Addr",
+                        "Remark"
+                ),
+                assigneeId);
+        shipment = shipmentService.accept(shipment.getId(), assigneeId, null);
+        ShipActionRequest shipReq = new ShipActionRequest(
+                null, null, null, null, null,
+                null, null, null, null,
+                null, null, null, null,
+                "Carrier A",
+                "https://example.com/pick-ticket.pdf",
+                "LOG-002",
+                null
+        );
+        shipment = shipmentService.ship(shipment.getId(), assigneeId, shipReq);
+        assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.SHIPPED);
+
+        Long shipmentId = shipment.getId();
+        assertThatThrownBy(() -> shipmentService.close(shipmentId, assigneeId))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("只有已签收的发货单可以关闭");
     }
 
     @Test
@@ -151,18 +198,20 @@ class ShipmentProcessTest {
                 assigneeId
         );
 
-        shipmentService.accept(shipment.getId(), assigneeId);
+        shipmentService.accept(shipment.getId(), assigneeId, null);
 
         ShipActionRequest shipReqMissingCarrier = new ShipActionRequest(
                 null, null, null, null, null,
                 null, null, null, null,
                 null, null, null, null,
                 null,   // carrier missing
+                null,
+                "LOG-001",
                 null
         );
 
         assertThatThrownBy(() -> shipmentService.ship(shipment.getId(), assigneeId, shipReqMissingCarrier))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(ShipmentValidationException.class)
                 .hasMessageContaining("承运方");
     }
 
@@ -192,11 +241,47 @@ class ShipmentProcessTest {
                 assigneeId
         );
 
-        shipmentService.accept(shipment.getId(), assigneeId);
+        shipmentService.accept(shipment.getId(), assigneeId, null);
 
-        ShipmentEntity exception = shipmentService.handleException(shipment.getId(), assigneeId, "Damaged goods");
+        ShipmentEntity exception = shipmentService.handleException(shipment.getId(), assigneeId,
+                new ExceptionMarkRequest("Damaged goods", null, null, null, null));
         assertThat(exception.getStatus()).isEqualTo(ShipmentStatus.EXCEPTION);
         assertThat(exception.getExceptionReason()).isEqualTo("Damaged goods");
+        java.util.List<ExceptionRecordDto> records = shipmentService.listExceptionRecords(shipment.getId(), null);
+        assertThat(records).hasSize(1);
+        assertThat(records.get(0).description()).isEqualTo("Damaged goods");
+    }
+
+    @Test
+    void markException_withInvalidMachineId_returns400() {
+        Long assigneeId = 105L;
+        Long quoteId = createConfirmedQuoteWithAssignee(assigneeId);
+        ShipmentEntity shipment = shipmentService.create(
+                new ShipmentCreateRequest(
+                        quoteId,
+                        "Entrust",
+                        LocalDate.now().plusDays(1),
+                        1,
+                        "Model X",
+                        true,
+                        "Pickup",
+                        "13800000000",
+                        true,
+                        "Pickup Addr",
+                        "Receiver",
+                        "13900000000",
+                        false,
+                        "Delivery Addr",
+                        "Remark"
+                ),
+                assigneeId);
+        shipmentService.accept(shipment.getId(), assigneeId, null);
+        long wrongMachineId = 999_999L;
+        assertThatThrownBy(() -> shipmentService.handleException(shipment.getId(), assigneeId,
+                new ExceptionMarkRequest("Reason", wrongMachineId, null, null, null)))
+                .isInstanceOf(ShipmentValidationException.class)
+                .satisfies(e -> assertThat(((ShipmentValidationException) e).getMachineCode())
+                        .isEqualTo(ShipmentValidationException.SHIPMENT_MACHINE_NOT_FOUND));
     }
 
     @Test

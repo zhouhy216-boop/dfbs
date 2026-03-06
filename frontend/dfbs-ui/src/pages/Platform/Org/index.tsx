@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Alert, Button, Form, Input, message, Modal, Popconfirm, Select, Switch, Tag } from 'antd';
+import { Alert, Button, Form, Input, message, Modal, Popconfirm, Select, Switch, Tag, Tooltip } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable, ProDescriptions } from '@ant-design/pro-components';
@@ -17,10 +17,14 @@ import { OrgCodeRule, OrgCodeUppercaseRule } from '@/features/platform/utils/val
 import { getPlatformConfigs, type PlatformConfigItem } from '@/features/platform/services/platformConfig';
 import { useDraftForm } from '@/shared/hooks/useDraftForm';
 import { useEffectivePermissions } from '@/shared/hooks/useEffectivePermissions';
+import { useSimulatedRoleStore } from '@/shared/stores/useSimulatedRoleStore';
+import { isPlatformOrgActionAllowedForSimulatedRole } from '@/shared/config/roleToUiGatingMatrix';
 
 const PERM_ORGS_CREATE = 'platform_application.orgs:CREATE';
 const PERM_ORGS_EDIT = 'platform_application.orgs:EDIT';
 const PERM_ORGS_DELETE = 'platform_application.orgs:DELETE';
+
+const SIMULATOR_DISABLED_TOOLTIP = '该角色不可操作';
 
 /** Region options for create/edit org (same as Platform Application flow). */
 const REGION_OPTIONS = [
@@ -175,6 +179,8 @@ export default function PlatformOrg() {
 
   const { saveDraft, loadDraft, clearDraft, hasDraft } = useDraftForm<PlatformOrgFormValues>('platform-org-create-admin');
   const { has: hasPermission } = useEffectivePermissions();
+  const simulatedRole = useSimulatedRoleStore((s) => s.simulatedRole);
+  const simulatorDisable = !isPlatformOrgActionAllowedForSimulatedRole(simulatedRole);
 
   const [platformConfigs, setPlatformConfigs] = useState<PlatformConfigItem[]>([]);
   useEffect(() => {
@@ -575,43 +581,59 @@ export default function PlatformOrg() {
           详情
         </a>,
         hasPermission(PERM_ORGS_EDIT) && (
-          <a
-            key="edit"
-            onClick={() => {
-              setCurrentRow(row);
-              editForm.setFieldsValue({
-                platform: row.platform,
-                orgCodeShort: row.orgCodeShort ?? row.orgCode,
-                orgFullName: row.orgFullName ?? row.orgName,
-                customerIds: row.customerIds ?? (row.customerId != null ? [row.customerId] : []),
-                isActive: row.isActive ?? true,
-                status: row.status ?? 'ACTIVE',
-                contactPerson: row.contactPerson ?? undefined,
-                contactPhone: row.contactPhone ?? undefined,
-                contactEmail: row.contactEmail ?? undefined,
-                salesPerson: row.salesPerson ?? undefined,
-                region: row.region ?? undefined,
-                remark: row.remark ?? undefined,
-              });
-              setEditOpen(true);
-            }}
-          >
-            编辑
-          </a>
+          simulatorDisable ? (
+            <Tooltip key="edit" title={SIMULATOR_DISABLED_TOOLTIP}>
+              <span style={{ display: 'inline-block' }}>
+                <Button type="link" size="small" disabled>编辑</Button>
+              </span>
+            </Tooltip>
+          ) : (
+            <a
+              key="edit"
+              onClick={() => {
+                setCurrentRow(row);
+                editForm.setFieldsValue({
+                  platform: row.platform,
+                  orgCodeShort: row.orgCodeShort ?? row.orgCode,
+                  orgFullName: row.orgFullName ?? row.orgName,
+                  customerIds: row.customerIds ?? (row.customerId != null ? [row.customerId] : []),
+                  isActive: row.isActive ?? true,
+                  status: row.status ?? 'ACTIVE',
+                  contactPerson: row.contactPerson ?? undefined,
+                  contactPhone: row.contactPhone ?? undefined,
+                  contactEmail: row.contactEmail ?? undefined,
+                  salesPerson: row.salesPerson ?? undefined,
+                  region: row.region ?? undefined,
+                  remark: row.remark ?? undefined,
+                });
+                setEditOpen(true);
+              }}
+            >
+              编辑
+            </a>
+          )
         ),
         row.status !== 'DELETED' && hasPermission(PERM_ORGS_DELETE) && (
-          <Popconfirm
-            key="delete"
-            title="确认删除该机构？"
-            description="删除后代码将被释放"
-            onConfirm={() => handleDelete(row)}
-            okText="确认"
-            cancelText="取消"
-          >
-            <a key="delete-btn" style={{ color: 'var(--ant-color-error)' }}>
-              删除
-            </a>
-          </Popconfirm>
+          simulatorDisable ? (
+            <Tooltip key="delete" title={SIMULATOR_DISABLED_TOOLTIP}>
+              <span style={{ display: 'inline-block' }}>
+                <Button type="link" size="small" disabled style={{ color: 'var(--ant-color-error)' }}>删除</Button>
+              </span>
+            </Tooltip>
+          ) : (
+            <Popconfirm
+              key="delete"
+              title="确认删除该机构？"
+              description="删除后代码将被释放"
+              onConfirm={() => handleDelete(row)}
+              okText="确认"
+              cancelText="取消"
+            >
+              <a key="delete-btn" style={{ color: 'var(--ant-color-error)' }}>
+                删除
+              </a>
+            </Popconfirm>
+          )
         ),
       ].filter(Boolean),
     },
@@ -657,17 +679,51 @@ export default function PlatformOrg() {
         pagination={{ pageSize: 10 }}
         scroll={{ x: 1200 }}
         toolBarRender={() => [
-          <Button key="sales" type="primary" onClick={() => navigate('/platform/apply?source=sales')}>
-            销售申请
-          </Button>,
-          <Button key="service" onClick={() => navigate('/platform/apply?source=service')}>
-            服务申请
-          </Button>,
-          <Button key="enterprise" onClick={() => navigate('/platform/apply?source=enterprise')}>
-            营企申请
-          </Button>,
+          simulatorDisable ? (
+            <Tooltip key="sales" title={SIMULATOR_DISABLED_TOOLTIP}>
+              <span style={{ display: 'inline-block' }}>
+                <Button type="primary" disabled>销售申请</Button>
+              </span>
+            </Tooltip>
+          ) : (
+            <Button key="sales" type="primary" onClick={() => navigate('/platform/apply?source=sales')}>
+              销售申请
+            </Button>
+          ),
+          simulatorDisable ? (
+            <Tooltip key="service" title={SIMULATOR_DISABLED_TOOLTIP}>
+              <span style={{ display: 'inline-block' }}>
+                <Button disabled>服务申请</Button>
+              </span>
+            </Tooltip>
+          ) : (
+            <Button key="service" onClick={() => navigate('/platform/apply?source=service')}>
+              服务申请
+            </Button>
+          ),
+          simulatorDisable ? (
+            <Tooltip key="enterprise" title={SIMULATOR_DISABLED_TOOLTIP}>
+              <span style={{ display: 'inline-block' }}>
+                <Button disabled>营企申请</Button>
+              </span>
+            </Tooltip>
+          ) : (
+            <Button key="enterprise" onClick={() => navigate('/platform/apply?source=enterprise')}>
+              营企申请
+            </Button>
+          ),
           ...(hasPermission(PERM_ORGS_CREATE)
-            ? [<Button key="create" onClick={openCreateModal}>新建机构</Button>]
+            ? [
+                simulatorDisable ? (
+                  <Tooltip key="create" title={SIMULATOR_DISABLED_TOOLTIP}>
+                    <span style={{ display: 'inline-block' }}>
+                      <Button disabled>新建机构</Button>
+                    </span>
+                  </Tooltip>
+                ) : (
+                  <Button key="create" onClick={openCreateModal}>新建机构</Button>
+                ),
+              ]
             : []),
         ]}
       />

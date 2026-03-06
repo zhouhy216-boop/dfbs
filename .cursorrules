@@ -1,3 +1,4 @@
+# FILE: .cursorrules  (REPLACE WHOLE FILE)
 # ============================================
 # DFBS vNext — .cursorrules (EN)
 # Purpose: Enforce Cursor execution discipline for high-frequency iteration
@@ -25,6 +26,25 @@ HARD RULES:
 3) All outputs intended for C MUST be ENGLISH ONLY (no Chinese/mixed language).
 4) Repo reality is the source of truth. If any doc/instruction conflicts with repo reality, follow repo reality and report it.
 
+ALIGNMENT PACK (shared vocabulary; prevents drift):
+- docs/product/MODULE_ROUTE_ANCHORS_v0.1.md
+- docs/product/BUSINESS_MAP_v0.1.md
+- docs/product/PROCESS_MAP_v0.1.md
+- docs/product/OBJECT_MAP_v0.1.md
+
+Rules for Alignment Pack:
+- These docs are not “source of truth over repo”; they are the shared map to interpret tickets.
+- If a ticket’s anchors are missing/unclear, ask C exactly ONE blocker question to clarify anchors.
+- If anchors conflict with repo reality, follow repo reality and report the conflict to C.
+
+UI Acceptance Policy (CEO):
+- CEO acceptance is UI-only by default (handled by C).
+- Therefore: DO NOT write instructions to CEO to run API calls, inspect HTTP codes, inspect DB, or read migrations.
+- If technical verification is required, YOU perform it locally and summarize as 1 short bullet in your receipt.
+
+NO “SMOKE DOC” by default:
+- Do NOT produce long smoke/regression documents unless the ticket explicitly requires it AND C confirms it is needed.
+- Default is always the short receipt format in Section 8.
 
 # 1) Legacy Documents Policy (Frozen)
 All legacy docs (README / PROJECT_STATUS / baseline docs / decision notes / scripts, etc.)
@@ -35,7 +55,6 @@ Source of truth is ONLY:
 - Repo’s actual current state/behavior
 - CEO-confirmed UI behavior + CEO-confirmed BUILD SUCCESS (final gate)
 
-
 # 2) Core Execution Cadence (WIP=1, No Scope Creep)
 HARD RULES:
 1) WIP=1: Work on ONLY ONE CURRENT Ticket at a time.
@@ -44,7 +63,6 @@ HARD RULES:
    - Report it to C as an INBOX suggestion (short).
 3) No interruption unless C explicitly declares a P0 interrupt / blocker / regression / BUILD FAILED.
 4) If a P0 interrupt happens: pause CURRENT cleanly (no mixed commits), fix P0, then resume CURRENT.
-
 
 # 3) Special Direct Ops (Bypass A/B/C) — HANDOVER SYNC (FIXED)
 This is a special direct channel between CEO and Cursor for keeping the repo-alignment pack factual.
@@ -69,7 +87,6 @@ OUTPUT (short receipt only; <= 20 lines; EN ok):
 - 3–6 bullets: what changed
 - "Not verified:" list (if any)
 
-
 # 4) Ticket Types You Must Support (From C)
 You will receive tickets from C in EN. Support these types:
 
@@ -93,7 +110,6 @@ D) IMPACT CHECK (FACTS ONLY)
 - Facts only; no refactor plans; no scope expansion.
 - Output short receipt (Section 8).
 
-
 # 5) Ticket ID Rules (Compatibility)
 Accept C’s ID formats (do not block on exact formatting):
 - Parent: <AUTO_KEY>-<YYMMDD>-<NNN>
@@ -103,21 +119,18 @@ Accept C’s ID formats (do not block on exact formatting):
 
 If a ticket uses a legacy ID (e.g., VNX-YYYYMMDD-###), still execute if it clearly comes from C.
 
-
 # 6) File/Module References in Tickets (Avoid “Blind Micromanagement”)
 Because C may not know the repo’s real-time file layout:
 - Treat file/module references as HINTS / TOUCHPOINTS unless the ticket explicitly says:
-  "Hard scope: docs-only" (e.g., evidence/handover updates).
+  "Hard scope: docs-only".
 - Choose the correct implementation location based on repo reality.
 - If hinted paths don’t match reality, proceed with the correct location and report it in the receipt.
-
 
 # 7) Questions & Unknowns (No Guessing)
 - MAX 1 blocker question per ticket.
 - Only ask a question if the answer would flip implementation direction or unblock execution.
 - Prefix exactly: "BLOCKER QUESTION: ..."
 - If uncertain and not blocking, mark as "Unknown" in your receipt and proceed safely within scope.
-
 
 # 8) Default Output Format (VERY SHORT) — ENGLISH ONLY (for C)
 Unless FAIL or explicitly requested, your output must be a short receipt (ENGLISH ONLY):
@@ -126,25 +139,24 @@ REQUIRED LINES (keep concise):
 - Completed? Yes/No
 - Full-suite build PASS/FAIL (include the command you ran)
 - Changed areas (very short: key pages/modules/files)
-- What to verify (1–3 bullets)
+- What to verify (1–3 bullets)  (UI-oriented if possible; no CEO API steps)
 - BLOCKER QUESTION (only if truly blocking; max 1)
 
 PROHIBITED (by default):
 - Long explanations
 - Huge logs
 - Large code pastes
+- Standalone smoke/regression documents
 
 Allowed only when:
 - FAIL, or
 - C explicitly asks for detailed logs/snippets, or
 - Ticket explicitly requires detailed evidence listing.
 
-
 # 9) Completion & Status Claims
 - You MUST NOT claim CEO acceptance.
 - Do NOT mark "Closed".
 - Only report your local execution/build/test status as facts.
-
 
 # 10) INBOX Suggestions (When You Discover New Ideas)
 If you notice something out-of-scope that might be valuable:
@@ -153,4 +165,14 @@ If you notice something out-of-scope that might be valuable:
   "INBOX SUGGESTION: <one line> | Impact: <one line> | Priority guess: P0/P1/P2"
 
 
+# 10) UI LANGUAGE (HARD RULE):
+- Any user-visible UI text must be pure Chinese.
+- Do NOT leave English in:
+  menu, title, button, tab, form label, placeholder, table header,
+  empty state, toast, modal, tooltip, badge, status text, role label, no-access message.
+- Allowed English only in:
+  hidden developer-only debug info, console/logs, code comments, config keys, API names.
+- If a ticket touches UI, convert visible English text in the touched scope to Chinese.
+- In your receipt, include 1 short check:
+  "Visible UI text in scope is Chinese: Yes/No"
 # End of file

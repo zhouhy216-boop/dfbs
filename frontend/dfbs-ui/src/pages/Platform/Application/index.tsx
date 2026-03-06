@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ProTable, ModalForm, ProFormMoney, ProFormDigit } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
-import { Alert, Button, Col, Modal, Form, Input, InputNumber, Row, Select, Tabs, Tag, message } from 'antd';
+import { Alert, Button, Col, Modal, Form, Input, InputNumber, Row, Select, Tabs, Tag, message, Tooltip } from 'antd';
 import request from '@/shared/utils/request';
 import SmartReferenceSelect from '@/shared/components/SmartReferenceSelect';
 import SmartInput from '@/shared/components/SmartInput';
@@ -14,12 +14,16 @@ import { ContractRule, OrgCodeRule, OrgCodeUppercaseRule } from '@/features/plat
 import { getPlatformConfigs, type PlatformConfigItem } from '@/features/platform/services/platformConfig';
 import { useDraftForm } from '@/shared/hooks/useDraftForm';
 import { useEffectivePermissions } from '@/shared/hooks/useEffectivePermissions';
+import { useSimulatedRoleStore } from '@/shared/stores/useSimulatedRoleStore';
+import { isPlatformApplicationActionAllowedForSimulatedRole } from '@/shared/config/roleToUiGatingMatrix';
 import ApplicationsHistory from '@/pages/Platform/applications/History';
 
 const PERM_APPS_SUBMIT = 'platform_application.applications:SUBMIT';
 const PERM_APPS_CLOSE = 'platform_application.applications:CLOSE';
 const PERM_APPS_APPROVE = 'platform_application.applications:APPROVE';
 const PERM_APPS_REJECT = 'platform_application.applications:REJECT';
+
+const SIMULATOR_DISABLED_TOOLTIP = '该角色不可操作';
 
 const SOURCE_TYPE_OPTIONS = [
   { label: '销售渠道', value: 'FACTORY' },
@@ -205,6 +209,8 @@ export default function PlatformApplication({
   const draftKey = `platform-apply-${createSourceType}${enterpriseDirect ? '-enterprise' : ''}`;
   const { saveDraft, loadDraft, clearDraft, hasDraft } = useDraftForm(draftKey);
   const { has: hasPermission } = useEffectivePermissions();
+  const simulatedRole = useSimulatedRoleStore((s) => s.simulatedRole);
+  const simulatorDisable = !isPlatformApplicationActionAllowedForSimulatedRole(simulatedRole);
   const plannerDraftKey = 'platform-apply-enterprise-confirm';
   const { saveDraft: savePlannerDraft, loadDraft: loadPlannerDraft, clearDraft: clearPlannerDraft, hasDraft: hasPlannerDraft } = useDraftForm(plannerDraftKey);
 
@@ -795,7 +801,17 @@ export default function PlatformApplication({
         width={560}
         footer={[
           ...(hasPermission(PERM_APPS_CLOSE)
-            ? [<Button key="closeApp" danger onClick={handlePlannerCloseApp}>关闭申请</Button>]
+            ? [
+                simulatorDisable ? (
+                  <Tooltip key="closeApp" title={SIMULATOR_DISABLED_TOOLTIP}>
+                    <span style={{ display: 'inline-block' }}>
+                      <Button danger disabled>关闭申请</Button>
+                    </span>
+                  </Tooltip>
+                ) : (
+                  <Button key="closeApp" danger onClick={handlePlannerCloseApp}>关闭申请</Button>
+                ),
+              ]
             : []),
           <Button key="cancel" onClick={() => { setPlannerModalOpen(false); setCurrentRow(null); setPlannerCustomerExists(null); plannerForm.resetFields(); }}>
             取消
@@ -815,7 +831,17 @@ export default function PlatformApplication({
             保存草稿
           </Button>,
           ...(hasPermission(PERM_APPS_SUBMIT)
-            ? [<Button key="submit" type="primary" onClick={() => handlePlannerConfirm()}>提交至管理员</Button>]
+            ? [
+                simulatorDisable ? (
+                  <Tooltip key="submit" title={SIMULATOR_DISABLED_TOOLTIP}>
+                    <span style={{ display: 'inline-block' }}>
+                      <Button type="primary" disabled>提交至管理员</Button>
+                    </span>
+                  </Tooltip>
+                ) : (
+                  <Button key="submit" type="primary" onClick={() => handlePlannerConfirm()}>提交至管理员</Button>
+                ),
+              ]
             : []),
         ]}
       >
@@ -1073,10 +1099,26 @@ export default function PlatformApplication({
                 </Form.Item>
                 <Form.Item>
                   {hasPermission(PERM_APPS_APPROVE) && (
-                    <Button type="primary" onClick={handleApprove} style={{ marginRight: 8 }}>通过</Button>
+                    simulatorDisable ? (
+                      <Tooltip title={SIMULATOR_DISABLED_TOOLTIP}>
+                        <span style={{ display: 'inline-block', marginRight: 8 }}>
+                          <Button type="primary" disabled>通过</Button>
+                        </span>
+                      </Tooltip>
+                    ) : (
+                      <Button type="primary" onClick={handleApprove} style={{ marginRight: 8 }}>通过</Button>
+                    )
                   )}
                   {hasPermission(PERM_APPS_REJECT) && (
-                    <Button danger onClick={() => setRejectModalOpen(true)}>驳回</Button>
+                    simulatorDisable ? (
+                      <Tooltip title={SIMULATOR_DISABLED_TOOLTIP}>
+                        <span style={{ display: 'inline-block' }}>
+                          <Button danger disabled>驳回</Button>
+                        </span>
+                      </Tooltip>
+                    ) : (
+                      <Button danger onClick={() => setRejectModalOpen(true)}>驳回</Button>
+                    )
                   )}
                 </Form.Item>
               </Form>

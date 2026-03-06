@@ -1,12 +1,15 @@
 import { useRef, useState, useEffect } from 'react';
 import { ProTable, ModalForm, PageContainer } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
-import { Tabs, Button, Modal, Form, Input, InputNumber, DatePicker, Select, message } from 'antd';
+import { Tabs, Button, Modal, Form, Input, InputNumber, DatePicker, Select, message, Tooltip } from 'antd';
 import type { Dayjs } from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 import request from '@/shared/utils/request';
 import SmartReferenceSelect from '@/shared/components/SmartReferenceSelect';
 import { useEffectivePermissions } from '@/shared/hooks/useEffectivePermissions';
+import { useIsAdminOrSuperAdmin } from '@/shared/components/AdminOrSuperAdminGuard';
+import { useSimulatedRoleStore } from '@/shared/stores/useSimulatedRoleStore';
+import { isWorkOrderActionAllowedForSimulatedRole } from '@/shared/config/roleToUiGatingMatrix';
 
 function CustomerSmartSelectInternal() {
   const form = Form.useFormInstance();
@@ -79,9 +82,14 @@ function toWorkOrderRow(d: { id: number; orderNo?: string; status?: string; cust
   };
 }
 
+const SIMULATOR_DISABLED_TOOLTIP = '该角色不可操作';
+
 export default function WorkOrderInternal() {
   const navigate = useNavigate();
   const { has } = useEffectivePermissions();
+  const isAdminOrSuperAdmin = useIsAdminOrSuperAdmin();
+  const simulatedRole = useSimulatedRoleStore((s) => s.simulatedRole);
+  const simulatorDisable = !isWorkOrderActionAllowedForSimulatedRole(simulatedRole);
   const pendingPoolRef = useRef<ActionType>(null);
   const readyPoolRef = useRef<ActionType>(null);
   const myOrdersRef = useRef<ActionType>(null);
@@ -157,37 +165,53 @@ export default function WorkOrderInternal() {
       render: (_, row) => [
         <a key="detail" onClick={() => navigate(`/work-orders/${row.id}`)}>详情</a>,
         has('work_order:ASSIGN') && (
-          <a
-            key="accept"
-            onClick={() => {
-              setAcceptRow(row);
-              acceptForm.setFieldsValue({
-                customerId: row.customerId ?? undefined,
-                customerName: row.customerName ?? '',
-                contactPerson: row.contactPerson ?? '',
-                contactPhone: row.contactPhone ?? '',
-                serviceAddress: row.serviceAddress ?? '',
-                issueDescription: undefined,
-                appointmentTime: undefined,
-              });
-              setAcceptModalOpen(true);
-            }}
-          >
-            受理
-          </a>
+          simulatorDisable ? (
+            <Tooltip key="accept" title={SIMULATOR_DISABLED_TOOLTIP}>
+              <span style={{ display: 'inline-block' }}>
+                <Button type="link" size="small" disabled>受理</Button>
+              </span>
+            </Tooltip>
+          ) : (
+            <a
+              key="accept"
+              onClick={() => {
+                setAcceptRow(row);
+                acceptForm.setFieldsValue({
+                  customerId: row.customerId ?? undefined,
+                  customerName: row.customerName ?? '',
+                  contactPerson: row.contactPerson ?? '',
+                  contactPhone: row.contactPhone ?? '',
+                  serviceAddress: row.serviceAddress ?? '',
+                  issueDescription: undefined,
+                  appointmentTime: undefined,
+                });
+                setAcceptModalOpen(true);
+              }}
+            >
+              受理
+            </a>
+          )
         ),
         has('work_order:REJECT') && (
-          <a
-            key="reject"
-            style={{ color: 'var(--ant-color-error)' }}
-            onClick={() => {
-              setRejectRow(row);
-              rejectForm.setFieldsValue({ reason: '' });
-              setRejectModalOpen(true);
-            }}
-          >
-            驳回
-          </a>
+          simulatorDisable ? (
+            <Tooltip key="reject" title={SIMULATOR_DISABLED_TOOLTIP}>
+              <span style={{ display: 'inline-block' }}>
+                <Button type="link" size="small" disabled style={{ color: 'var(--ant-color-error)' }}>驳回</Button>
+              </span>
+            </Tooltip>
+          ) : (
+            <a
+              key="reject"
+              style={{ color: 'var(--ant-color-error)' }}
+              onClick={() => {
+                setRejectRow(row);
+                rejectForm.setFieldsValue({ reason: '' });
+                setRejectModalOpen(true);
+              }}
+            >
+              驳回
+            </a>
+          )
         ),
       ].filter(Boolean),
     },
@@ -202,16 +226,24 @@ export default function WorkOrderInternal() {
       render: (_, row) => [
         <a key="detail" onClick={() => navigate(`/work-orders/${row.id}`)}>详情</a>,
         has('work_order:ASSIGN') && (
-          <a
-            key="dispatch"
-            onClick={() => {
-              setDispatchRow(row);
-              dispatchForm.setFieldsValue({ serviceManagerId: undefined });
-              setDispatchModalOpen(true);
-            }}
-          >
-            派单
-          </a>
+          simulatorDisable ? (
+            <Tooltip key="dispatch" title={SIMULATOR_DISABLED_TOOLTIP}>
+              <span style={{ display: 'inline-block' }}>
+                <Button type="link" size="small" disabled>派单</Button>
+              </span>
+            </Tooltip>
+          ) : (
+            <a
+              key="dispatch"
+              onClick={() => {
+                setDispatchRow(row);
+                dispatchForm.setFieldsValue({ serviceManagerId: undefined });
+                setDispatchModalOpen(true);
+              }}
+            >
+              派单
+            </a>
+          )
         ),
       ].filter(Boolean),
     },
@@ -226,49 +258,73 @@ export default function WorkOrderInternal() {
       render: (_, row) => [
         <a key="detail" onClick={() => navigate(`/work-orders/${row.id}`)}>详情</a>,
         row.status === 'PENDING' && has('work_order:ASSIGN') && (
-          <a
-            key="accept"
-            onClick={() => {
-              setAcceptRow(row);
-              acceptForm.setFieldsValue({
-                customerId: row.customerId ?? undefined,
-                customerName: row.customerName ?? '',
-                contactPerson: row.contactPerson ?? '',
-                contactPhone: row.contactPhone ?? '',
-                serviceAddress: row.serviceAddress ?? '',
-                issueDescription: undefined,
-                appointmentTime: undefined,
-              });
-              setAcceptModalOpen(true);
-            }}
-          >
-            受理
-          </a>
+          simulatorDisable ? (
+            <Tooltip key="accept" title={SIMULATOR_DISABLED_TOOLTIP}>
+              <span style={{ display: 'inline-block' }}>
+                <Button type="link" size="small" disabled>受理</Button>
+              </span>
+            </Tooltip>
+          ) : (
+            <a
+              key="accept"
+              onClick={() => {
+                setAcceptRow(row);
+                acceptForm.setFieldsValue({
+                  customerId: row.customerId ?? undefined,
+                  customerName: row.customerName ?? '',
+                  contactPerson: row.contactPerson ?? '',
+                  contactPhone: row.contactPhone ?? '',
+                  serviceAddress: row.serviceAddress ?? '',
+                  issueDescription: undefined,
+                  appointmentTime: undefined,
+                });
+                setAcceptModalOpen(true);
+              }}
+            >
+              受理
+            </a>
+          )
         ),
         row.status === 'ACCEPTED_BY_DISPATCHER' && has('work_order:ASSIGN') && (
-          <a
-            key="dispatch"
-            onClick={() => {
-              setDispatchRow(row);
-              dispatchForm.setFieldsValue({ serviceManagerId: undefined });
-              setDispatchModalOpen(true);
-            }}
-          >
-            派单
-          </a>
+          simulatorDisable ? (
+            <Tooltip key="dispatch" title={SIMULATOR_DISABLED_TOOLTIP}>
+              <span style={{ display: 'inline-block' }}>
+                <Button type="link" size="small" disabled>派单</Button>
+              </span>
+            </Tooltip>
+          ) : (
+            <a
+              key="dispatch"
+              onClick={() => {
+                setDispatchRow(row);
+                dispatchForm.setFieldsValue({ serviceManagerId: undefined });
+                setDispatchModalOpen(true);
+              }}
+            >
+              派单
+            </a>
+          )
         ),
         row.status === 'PENDING' && has('work_order:REJECT') && (
-          <a
-            key="reject"
-            style={{ color: 'var(--ant-color-error)' }}
-            onClick={() => {
-              setRejectRow(row);
-              rejectForm.setFieldsValue({ reason: '' });
-              setRejectModalOpen(true);
-            }}
-          >
-            驳回
-          </a>
+          simulatorDisable ? (
+            <Tooltip key="reject" title={SIMULATOR_DISABLED_TOOLTIP}>
+              <span style={{ display: 'inline-block' }}>
+                <Button type="link" size="small" disabled style={{ color: 'var(--ant-color-error)' }}>驳回</Button>
+              </span>
+            </Tooltip>
+          ) : (
+            <a
+              key="reject"
+              style={{ color: 'var(--ant-color-error)' }}
+              onClick={() => {
+                setRejectRow(row);
+                rejectForm.setFieldsValue({ reason: '' });
+                setRejectModalOpen(true);
+              }}
+            >
+              驳回
+            </a>
+          )
         ),
       ].filter(Boolean),
     },
@@ -394,10 +450,18 @@ export default function WorkOrderInternal() {
     <PageContainer
       title="工单管理"
       extra={[
-        has('work_order:CREATE') && (
-          <Button key="create" type="primary" onClick={() => setCreateModalOpen(true)}>
-            新建工单
-          </Button>
+        (has('work_order:CREATE') || isAdminOrSuperAdmin) && (
+          simulatorDisable ? (
+            <Tooltip key="create" title={SIMULATOR_DISABLED_TOOLTIP}>
+              <span style={{ display: 'inline-block' }}>
+                <Button type="primary" disabled>新建工单</Button>
+              </span>
+            </Tooltip>
+          ) : (
+            <Button key="create" type="primary" onClick={() => setCreateModalOpen(true)}>
+              新建工单
+            </Button>
+          )
         ),
       ].filter(Boolean)}
     >

@@ -1,9 +1,9 @@
 # TEST_BASELINE — How to run tests; what counts as BUILD SUCCESS
 
-- **As-of:** 2026-02-09 14:00
+- **As-of:** 2025-02-24 20:00
 - **Repo:** main
-- **Commit:** 1df603c5
-- **Verification method:** `backend/dfbs-app/pom.xml`, `frontend/dfbs-ui/package.json`, `backend/dfbs-app/src/main/resources/application.yml`, list_dir `backend/dfbs-app/src/test/java/com/dfbs/app/`.
+- **Commit:** 983df8e7
+- **Verification method:** Inspected `backend/dfbs-app/pom.xml`, `frontend/dfbs-ui/package.json`, `application.yml`; grep `*Test.java` under `backend/dfbs-app/src/test/`.
 
 **Facts only.** No test run was executed in this handover; BUILD SUCCESS criteria are defined from project config.
 
@@ -14,7 +14,7 @@
 | Scope | Command | Working directory |
 |-------|---------|-------------------|
 | Backend tests | `.\mvnw.cmd test` (Windows) or `./mvnw test` (Unix) | `backend/dfbs-app` |
-| Backend compile (no tests) | `.\mvnw.cmd -q clean compile -DskipTests` | `backend/dfbs-app` |
+| Backend compile (no tests) | `.\mvnw.cmd -q clean compile -DskipTests` or `.\mvnw.cmd -q -DskipTests package` | `backend/dfbs-app` |
 | Frontend build | `npm run build` | `frontend/dfbs-ui` |
 | Frontend lint | `npm run lint` | `frontend/dfbs-ui` |
 | Frontend dev | `npm run dev` | `frontend/dfbs-ui` |
@@ -44,8 +44,8 @@ Frontend: no required env vars found in `frontend/dfbs-ui/src` for build; dev/pr
 
 ## Backend test layout (facts from repo)
 
-- **Application (service) tests:** `src/test/java/com/dfbs/app/application/` — e.g. QuoteItemTest, QuoteStateTest, QuoteVoidTest, ShipmentPanoramaTest, ShipmentProcessTest, RepairRecordTest, PaymentRecordTest, QuotePaymentWorkflowTest, AccountStatementTest, ExpenseClaimTest, TripRequestTest, CorrectionTest, FreightBillTest, InventoryTest, InvoiceApplicationTest, CustomerMergeTest, DamageRecordTest, BomServiceTest, CarrierTest, PriceBookTest, NotificationTest, PermissionRequestTest, PaymentTest, DictionaryLogicTest, DictionaryQuoteTest, QuoteCcTest, QuoteDownstreamTest, QuoteExportTest, QuoteNumberingTest, QuotePartLinkTest, QuoteStandardizationTest, QuoteWarehouseTest, WorkOrderQuoteTest, ExpenseStatsTest, AttachmentRuleTest, MasterDataListTest; orgstructure: OrgLevelServiceTest, OrgStructureDevResetServiceTest.
-- **Interface (controller) tests:** `src/test/java/com/dfbs/app/interfaces/` — e.g. ContractMasterDataCreateTest, CustomerMasterDataSearchTest, AccountStatementControllerTest, ContractPriceControllerTest, MachineMasterDataCreateTest, ProductMasterDataCreateTest, ProductMasterDataSearchTest, IccidMasterDataCreateTest, QuoteVersionActivateTest; orgstructure: OrgLevelControllerTest, OrgLevelReorderControllerTest, OrgChangeLogControllerTest, OrgNodeControllerTest, OrgStructureResetAllControllerTest.
+- **Application (service) tests:** `src/test/java/com/dfbs/app/application/` — e.g. QuoteItemTest, ShipmentPanoramaTest, ShipmentProcessTest, AttachmentRuleTest, DamageRecordTest, RepairRecordTest, QuotePaymentWorkflowTest, AccountStatementTest, and subpackages quote, quote/void, quote/payment, masterdata, orgstructure.
+- **Interface (controller) tests:** `src/test/java/com/dfbs/app/interfaces/` — e.g. ShipmentControllerPermissionTest, ContractMasterDataCreateTest, CustomerMasterDataSearchTest, AccountStatementControllerTest, ContractPriceControllerTest, MachineMasterDataCreateTest, OrgLevelControllerTest, OrgLevelReorderControllerTest, OrgChangeLogControllerTest, OrgNodeControllerTest, OrgStructureResetAllControllerTest.
 - **Other:** `DfbsAppApplicationTests.java`, `ArchitectureRulesTest.java`, `MasterDataReadOnlyRulesTest.java`; `infra/SwaggerTest.java`.
 
 ---
@@ -67,8 +67,8 @@ There is no `test` script. Frontend gate for PR: Not verified; candidates are `n
 
 ## Common failure modes (facts from repo config)
 
-- Backend: Tests that hit the DB require Postgres at `spring.datasource.url`; if DB is down or migrations not applied, tests can fail. Flyway is configured with `validate-on-migrate: false` and `ignore-missing-migrations: true` (see `application.yml`), so missing V0056 does not block startup.
-- Frontend: `npm run build` runs `tsc -b` first; TypeScript errors cause build failure. No test script; no automated frontend test run documented.
+- **Backend:** Tests that hit the DB require Postgres at `spring.datasource.url`; if DB is down or migrations not applied, tests can fail. Flyway is configured with `validate-on-migrate: false` and `ignore-missing-migrations: true` (see `application.yml`), so missing V0056 does not block startup.
+- **Frontend:** `npm run build` runs `tsc -b` first; TypeScript errors cause build failure. At handover time, multiple existing TS errors in repo (e.g. `OrgTreeSelect.tsx`, `AccountPermissions/BizPermCatalogMaintenance.tsx`, `OrgTree/index.tsx`, `RolesPermissions/index.tsx`, `AfterSales/index.tsx`, `ImportCenter/index.tsx`, `Quote/index.tsx`, `Platform/Application/index.tsx`, others) cause `npm run build` to fail. No automated frontend test script.
 
 ---
 
