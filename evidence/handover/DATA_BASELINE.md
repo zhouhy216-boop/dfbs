@@ -1,15 +1,15 @@
 # DATA_BASELINE — Flyway migrations and key tables
 
-- **As-of:** 2025-02-24 20:00
+- **As-of:** 2025-02-24 (stage baseline rebuild)
 - **Repo:** main
-- **Commit:** 983df8e7
+- **Commit:** 328150bd
 - **Verification method:** List `backend/dfbs-app/src/main/resources/db/migration/V*.sql` (sorted by name); grep `CREATE TABLE|ALTER TABLE` in migration files.
 
 **Facts only.** Location: `backend/dfbs-app/src/main/resources/db/migration/`. Format: `Vxxxx__<name>.sql`. V0056 missing in repo.
 
 ---
 
-## Migration filenames (ordered V0001–V0086)
+## Migration filenames (ordered V0001–V0087)
 
 | Id | Filename |
 |----|----------|
@@ -98,6 +98,7 @@
 | V0084 | V0084__dict_transition.sql |
 | V0085 | V0085__shipment_closed_at.sql |
 | V0086 | V0086__shipment_exception_record.sql |
+| V0087 | V0087__app_user_primary_business_role.sql |
 
 ---
 
@@ -162,6 +163,22 @@
 | V0084 | dict_transition (Type B from→to edges) | V0084__dict_transition.sql |
 | V0085 | shipment closed_at column (close action) | V0085__shipment_closed_at.sql |
 | V0086 | shipment_exception_record (manual exception records) | V0086__shipment_exception_record.sql |
+| V0087 | app_user.primary_business_role (identity basis; one per account) | V0087__app_user_primary_business_role.sql |
+
+---
+
+## Migrations relevant to accounts / users / people / org / permissions
+
+- **app_user / account:** V0024 (permission_request, app_user), V0046 (username), V0047 (seed admin), V0074 (perm_user_role_template_and_override), V0076 (person_binding, enabled, password), V0087 (primary_business_role).
+- **Org / person:** V0061 (org_level, org_node, job_level, org_person, person_affiliation, org_change_log), V0063–V0064 (org_position), V0062 (org_level default seed).
+- **Permissions / role-like:** V0071–V0079 (perm_definition, perm_role, perm_audit_log, app_setting, perm_module_enabled), V0080–V0081 (biz_perm_catalog, biz_perm_user_op_scope).
+
+---
+
+## Decision-risk notes
+
+- **app_user.primary_business_role:** Column stores one Chinese business-role label per account; used as real identity basis. Do not assume it is used by contract/review flows—no review table or ownership fields exist in repo yet.
+- **org_person / person_affiliation:** Used for account binding; “person” is the real identity; account creation requires selecting an existing org person.
 
 ---
 

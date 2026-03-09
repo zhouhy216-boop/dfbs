@@ -81,3 +81,19 @@
 | 生产准备（生产企画） | （暂无） | 目前未在路由清单中看到独立入口 |
 | 入网准备协作（营业企画→生产企画→平台主管） | （暂无） | 未来可能落在“机器详情/合同详情/平台&SIM模块”之一，等细聊再定 |
 | 报表中心（领导自选） | （暂无） | 目前只有 Dashboard；报表中心未见独立入口 |
+
+---
+
+## Repo reality check (stage baseline 2025-02-24)
+
+- **Already in repo:** All routes in sections A–D exist in `frontend/dfbs-ui/src/App.tsx`. Aliases and redirects match. Left menu does not show 角色与权限 or 字典类型 (removed per menu cleanup); 账号与权限 and 数据字典 remain. Account-permissions page: create/edit account with 主业务角色 (Primary Business Role); PUT `/api/v1/admin/account-permissions/accounts/{userId}` for profile update.
+- **Menu vs route:** 角色与权限 is reachable by direct URL `/admin/roles-permissions` but not in left menu.
+
+## Conflicts with current repo reality
+
+- None. Product text describes “字典类型” and “数据字典” as duplicate/alias; repo reflects that (one menu entry removed). 账号与权限 is Admin or Super Admin; 角色与权限 is Perm Super Admin (different guard).
+
+## Anchor gaps / not yet present in repo
+
+- **评审协同（营业企画）:** No route or page; no contract review flow, no review record entity. MODULE_ROUTE_ANCHORS correctly states “目前未在路由清单中看到独立入口”.
+- **生产准备（生产企画）、入网准备协作、报表中心:** No dedicated routes; product intent unchanged; repo has no new anchors for these.

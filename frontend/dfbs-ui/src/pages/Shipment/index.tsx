@@ -159,6 +159,7 @@ export default function Shipment() {
   const [exceptionForm] = Form.useForm();
   const [exceptionRecords, setExceptionRecords] = useState<ExceptionRecordDto[]>([]);
   const [shipmentMachines, setShipmentMachines] = useState<ShipmentMachineItem[]>([]);
+  const simulatorDisable = !isShipmentWorkflowActionAllowedForSimulatedRole(simulatedRole);
 
   const columns: ProColumns<ShipmentListRow>[] = [
     { title: '发货单号', dataIndex: 'shipmentNo', width: 160 },
@@ -398,7 +399,7 @@ export default function Shipment() {
   const visibleActions = (actions: WorkflowActionDto[]) =>
     actions.filter((a) => {
       const key = permKeyForAction(a.actionCode);
-      return key != null && has(key);
+      return key != null && (has(key) || isAdminOrSuperAdmin);
     });
 
   return (
@@ -427,10 +428,17 @@ export default function Shipment() {
         pagination={{ pageSize: 10 }}
         headerTitle="发货列表"
         toolBarRender={() => [
+          simulatorDisable ? (
+            <Tooltip key="create" title={SIMULATOR_DISABLED_TOOLTIP}>
+              <span style={{ display: 'inline-block' }}>
+                <Button type="primary" disabled>新建发货单</Button>
+              </span>
+            </Tooltip>
+          ) : (
           <ModalForm<{ customerId: number; shipmentType: string }>
             key="create"
             title="新建发货单"
-            trigger={<Button type="primary">New Shipment</Button>}
+            trigger={<Button type="primary">新建发货单</Button>}
             onFinish={async (values) => {
               await request.post('/v1/shipments', {
                 customerId: values.customerId,
@@ -463,7 +471,8 @@ export default function Shipment() {
               ]}
               initialValue="STANDARD"
             />
-          </ModalForm>,
+          </ModalForm>
+          ),
         ]}
       />
       <Drawer
@@ -522,9 +531,17 @@ export default function Shipment() {
               </div>
             )}
             <div style={{ marginBottom: 16 }}>
-              <Button type="primary" size="small" onClick={() => setApplyAfterSalesOpen(true)}>
-                发起售后
-              </Button>
+              {simulatorDisable ? (
+                <Tooltip title={SIMULATOR_DISABLED_TOOLTIP}>
+                  <span style={{ display: 'inline-block' }}>
+                    <Button type="primary" size="small" disabled>发起售后</Button>
+                  </span>
+                </Tooltip>
+              ) : (
+                <Button type="primary" size="small" onClick={() => setApplyAfterSalesOpen(true)}>
+                  发起售后
+                </Button>
+              )}
             </div>
             <Descriptions column={1} bordered size="small">
               <Descriptions.Item label="ID">{detail.id}</Descriptions.Item>

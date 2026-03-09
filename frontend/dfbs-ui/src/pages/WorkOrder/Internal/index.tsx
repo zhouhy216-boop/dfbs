@@ -164,7 +164,7 @@ export default function WorkOrderInternal() {
       width: 200,
       render: (_, row) => [
         <a key="detail" onClick={() => navigate(`/work-orders/${row.id}`)}>详情</a>,
-        has('work_order:ASSIGN') && (
+        (has('work_order:ASSIGN') || isAdminOrSuperAdmin) && (
           simulatorDisable ? (
             <Tooltip key="accept" title={SIMULATOR_DISABLED_TOOLTIP}>
               <span style={{ display: 'inline-block' }}>
@@ -192,7 +192,7 @@ export default function WorkOrderInternal() {
             </a>
           )
         ),
-        has('work_order:REJECT') && (
+        (has('work_order:REJECT') || isAdminOrSuperAdmin) && (
           simulatorDisable ? (
             <Tooltip key="reject" title={SIMULATOR_DISABLED_TOOLTIP}>
               <span style={{ display: 'inline-block' }}>
@@ -225,7 +225,7 @@ export default function WorkOrderInternal() {
       width: 140,
       render: (_, row) => [
         <a key="detail" onClick={() => navigate(`/work-orders/${row.id}`)}>详情</a>,
-        has('work_order:ASSIGN') && (
+        (has('work_order:ASSIGN') || isAdminOrSuperAdmin) && (
           simulatorDisable ? (
             <Tooltip key="dispatch" title={SIMULATOR_DISABLED_TOOLTIP}>
               <span style={{ display: 'inline-block' }}>
@@ -257,7 +257,7 @@ export default function WorkOrderInternal() {
       width: 220,
       render: (_, row) => [
         <a key="detail" onClick={() => navigate(`/work-orders/${row.id}`)}>详情</a>,
-        row.status === 'PENDING' && has('work_order:ASSIGN') && (
+        row.status === 'PENDING' && (has('work_order:ASSIGN') || isAdminOrSuperAdmin) && (
           simulatorDisable ? (
             <Tooltip key="accept" title={SIMULATOR_DISABLED_TOOLTIP}>
               <span style={{ display: 'inline-block' }}>
@@ -285,7 +285,7 @@ export default function WorkOrderInternal() {
             </a>
           )
         ),
-        row.status === 'ACCEPTED_BY_DISPATCHER' && has('work_order:ASSIGN') && (
+        row.status === 'ACCEPTED_BY_DISPATCHER' && (has('work_order:ASSIGN') || isAdminOrSuperAdmin) && (
           simulatorDisable ? (
             <Tooltip key="dispatch" title={SIMULATOR_DISABLED_TOOLTIP}>
               <span style={{ display: 'inline-block' }}>
@@ -305,7 +305,7 @@ export default function WorkOrderInternal() {
             </a>
           )
         ),
-        row.status === 'PENDING' && has('work_order:REJECT') && (
+        row.status === 'PENDING' && (has('work_order:REJECT') || isAdminOrSuperAdmin) && (
           simulatorDisable ? (
             <Tooltip key="reject" title={SIMULATOR_DISABLED_TOOLTIP}>
               <span style={{ display: 'inline-block' }}>

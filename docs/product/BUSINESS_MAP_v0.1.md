@@ -145,3 +145,20 @@
   - 动作（用通用动作层词汇）  
   - 与其他模块的联动（只写“连到谁”）  
   - v1 验收标准（你能在 UI 上看到的变化）
+
+---
+
+## Repo reality check (stage baseline 2025-02-24)
+
+- **M01, M04, M05, M06, M07, M08, M09, M10:** Routes and pages exist as stated. Account-permissions under system admin: create/edit account with Primary Business Role (主业务角色); stored on `app_user.primary_business_role` (V0087).
+- **M02 评审协同, M03 生产准备:** No pages or routes in repo; product “暂无” is correct.
+
+## Conflicts with current repo reality
+
+- None. Business map anchors (e.g. `/shipments`, `/work-orders`, `/platform/orgs`, `/platform/applications`, `/master-data/contracts`) match repo. Access to some pages requires effective permission or admin/super-admin bypass (whitelist in `PermEnforcementService.java`); product does not claim “no permission model”.
+
+## Anchor gaps / not yet present in repo
+
+- **M02 评审协同:** No contract review flow, no initiator/assigned/current handler in repo. Valid product anchor; not implemented.
+- **M03 生产准备:** No dedicated route or “生产准备” page. Valid product anchor; not implemented.
+- **“设备绑定” exact UI location:** Not decided in repo; product note (“机器详情还是平台模块”) unchanged.

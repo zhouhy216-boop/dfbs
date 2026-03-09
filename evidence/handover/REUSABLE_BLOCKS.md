@@ -1,8 +1,8 @@
 # REUSABLE_BLOCKS — Inventory of reusable building blocks
 
-- **As-of:** 2025-02-24 20:00
+- **As-of:** 2025-02-24 (stage baseline rebuild)
 - **Repo:** main
-- **Commit:** 983df8e7
+- **Commit:** 328150bd
 - **Verification method:** Grep imports/usages in `frontend/dfbs-ui/src` for component and hook names.
 
 **Facts only.** Usage sites from repo. Paths under `frontend/dfbs-ui/src/`.
@@ -204,6 +204,13 @@
 - **Location:** `shared/stores/useSimulatedRoleStore.ts`; `shared/config/roleToUiGatingMatrix.ts`.
 - **Usage sites:** BasicLayout (menu filter, dropdown, badge, matrix review modal); Shipment page (workflow buttons disable + tooltip); WorkOrder Internal list and Detail (新建工单, 受理, 派单, 驳回, 接单); Platform Org (销售申请, 服务申请, 营企申请, 新建机构, 编辑, 删除); Platform Application (通过, 驳回, 提交至管理员, 关闭申请).
 - **Key interface:** useSimulatedRoleStore((s) => s.simulatedRole), .setSimulatedRole; getRoleToUiGatingEntry(id), isRouteVisibleForSimulatedRole(path, role), filterMenuBySimulatedRole(routes, role), is*ActionAllowedForSimulatedRole(role).
+
+---
+
+## Reuse status
+
+- Blocks 1–21: Reusable as-is for current usage sites; request/adapters/dictRead/dictTransition are shared across pages.
+- Block 22 (useSimulatedRoleStore, roleToUiGatingMatrix): Reusable as-is for UI-only simulator; does not affect backend identity or permissions. Reusable in name only for “real” role-based flows—backend uses effective keys and Primary Business Role on account, not simulated role.
 
 ---
 

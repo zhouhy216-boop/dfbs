@@ -1,9 +1,9 @@
 # UI_ENTRYPOINTS — All current UI entry points
 
-- **As-of:** 2025-02-24 20:00
+- **As-of:** 2025-02-24 (stage baseline rebuild)
 - **Repo:** main
-- **Commit:** 983df8e7
-- **Verification method:** Inspected `frontend/dfbs-ui/src/App.tsx` (Routes), `frontend/dfbs-ui/src/layouts/BasicLayout.tsx` (MENU_ROUTES_BASE, buildMenuRoutes, adminExtras).
+- **Commit:** 328150bd
+- **Verification method:** Inspected `App.tsx` (Routes), `BasicLayout.tsx` (MENU_ROUTES_BASE, buildMenuRoutes, adminExtras), `AccountPermissions/AccountsTab.tsx` (create/edit account + Primary Business Role).
 
 **Facts only.** Unverifiable items in "Not verified" section.
 
@@ -56,7 +56,7 @@ All entries below require valid token (AuthGuard). Layout: `BasicLayout.tsx`; me
 | 字典项管理 | `/admin/dictionary-types/:typeId/items` | Auth + Super Admin | Dict items list/create/edit/reorder/enable/disable | `DictionaryTypeAdminController` (items); `pages/Admin/DictionaryItems/index.tsx` |
 | 状态流(迁移规则) | `/admin/dictionary-types/:typeId/transitions` | Auth + Super Admin | Transitions list/add/disable/enable; save; read preview | `DictionaryTypeAdminController` (transitions), `DictionaryReadController` (transitions); `pages/Admin/DictionaryTransitions/index.tsx` |
 | 历史显示示例 | `/admin/dictionary-snapshot-demo` | Auth + Super Admin | Snapshot demo create/list records | `DictionarySnapshotDemoController`; `pages/Admin/DictionarySnapshotDemo/index.tsx` |
-| 账号与权限 | `/admin/account-permissions` | Auth + Admin or Super Admin | Account list; people; roles; override; reset password | `AccountPermissionsController`; `pages/Admin/AccountPermissions/index.tsx`; `AdminOrSuperAdminGuard` |
+| 账号与权限 | `/admin/account-permissions` | Auth + Admin or Super Admin | Account list; create account (bind person + **主业务角色**); edit account (update 主业务角色); roles; override; reset password | `AccountPermissionsController` (POST/PUT accounts, GET people, account-list); `AccountsTab.tsx`, `acctPermService.ts`; `AdminOrSuperAdminGuard` |
 | 角色与权限 | `/admin/roles-permissions` | Auth + Perm allowlist (Perm Super Admin) | Roles/permissions management. Not in left menu (removed per menu cleanup); reachable by direct URL. | `PermAdminController`; `pages/Admin/RolesPermissions/index.tsx`; `PermSuperAdminGuard` |
 
 ---
@@ -66,6 +66,26 @@ All entries below require valid token (AuthGuard). Layout: `BasicLayout.tsx`; me
 - Default index: `/` redirects to `/dashboard`. `App.tsx` L63.
 - `/logistics` redirects to `/shipments`; `/after-sales-service` to `/work-orders`; `/master-data` to `/master-data/contracts`; `/platform` to `/platform/applications`; `/admin` to `/admin/confirmation-center`. `App.tsx` L67, L71, L78, L88, L98.
 - Wildcard: `*` redirects to `/`. `App.tsx` L111.
+
+---
+
+## Reality semantics
+
+- **Account-permissions page:** Create flow requires selecting an existing org person and one Primary Business Role (必选); edit flow in account detail drawer allows updating Primary Business Role and saving via PUT `/api/v1/admin/account-permissions/accounts/{userId}`. List and detail show primaryBusinessRole. No mock-person layer; identity basis is real account + bound person + primary business role.
+- **Route vs usable:** Routes under platform/shipments/work-orders may show "无权限" or redirect if user lacks effective permission; admin/super-admin bypass is whitelist-based (see STATE_SNAPSHOT). Seeing a menu entry does not guarantee all actions succeed without the right keys or Super Admin.
+
+---
+
+## Reuse status
+
+Per entry: see STATE_SNAPSHOT. Account-permissions: Reusable as-is for create/edit account with Primary Business Role. Contract page: Exists but incomplete (no review flow).
+
+---
+
+## Decision-risk notes
+
+- **Menu visible ≠ page usable:** Menu visibility can be restored for admin/super-admin via bypass, but action-level 403 can still occur if the action key is not in the bypass whitelist.
+- **Contract list/detail:** Exists at `/master-data/contracts`; no contract review, no ownership fields (initiator/assigned/current handler) in repo.
 
 ---
 

@@ -1,8 +1,8 @@
 # REUSABLE_BLOCKS_ZH — 可复用模块一览（中文）
 
-- **As-of:** 2025-02-24 20:00
+- **As-of:** 2025-02-24 (stage baseline rebuild)
 - **Repo:** main
-- **Commit:** 983df8e7
+- **Commit:** 328150bd
 - **Verification method:** Grep imports/usages in `frontend/dfbs-ui/src` for component and hook names.
 
 **仅事实。** 路径均在 `frontend/dfbs-ui/src/` 下。用途以页面/流程描述，不列代码路径。
@@ -182,6 +182,13 @@
 - **用途：** 仅界面层面的角色模拟：顶栏下拉选中的模拟角色存入 store；矩阵与辅助函数负责左侧菜单与各页操作按钮按模拟角色显隐/禁用及 tooltip「该角色不可操作」。
 - **位置：** `shared/stores/useSimulatedRoleStore.ts`；`shared/config/roleToUiGatingMatrix.ts`。
 - **使用场景：** 顶栏（模拟角色下拉、角标、免责说明、角色-界面矩阵查看）；发货列表页（可执行操作按钮）；工单管理列表与详情（新建工单、受理、派单、驳回、接单）；平台管理页（销售申请、服务申请、营企申请、新建机构、编辑、删除）；申请管理页（通过、驳回、提交至管理员、关闭申请）。
+
+---
+
+## Reuse status（复用状态）
+
+- 1–21：当前使用场景下可直接复用；request/adapters/字典读取/状态流读取为多页共用。
+- 22（角色模拟 store 与矩阵）：仅界面模拟，不改变后端身份或权限；可直接复用于当前验收场景。若需“真实”角色业务流，须依赖账号主业务角色与后端权限，不可仅靠模拟角色。
 
 ---
 

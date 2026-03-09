@@ -132,9 +132,10 @@ public class AccountPermissionsController {
                     request.orgPersonId(),
                     request.username(),
                     request.nickname(),
-                    request.roleTemplateId());
+                    request.roleTemplateId(),
+                    request.primaryBusinessRole());
             return ResponseEntity.ok(new PermAccountOverrideDto.AccountSummaryResponse(
-                    summary.id(), summary.username(), summary.nickname(), summary.enabled(), summary.orgPersonId()));
+                    summary.id(), summary.username(), summary.nickname(), summary.enabled(), summary.orgPersonId(), summary.primaryBusinessRole()));
         } catch (PersonAlreadyBoundException ex) {
             return ResponseEntity.badRequest().body(ErrorResult.of(ex.getMessage(), ACCTPERM_PERSON_ALREADY_BOUND));
         } catch (AdminAccountService.UsernameExistsException ex) {
@@ -160,6 +161,19 @@ public class AccountPermissionsController {
             auditService.log(PermAuditService.ACTION_ACCOUNT_ENABLE_SET, PermAuditService.TARGET_USER, userId, targetKey,
                     "enabled=" + request.enabled());
             return ResponseEntity.ok().build();
+        } catch (AdminAccountService.UserNotFoundException ex) {
+            return ResponseEntity.badRequest().body(ErrorResult.of(ex.getMessage(), ACCTPERM_USER_NOT_FOUND));
+        }
+    }
+
+    @PutMapping("/accounts/{userId}")
+    public ResponseEntity<?> updateAccount(@PathVariable Long userId,
+                                          @RequestBody PermAccountOverrideDto.UpdateAccountRequest request) {
+        adminGuard.requireAdminOrSuperAdmin();
+        try {
+            var summary = adminAccountService.updateAccount(userId, request.nickname(), request.primaryBusinessRole());
+            return ResponseEntity.ok(new PermAccountOverrideDto.AccountSummaryResponse(
+                    summary.id(), summary.username(), summary.nickname(), summary.enabled(), summary.orgPersonId(), summary.primaryBusinessRole()));
         } catch (AdminAccountService.UserNotFoundException ex) {
             return ResponseEntity.badRequest().body(ErrorResult.of(ex.getMessage(), ACCTPERM_USER_NOT_FOUND));
         }
@@ -192,7 +206,7 @@ public class AccountPermissionsController {
         List<PermAccountOverrideDto.UserSummary> list = userRepo
                 .findTop20ByUsernameContainingIgnoreCaseOrNicknameContainingIgnoreCaseOrderByUsername(q, q)
                 .stream()
-                .map(u -> new PermAccountOverrideDto.UserSummary(u.getId(), u.getUsername(), u.getNickname(), u.getEnabled()))
+                .map(u -> new PermAccountOverrideDto.UserSummary(u.getId(), u.getUsername(), u.getNickname(), u.getEnabled(), u.getPrimaryBusinessRole()))
                 .toList();
         return ResponseEntity.ok(list);
     }
@@ -205,7 +219,7 @@ public class AccountPermissionsController {
             return ResponseEntity.badRequest().body(ErrorResult.of("用户不存在: id=" + id, USER_NOT_FOUND));
         }
         var u = opt.get();
-        return ResponseEntity.ok(new PermAccountOverrideDto.UserSummary(u.getId(), u.getUsername(), u.getNickname(), u.getEnabled()));
+        return ResponseEntity.ok(new PermAccountOverrideDto.UserSummary(u.getId(), u.getUsername(), u.getNickname(), u.getEnabled(), u.getPrimaryBusinessRole()));
     }
 
     @GetMapping("/accounts/{userId}/override")

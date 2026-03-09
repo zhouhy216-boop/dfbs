@@ -14,10 +14,12 @@ import { ContractRule, OrgCodeRule, OrgCodeUppercaseRule } from '@/features/plat
 import { getPlatformConfigs, type PlatformConfigItem } from '@/features/platform/services/platformConfig';
 import { useDraftForm } from '@/shared/hooks/useDraftForm';
 import { useEffectivePermissions } from '@/shared/hooks/useEffectivePermissions';
+import { useIsAdminOrSuperAdmin } from '@/shared/components/AdminOrSuperAdminGuard';
 import { useSimulatedRoleStore } from '@/shared/stores/useSimulatedRoleStore';
 import { isPlatformApplicationActionAllowedForSimulatedRole } from '@/shared/config/roleToUiGatingMatrix';
 import ApplicationsHistory from '@/pages/Platform/applications/History';
 
+const PERM_APPS_CREATE = 'platform_application.applications:CREATE';
 const PERM_APPS_SUBMIT = 'platform_application.applications:SUBMIT';
 const PERM_APPS_CLOSE = 'platform_application.applications:CLOSE';
 const PERM_APPS_APPROVE = 'platform_application.applications:APPROVE';
@@ -209,6 +211,7 @@ export default function PlatformApplication({
   const draftKey = `platform-apply-${createSourceType}${enterpriseDirect ? '-enterprise' : ''}`;
   const { saveDraft, loadDraft, clearDraft, hasDraft } = useDraftForm(draftKey);
   const { has: hasPermission } = useEffectivePermissions();
+  const isAdminOrSuperAdmin = useIsAdminOrSuperAdmin();
   const simulatedRole = useSimulatedRoleStore((s) => s.simulatedRole);
   const simulatorDisable = !isPlatformApplicationActionAllowedForSimulatedRole(simulatedRole);
   const plannerDraftKey = 'platform-apply-enterprise-confirm';
@@ -255,7 +258,7 @@ export default function PlatformApplication({
       render: (_, row) => [
         <a key="view" onClick={() => { setCurrentRow(row); setDetailModalOpen(true); }}>详情</a>,
         (row.status === 'PENDING_PLANNER' || row.status === 'PENDING_CONFIRM' || row.status === 'CLOSED') &&
-          (hasPermission(PERM_APPS_SUBMIT) || hasPermission(PERM_APPS_CLOSE)) && (
+          (hasPermission(PERM_APPS_SUBMIT) || hasPermission(PERM_APPS_CLOSE) || isAdminOrSuperAdmin) && (
           <a
             key="planner"
             onClick={() => {
@@ -283,7 +286,7 @@ export default function PlatformApplication({
             营企处理
           </a>
         ),
-        row.status === 'PENDING_ADMIN' && (hasPermission(PERM_APPS_APPROVE) || hasPermission(PERM_APPS_REJECT)) && (
+        row.status === 'PENDING_ADMIN' && (hasPermission(PERM_APPS_APPROVE) || hasPermission(PERM_APPS_REJECT) || isAdminOrSuperAdmin) && (
           <a key="admin" onClick={() => { setCurrentRow(row); setAdminHitMatches([]); adminForm.setFieldsValue({ orgCodeShort: row.orgCodeShort ?? '', region: row.region ?? undefined }); setAdminModalOpen(true); }}>
             管理员审核
           </a>
@@ -672,7 +675,11 @@ export default function PlatformApplication({
                 search={{ labelWidth: 'auto' }}
                 pagination={{ pageSize: 20 }}
                 headerTitle="平台开户申请"
-                toolBarRender={() => []}
+                toolBarRender={() =>
+                  (hasPermission(PERM_APPS_CREATE) || isAdminOrSuperAdmin)
+                    ? [<Button key="create" type="primary" onClick={() => setCreateOpen(true)}>新建申请</Button>]
+                    : []
+                }
               />
             ),
           },
@@ -800,7 +807,7 @@ export default function PlatformApplication({
         destroyOnClose
         width={560}
         footer={[
-          ...(hasPermission(PERM_APPS_CLOSE)
+          ...((hasPermission(PERM_APPS_CLOSE) || isAdminOrSuperAdmin)
             ? [
                 simulatorDisable ? (
                   <Tooltip key="closeApp" title={SIMULATOR_DISABLED_TOOLTIP}>
@@ -830,7 +837,7 @@ export default function PlatformApplication({
           >
             保存草稿
           </Button>,
-          ...(hasPermission(PERM_APPS_SUBMIT)
+          ...((hasPermission(PERM_APPS_SUBMIT) || isAdminOrSuperAdmin)
             ? [
                 simulatorDisable ? (
                   <Tooltip key="submit" title={SIMULATOR_DISABLED_TOOLTIP}>
@@ -1098,7 +1105,7 @@ export default function PlatformApplication({
                   <Select options={REGION_OPTIONS} placeholder="华东/华北/华南/西部/海外" allowClear />
                 </Form.Item>
                 <Form.Item>
-                  {hasPermission(PERM_APPS_APPROVE) && (
+                  {(hasPermission(PERM_APPS_APPROVE) || isAdminOrSuperAdmin) && (
                     simulatorDisable ? (
                       <Tooltip title={SIMULATOR_DISABLED_TOOLTIP}>
                         <span style={{ display: 'inline-block', marginRight: 8 }}>
@@ -1109,7 +1116,7 @@ export default function PlatformApplication({
                       <Button type="primary" onClick={handleApprove} style={{ marginRight: 8 }}>通过</Button>
                     )
                   )}
-                  {hasPermission(PERM_APPS_REJECT) && (
+                  {(hasPermission(PERM_APPS_REJECT) || isAdminOrSuperAdmin) && (
                     simulatorDisable ? (
                       <Tooltip title={SIMULATOR_DISABLED_TOOLTIP}>
                         <span style={{ display: 'inline-block' }}>

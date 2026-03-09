@@ -17,6 +17,7 @@ import { OrgCodeRule, OrgCodeUppercaseRule } from '@/features/platform/utils/val
 import { getPlatformConfigs, type PlatformConfigItem } from '@/features/platform/services/platformConfig';
 import { useDraftForm } from '@/shared/hooks/useDraftForm';
 import { useEffectivePermissions } from '@/shared/hooks/useEffectivePermissions';
+import { useIsAdminOrSuperAdmin } from '@/shared/components/AdminOrSuperAdminGuard';
 import { useSimulatedRoleStore } from '@/shared/stores/useSimulatedRoleStore';
 import { isPlatformOrgActionAllowedForSimulatedRole } from '@/shared/config/roleToUiGatingMatrix';
 
@@ -179,6 +180,7 @@ export default function PlatformOrg() {
 
   const { saveDraft, loadDraft, clearDraft, hasDraft } = useDraftForm<PlatformOrgFormValues>('platform-org-create-admin');
   const { has: hasPermission } = useEffectivePermissions();
+  const isAdminOrSuperAdmin = useIsAdminOrSuperAdmin();
   const simulatedRole = useSimulatedRoleStore((s) => s.simulatedRole);
   const simulatorDisable = !isPlatformOrgActionAllowedForSimulatedRole(simulatedRole);
 
@@ -530,7 +532,7 @@ export default function PlatformOrg() {
       width: 90,
       search: false,
       render: (_, row) =>
-        hasPermission(PERM_ORGS_EDIT) ? (
+        (hasPermission(PERM_ORGS_EDIT) || isAdminOrSuperAdmin) ? (
           <Switch
             checked={!!row.isActive}
             onChange={(val) => handleToggleActive(row, val)}
@@ -580,7 +582,7 @@ export default function PlatformOrg() {
         >
           详情
         </a>,
-        hasPermission(PERM_ORGS_EDIT) && (
+        (hasPermission(PERM_ORGS_EDIT) || isAdminOrSuperAdmin) && (
           simulatorDisable ? (
             <Tooltip key="edit" title={SIMULATOR_DISABLED_TOOLTIP}>
               <span style={{ display: 'inline-block' }}>
@@ -613,7 +615,7 @@ export default function PlatformOrg() {
             </a>
           )
         ),
-        row.status !== 'DELETED' && hasPermission(PERM_ORGS_DELETE) && (
+        row.status !== 'DELETED' && (hasPermission(PERM_ORGS_DELETE) || isAdminOrSuperAdmin) && (
           simulatorDisable ? (
             <Tooltip key="delete" title={SIMULATOR_DISABLED_TOOLTIP}>
               <span style={{ display: 'inline-block' }}>
@@ -712,7 +714,7 @@ export default function PlatformOrg() {
               营企申请
             </Button>
           ),
-          ...(hasPermission(PERM_ORGS_CREATE)
+          ...((hasPermission(PERM_ORGS_CREATE) || isAdminOrSuperAdmin)
             ? [
                 simulatorDisable ? (
                   <Tooltip key="create" title={SIMULATOR_DISABLED_TOOLTIP}>

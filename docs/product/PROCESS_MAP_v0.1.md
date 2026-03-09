@@ -130,3 +130,22 @@ flowchart LR
   E5 --> RPT
   Q5 --> RPT
   K2 --> RPT
+```
+
+---
+
+## Repo reality check (stage baseline 2025-02-24)
+
+- **A2–A9 (合同录入→交付关闭):** Contract CRUD at `/master-data/contracts`; shipment workflow (accept/prepare/ship/complete/tracking/exception/cancel/close) at `/shipments`. No “评审/补充” (A3) as a distinct flow in repo.
+- **N1–N5 (入网准备):** Platform org/applications and SIM-related routes exist; no single “入网准备协作” process node UI.
+- **S0–S7 (工单):** Work order pool, my-orders, accept, dispatch, record, sign, complete at `/work-orders` and `/work-orders/:id`. Public repair at `/public/repair`.
+- **M02 contract review nodes:** No process nodes or states for “评审协同” (initiator, assigned Business Planning person, current handler) in repo.
+
+## Conflicts with current repo reality
+
+- None. Process map describes intended flow; repo implements parts of it (shipment, work order, platform, contract CRUD). A3 “营业企画：评审/补充” has no dedicated backend or UI flow.
+
+## Anchor gaps / not yet present in repo
+
+- **A3 (评审/补充/协调):** No contract review workflow or review record; no ownership fields (initiator, assigned, current handler). Valid process node; not in repo.
+- **M02/M03 process nodes:** Any process nodes that would be “评审协同” or “生产准备” UI are not present in code.

@@ -1,8 +1,8 @@
 # REPO_MAP — Key folders and entry points
 
-- **As-of:** 2025-02-24 20:00
+- **As-of:** 2025-02-24 (stage baseline rebuild)
 - **Repo:** main
-- **Commit:** 983df8e7
+- **Commit:** 328150bd
 - **Verification method:** List repo root and key dirs; inspected `App.tsx`, `BasicLayout.tsx`, `DfbsAppApplication.java`, `package.json`, `pom.xml`.
 
 **Facts only.** Paths relative to repo root.
@@ -16,7 +16,7 @@
 | `backend/` | Maven root; contains `dfbs-app/` (single Spring Boot module). |
 | `backend/dfbs-app/` | Spring Boot application. |
 | `backend/dfbs-app/src/main/java/com/dfbs/app/` | Java source: `DfbsAppApplication.java`, `config/`, `interfaces/` (REST controllers), `application/` (services), `modules/` (entities/repos), `infra/` (e.g. GlobalExceptionHandler). |
-| `backend/dfbs-app/src/main/resources/` | `application.yml`, `db/migration/` (Flyway V0001–V0086), `templates/`. |
+| `backend/dfbs-app/src/main/resources/` | `application.yml`, `db/migration/` (Flyway V0001–V0087), `templates/`. |
 | `backend/dfbs-app/src/test/java/com/dfbs/app/` | Tests: `application/`, `interfaces/`, `infra/` (e.g. SwaggerTest), root (DfbsAppApplicationTests, ArchitectureRulesTest, MasterDataReadOnlyRulesTest). |
 | `frontend/dfbs-ui/` | Vite + React + TypeScript + Ant Design Pro frontend. |
 | `frontend/dfbs-ui/src/` | `main.tsx`, `App.tsx`, `pages/`, `layouts/`, `shared/` (components, utils, stores, hooks), `features/` (dicttype, orgstructure, platform). |
@@ -42,6 +42,21 @@
 
 - **Path:** `evidence/handover/`.
 - **Usage:** Single source of truth for non-repo viewers (PM, operations). Describes current routes, APIs, migrations, test commands, reusable blocks, and dev env. Do not change application code from handover instructions; update handover docs to match repo reality.
+
+---
+
+## Where docs/product lives and intended usage
+
+- **Path:** `docs/product/` (e.g. `MODULE_ROUTE_ANCHORS_v0.1.md`, `BUSINESS_MAP_v0.1.md`, `PROCESS_MAP_v0.1.md`, `OBJECT_MAP_v0.1.md`).
+- **Usage:** Product alignment pack; anchors and module/process/object maps. Audited against repo reality in “Repo reality check” / “Conflicts” / “Anchor gaps” sections per file (see product docs).
+
+---
+
+## Reality semantics
+
+- **Actively wired:** Routes in `App.tsx` are wired to page components; admin/shipments/work-orders/platform/account-permissions pages exist and are reachable when guards allow. Some pages may still show “无权限” or redirect if effective permission is missing (whitelist bypass applies only to listed keys).
+- **Shells / partial:** Placeholder routes (e.g. `/platform/applications/reuse`, `verification`, `sim-activation`) may render minimal UI. Contract page exists; contract review flow does not exist in repo.
+- **Legacy:** Docs under `legacy/` (if any) are not authoritative per repo convention.
 
 ---
 

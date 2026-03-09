@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { ProLayout } from '@ant-design/pro-components';
-import { Button, Dropdown, Modal, Table } from 'antd';
+import { Button, Dropdown, Modal, Popover, Table } from 'antd';
 import type { MenuProps } from 'antd';
 import { useAuthStore } from '@/shared/stores/useAuthStore';
 import {
@@ -32,7 +32,11 @@ import { useIsAdminOrSuperAdmin } from '@/shared/components/AdminOrSuperAdminGua
 import { useEffectivePermissions } from '@/shared/hooks/useEffectivePermissions';
 import {
   ROLE_TO_UI_GATING_MATRIX,
+  SIMULATOR_BUSINESS_ROLES_ZH,
   SUPPORT_NONE_ENTRY_IDS,
+  FIRST_BATCH_ENTRY_IDS,
+  BUSINESS_MODULE_LABEL_MAP,
+  FIRST_BATCH_UI_AREA_LABEL_MAP,
   filterMenuBySimulatedRole,
   type MenuRouteItem,
   type RoleToUiGatingEntry,
@@ -42,19 +46,40 @@ import { useSimulatedRoleStore } from '@/shared/stores/useSimulatedRoleStore';
 /** Re-export for consumers that need the storage key. */
 export { SIMULATED_ROLE_STORAGE_KEY } from '@/shared/stores/useSimulatedRoleStore';
 
-/** Temporary UI list for role simulator shell; not wired to backend roles. */
+/** CEO-facing simulator options: Chinese business roles only + 取消模拟 (ROLESIMA-260306-001-02). */
 const SIMULATOR_ROLE_OPTIONS: { label: string; key: string }[] = [
-  { label: 'Super Admin', key: 'Super Admin' },
-  { label: 'Admin', key: 'Admin' },
-  { label: 'Operator', key: 'Operator' },
-  { label: 'Viewer', key: 'Viewer' },
-  { label: 'None', key: '__none__' },
+  ...SIMULATOR_BUSINESS_ROLES_ZH.map((role) => ({ label: role, key: role })),
+  { label: '取消模拟', key: '__none__' },
 ];
 
 const PERM_ORGS_VIEW = 'platform_application.orgs:VIEW';
 const PERM_APPS_VIEW = 'platform_application.applications:VIEW';
 const PERM_WORK_ORDER_VIEW = 'work_order:VIEW';
 import { TestDataCleanerModal } from '@/shared/components/TestDataCleaner/Modal';
+
+/** 两层验收边界说明（与后端 PermEnforcementService 首批放行范围一致，仅用于开发阶段真实验收） */
+const DUAL_LAYER_BOUNDARY_CONTENT = (
+  <div style={{ maxWidth: 420, fontSize: 12 }}>
+    <p style={{ marginBottom: 8, fontWeight: 600 }}>① 开发阶段超管不受限</p>
+    <p style={{ marginBottom: 12, color: '#333' }}>
+      当您以超管身份登录时，以下首批页面可由后端放行，仅用于开发阶段真实验收，与「界面角色模拟」无关：
+    </p>
+    <ul style={{ marginBottom: 12, paddingLeft: 16 }}>
+      <li>发货列表：查看</li>
+      <li>工单管理：查看、新建工单</li>
+      <li>平台管理：查看</li>
+      <li>申请管理：查看</li>
+    </ul>
+    <p style={{ marginBottom: 4, fontWeight: 600 }}>② 界面角色模拟</p>
+    <p style={{ marginBottom: 12, color: '#333' }}>
+      仅影响左侧菜单显隐与页面内按钮的禁用/提示，不改变实际权限。模拟角色不会获得任何后端放行。
+    </p>
+    <p style={{ marginBottom: 4, fontWeight: 600 }}>验收方式</p>
+    <p style={{ marginBottom: 0, color: '#333' }}>
+      先用超管账号在首批模块（发货、工单、平台管理、申请管理）内执行真实操作，确认流程可跑通；再使用「角色模拟」切换业务角色，核对左侧菜单与页面按钮的显示是否符合该角色预期。
+    </p>
+  </div>
+);
 
 /** Static menu config: guaranteed array to avoid "spread non-iterable" in ProLayout. */
 const MENU_ROUTES_BASE = [
@@ -218,6 +243,11 @@ export default function BasicLayout() {
   const [matrixReviewOpen, setMatrixReviewOpen] = useState(false);
   const simulatedRole = useSimulatedRoleStore((s) => s.simulatedRole);
   const setSimulatedRole = useSimulatedRoleStore((s) => s.setSimulatedRole);
+  useEffect(() => {
+    if (simulatedRole && !SIMULATOR_BUSINESS_ROLES_ZH.includes(simulatedRole)) {
+      setSimulatedRole(null);
+    }
+  }, [simulatedRole, setSimulatedRole]);
   const displayName = userInfo?.username ?? 'User';
   const menuRoutes = useMemo(() => {
     const base = buildMenuRoutes(isSuperAdmin, permAllowed, isAdminOrSuperAdmin, hasPermission);
@@ -253,24 +283,21 @@ export default function BasicLayout() {
         actionsRender={() => [
           ...(showSimulator
             ? [
-                ...(simulatedRole
-                  ? [
-                      <span
-                        key="sim-badge"
-                        style={{
-                          marginRight: 12,
-                          padding: '2px 8px',
-                          background: '#faad14',
-                          color: '#000',
-                          borderRadius: 4,
-                          fontSize: 12,
-                          fontWeight: 500,
-                        }}
-                      >
-                        SIMULATING: {simulatedRole}
-                      </span>,
-                    ]
-                  : []),
+                <span
+                  key="sim-status"
+                  style={{
+                    marginRight: 12,
+                    padding: '2px 8px',
+                    background: simulatedRole ? '#faad14' : 'transparent',
+                    color: simulatedRole ? '#000' : '#8c8c8c',
+                    border: simulatedRole ? 'none' : '1px solid #d9d9d9',
+                    borderRadius: 4,
+                    fontSize: 12,
+                    fontWeight: 500,
+                  }}
+                >
+                  {simulatedRole ? `模拟中：${simulatedRole}` : '当前：未模拟'}
+                </span>,
                 <span
                   key="sim-disclaimer"
                   style={{ marginRight: 8, fontSize: 11, color: '#8c8c8c' }}
@@ -278,13 +305,23 @@ export default function BasicLayout() {
                 >
                   仅界面模拟，不改变实际权限
                 </span>,
+                <Popover
+                  key="boundary-popover"
+                  title="两层验收边界说明"
+                  content={DUAL_LAYER_BOUNDARY_CONTENT}
+                  trigger="click"
+                >
+                  <a onClick={(e) => e.preventDefault()} style={{ marginRight: 8 }}>
+                    验收边界说明
+                  </a>
+                </Popover>,
                 <Dropdown
                   key="simulated-role"
                   menu={{ items: simulatorMenuItems, onClick: onSimulatedRoleSelect }}
                   trigger={['click']}
                 >
                   <a onClick={(e) => e.preventDefault()} style={{ marginRight: 8 }}>
-                    Simulated Role
+                    角色模拟
                   </a>
                 </Dropdown>,
                 <a
@@ -326,7 +363,7 @@ export default function BasicLayout() {
         onClose={() => setTestDataCleanerOpen(false)}
       />
       <Modal
-        title="Role-to-UI gating matrix（只读查看）"
+        title="角色-界面矩阵（只读）"
         open={matrixReviewOpen}
         onCancel={() => setMatrixReviewOpen(false)}
         footer={<Button type="primary" onClick={() => setMatrixReviewOpen(false)}>关闭</Button>}
@@ -334,25 +371,79 @@ export default function BasicLayout() {
         destroyOnClose
       >
         <div style={{ marginBottom: 12 }}>
-          <strong>总条目数：</strong>{ROLE_TO_UI_GATING_MATRIX.length}
+          <strong>首批条目数：</strong>{FIRST_BATCH_ENTRY_IDS.length}
           <span style={{ marginLeft: 16 }}>
-            <strong>使用 Support/none 的条目：</strong>{SUPPORT_NONE_ENTRY_IDS.length} 个 — {SUPPORT_NONE_ENTRY_IDS.join(', ')}
+            <strong>总条目数：</strong>{ROLE_TO_UI_GATING_MATRIX.length}
           </span>
+          <span style={{ marginLeft: 16 }}>
+            <strong>无对应流程节点的条目：</strong>{SUPPORT_NONE_ENTRY_IDS.length} 个 — {SUPPORT_NONE_ENTRY_IDS.join(', ')}
+          </span>
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <strong>首批模块（锚点包 M04 / M05 / M08）</strong>
         </div>
         <Table<RoleToUiGatingEntry>
           size="small"
           pagination={false}
-          scroll={{ x: 900 }}
-          dataSource={ROLE_TO_UI_GATING_MATRIX}
+          scroll={{ x: 880 }}
+          dataSource={ROLE_TO_UI_GATING_MATRIX.filter((e) => FIRST_BATCH_ENTRY_IDS.includes(e.id))}
           rowKey="id"
           columns={[
-            { title: 'id', dataIndex: 'id', width: 180, ellipsis: true },
+            {
+              title: '界面名称',
+              key: 'uiArea',
+              width: 180,
+              render: (_: unknown, row: RoleToUiGatingEntry) => FIRST_BATCH_UI_AREA_LABEL_MAP[row.id] ?? row.uiAreaName,
+            },
+            {
+              title: '业务模块',
+              dataIndex: 'businessModuleCodes',
+              width: 120,
+              render: (v: string[]) => (Array.isArray(v) ? v.map((c) => BUSINESS_MODULE_LABEL_MAP[c] ?? c).join(', ') : ''),
+            },
+            {
+              title: '路由锚点',
+              dataIndex: 'routeAnchors',
+              width: 180,
+              render: (v: string[]) => (Array.isArray(v) ? v.join(', ') : ''),
+            },
+            {
+              title: '流程节点',
+              dataIndex: 'processNodes',
+              width: 120,
+              render: (v: string[]) => (Array.isArray(v) ? v.join(', ') : ''),
+            },
+            {
+              title: '对象范围',
+              dataIndex: 'objectScope',
+              width: 160,
+              render: (v: string[]) => (Array.isArray(v) ? v.join(', ') : '—'),
+            },
+            {
+              title: '可见角色集',
+              dataIndex: 'allowedSimulatedRoleSet',
+              width: 200,
+              render: (v: string[]) => (Array.isArray(v) ? v.join(', ') : ''),
+            },
+          ]}
+        />
+        <div style={{ marginTop: 24, marginBottom: 8 }}>
+          <strong>系统/全局条目</strong>
+        </div>
+        <Table<RoleToUiGatingEntry>
+          size="small"
+          pagination={false}
+          scroll={{ x: 880 }}
+          dataSource={ROLE_TO_UI_GATING_MATRIX.filter((e) => !FIRST_BATCH_ENTRY_IDS.includes(e.id))}
+          rowKey="id"
+          columns={[
+            { title: 'id', dataIndex: 'id', width: 160, ellipsis: true },
             { title: 'UI 区域', dataIndex: 'uiAreaName', width: 220, ellipsis: true },
             {
               title: '业务模块',
               dataIndex: 'businessModuleCodes',
               width: 100,
-              render: (v: string[]) => (Array.isArray(v) ? v.join(', ') : ''),
+              render: (v: string[]) => (Array.isArray(v) ? v.map((c) => BUSINESS_MODULE_LABEL_MAP[c] ?? c).join(', ') : ''),
             },
             {
               title: '路由锚点',

@@ -9,6 +9,7 @@ export interface UserSummary {
   username: string;
   nickname?: string;
   enabled?: boolean;
+  primaryBusinessRole?: string | null;
 }
 
 export interface AccountOverrideResponse {
@@ -45,6 +46,7 @@ export interface AccountSummaryResponse {
   nickname?: string;
   enabled?: boolean;
   orgPersonId?: number;
+  primaryBusinessRole?: string | null;
 }
 
 export function getPeopleOptions(query: string): Promise<PersonOptionForBinding[]> {
@@ -58,6 +60,7 @@ export function createAccount(body: {
   username: string;
   nickname?: string;
   roleTemplateId?: number | null;
+  primaryBusinessRole: string;
 }): Promise<AccountSummaryResponse> {
   return request
     .post<AccountSummaryResponse>(`${BASE}/accounts`, {
@@ -65,7 +68,17 @@ export function createAccount(body: {
       username: body.username.trim(),
       nickname: body.nickname?.trim() || undefined,
       roleTemplateId: body.roleTemplateId ?? undefined,
+      primaryBusinessRole: body.primaryBusinessRole?.trim() || undefined,
     })
+    .then((res) => res.data);
+}
+
+export function updateAccount(
+  userId: number,
+  body: { nickname?: string; primaryBusinessRole?: string | null },
+): Promise<AccountSummaryResponse> {
+  return request
+    .put<AccountSummaryResponse>(`${BASE}/accounts/${userId}`, body)
     .then((res) => res.data);
 }
 

@@ -6,17 +6,20 @@ import java.util.List;
 public final class PermAccountOverrideDto {
 
     /** Minimal user info for account selection (GET /users?query=, GET /users/{id}). */
-    public record UserSummary(Long id, String username, String nickname, Boolean enabled) {
+    public record UserSummary(Long id, String username, String nickname, Boolean enabled, String primaryBusinessRole) {
         public UserSummary(Long id, String username, String nickname) {
-            this(id, username, nickname, null);
+            this(id, username, nickname, null, null);
         }
     }
 
     /** Request body for POST /accounts (create account by binding person). */
-    public record CreateAccountRequest(Long orgPersonId, String username, String nickname, Long roleTemplateId) {}
+    public record CreateAccountRequest(Long orgPersonId, String username, String nickname, Long roleTemplateId, String primaryBusinessRole) {}
 
     /** Response for created account or account summary. */
-    public record AccountSummaryResponse(Long id, String username, String nickname, Boolean enabled, Long orgPersonId) {}
+    public record AccountSummaryResponse(Long id, String username, String nickname, Boolean enabled, Long orgPersonId, String primaryBusinessRole) {}
+
+    /** Request body for PUT /accounts/{userId} (update account profile). */
+    public record UpdateAccountRequest(String nickname, String primaryBusinessRole) {}
 
     /** Request body for PUT /accounts/{userId}/enabled. */
     public record SetEnabledRequest(boolean enabled) {}
@@ -56,7 +59,8 @@ public final class PermAccountOverrideDto {
             String position,
             String department,
             Long roleTemplateId,
-            String roleTemplateLabel
+            String roleTemplateLabel,
+            String primaryBusinessRole
     ) {}
 
     private PermAccountOverrideDto() {}

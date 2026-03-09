@@ -41,9 +41,9 @@ public class AdminAccountService {
         this.accountOverrideService = accountOverrideService;
     }
 
-    /** Create account bound to org person; username globally unique; optional roleTemplateId applied via override. */
+    /** Create account bound to org person; username globally unique; optional roleTemplateId applied via override; optional primaryBusinessRole. */
     @Transactional
-    public AccountSummary createAccount(Long orgPersonId, String username, String nickname, Long roleTemplateId) {
+    public AccountSummary createAccount(Long orgPersonId, String username, String nickname, Long roleTemplateId, String primaryBusinessRole) {
         if (orgPersonId == null) {
             throw new IllegalArgumentException("orgPersonId required");
         }
@@ -64,6 +64,7 @@ public class AdminAccountService {
         u.setUsername(trimmedUsername);
         u.setNickname(nickname != null && !nickname.isBlank() ? nickname.trim() : null);
         u.setOrgPersonId(orgPersonId);
+        u.setPrimaryBusinessRole(primaryBusinessRole != null && !primaryBusinessRole.isBlank() ? primaryBusinessRole.trim() : null);
         u.setEnabled(true);
         u.setPasswordHash(passwordEncoder.encode(defaultPasswordService.getEffectiveDefaultPassword()));
         u.setAuthorities(DEFAULT_AUTHORITIES);
@@ -81,7 +82,21 @@ public class AdminAccountService {
         if (roleTemplateId != null) {
             accountOverrideService.saveOverride(u.getId(), roleTemplateId, List.of(), List.of());
         }
-        return new AccountSummary(u.getId(), u.getUsername(), u.getNickname(), u.getEnabled(), u.getOrgPersonId());
+        return new AccountSummary(u.getId(), u.getUsername(), u.getNickname(), u.getEnabled(), u.getOrgPersonId(), u.getPrimaryBusinessRole());
+    }
+
+    /** Update account profile (nickname, primary business role). Null fields mean leave unchanged. */
+    @Transactional
+    public AccountSummary updateAccount(Long userId, String nickname, String primaryBusinessRole) {
+        UserEntity u = userRepo.findById(userId).orElseThrow(() -> new UserNotFoundException("用户不存在: id=" + userId));
+        if (nickname != null) {
+            u.setNickname(nickname.isBlank() ? null : nickname.trim());
+        }
+        if (primaryBusinessRole != null) {
+            u.setPrimaryBusinessRole(primaryBusinessRole.isBlank() ? null : primaryBusinessRole.trim());
+        }
+        u = userRepo.save(u);
+        return new AccountSummary(u.getId(), u.getUsername(), u.getNickname(), u.getEnabled(), u.getOrgPersonId(), u.getPrimaryBusinessRole());
     }
 
     @Transactional
@@ -99,7 +114,7 @@ public class AdminAccountService {
         userRepo.save(u);
     }
 
-    public record AccountSummary(Long id, String username, String nickname, Boolean enabled, Long orgPersonId) {}
+    public record AccountSummary(Long id, String username, String nickname, Boolean enabled, Long orgPersonId, String primaryBusinessRole) {}
 
     public static final class UserNotFoundException extends RuntimeException {
         public UserNotFoundException(String message) { super(message); }

@@ -14,12 +14,29 @@ import {
   saveAccountOverride,
   searchUsers,
   setAccountEnabled,
+  updateAccount,
   resetPassword as apiResetPassword,
   type AccountOverrideResponse,
   type PersonOptionForBinding,
   type RoleResponse,
   type UserSummary,
 } from './acctPermService';
+
+/** Fixed primary business role options (MOCKACC-260309-001-01). Super Admin is NOT in this list. */
+const PRIMARY_BUSINESS_ROLE_OPTIONS = [
+  { label: '销售', value: '销售' },
+  { label: '销售领导', value: '销售领导' },
+  { label: '营业企画', value: '营业企画' },
+  { label: '营企领导', value: '营企领导' },
+  { label: '生产企画', value: '生产企画' },
+  { label: '客服代表', value: '客服代表' },
+  { label: '服务经理', value: '服务经理' },
+  { label: '服务领导', value: '服务领导' },
+  { label: '物流主管', value: '物流主管' },
+  { label: '平台主管', value: '平台主管' },
+  { label: '仓库主管', value: '仓库主管' },
+  { label: '会计', value: '会计' },
+];
 import { fetchPermissionTree, type ModuleNode } from '../RolesPermissions/permService';
 import { ModuleOverviewCards } from './ModuleOverviewCards';
 import { PermissionMenuTree } from './PermissionMenuTree';
@@ -77,8 +94,12 @@ export default function AccountsTab() {
   const [createSelectedPersonId, setCreateSelectedPersonId] = useState<number | null>(null);
   const [createUsername, setCreateUsername] = useState('');
   const [createNickname, setCreateNickname] = useState('');
+  const [createPrimaryBusinessRole, setCreatePrimaryBusinessRole] = useState<string>('');
   const [createRoleTemplateId, setCreateRoleTemplateId] = useState<number | null>(null);
   const [createSubmitting, setCreateSubmitting] = useState(false);
+  // Edit primary business role in drawer
+  const [editPrimaryBusinessRole, setEditPrimaryBusinessRole] = useState<string | null>(null);
+  const [updateAccountSaving, setUpdateAccountSaving] = useState(false);
   // Reset password modal
   const [resetPwdModalOpen, setResetPwdModalOpen] = useState(false);
   const [resetPwdValue, setResetPwdValue] = useState('');
@@ -116,6 +137,12 @@ export default function AccountsTab() {
         }
       });
   }, []);
+
+  useEffect(() => {
+    if (accountDetailDrawerOpen && selectedUser) {
+      setEditPrimaryBusinessRole(selectedUser.primaryBusinessRole ?? null);
+    }
+  }, [accountDetailDrawerOpen, selectedUser?.id, selectedUser?.primaryBusinessRole]);
 
   useEffect(() => {
     if (selectedUser == null) {
@@ -350,6 +377,7 @@ export default function AccountsTab() {
     setCreateSelectedPersonId(null);
     setCreateUsername('');
     setCreateNickname('');
+    setCreatePrimaryBusinessRole('');
     setCreateRoleTemplateId(null);
   };
 
@@ -362,11 +390,16 @@ export default function AccountsTab() {
       message.warning('请输入用户名');
       return;
     }
+    if (!createPrimaryBusinessRole?.trim()) {
+      message.warning('请选择主业务角色');
+      return;
+    }
     setCreateSubmitting(true);
     createAccount({
       orgPersonId: createSelectedPersonId,
       username: createUsername.trim(),
       nickname: createNickname.trim() || undefined,
+      primaryBusinessRole: createPrimaryBusinessRole.trim(),
       roleTemplateId: createRoleTemplateId ?? undefined,
     })
       .then((res) => {
@@ -377,6 +410,7 @@ export default function AccountsTab() {
           username: res.username,
           nickname: res.nickname ?? undefined,
           enabled: res.enabled ?? true,
+          primaryBusinessRole: res.primaryBusinessRole ?? undefined,
         };
         setSelectedUser(newUser);
         setUserSearchResults((prev) =>
@@ -483,6 +517,7 @@ export default function AccountsTab() {
               { title: 'ID', dataIndex: 'id', width: 72, render: (v: number) => v },
               { title: '用户名', dataIndex: 'username', ellipsis: true },
               { title: '昵称', dataIndex: 'nickname', ellipsis: true },
+              { title: '主业务角色', dataIndex: 'primaryBusinessRole', width: 100, ellipsis: true, render: (v: string | null | undefined) => v ?? '—' },
               {
                 title: '状态',
                 dataIndex: 'enabled',
@@ -557,6 +592,17 @@ export default function AccountsTab() {
             />
           </div>
           <div>
+            <span style={{ display: 'block', marginBottom: 4, fontSize: 12 }}>主业务角色（必选）</span>
+            <Select
+              placeholder="请选择主业务角色"
+              style={{ width: '100%' }}
+              value={createPrimaryBusinessRole || undefined}
+              onChange={(v) => setCreatePrimaryBusinessRole(v ?? '')}
+              options={PRIMARY_BUSINESS_ROLE_OPTIONS}
+              allowClear={false}
+            />
+          </div>
+          <div>
             <span style={{ display: 'block', marginBottom: 4, fontSize: 12 }}>角色模板（选填）</span>
             <Select
               placeholder="选择角色模板"
@@ -607,9 +653,39 @@ export default function AccountsTab() {
                 <p style={{ marginBottom: 4 }}><strong>昵称</strong>：{selectedUser.nickname ?? '—'}</p>
                 <p style={{ marginBottom: 4 }}><strong>ID</strong>：{selectedUser.id}</p>
                 <p style={{ marginBottom: 4 }}><strong>状态</strong>：{selectedUser.enabled !== false ? '启用' : '停用'}</p>
-                <p style={{ marginBottom: 4 }}><strong>角色</strong>：{roleLabelForUser}</p>
+                <p style={{ marginBottom: 4 }}><strong>主业务角色</strong>：{selectedUser.primaryBusinessRole ?? '—'}</p>
+                <p style={{ marginBottom: 4 }}><strong>角色模板</strong>：{roleLabelForUser}</p>
                 <p style={{ marginBottom: 4 }}><strong>岗位</strong>：—</p>
                 <p style={{ marginBottom: 0 }}><strong>部门</strong>：—</p>
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <span style={{ fontSize: 12, marginRight: 8 }}>主业务角色：</span>
+                <Select
+                  placeholder="选择主业务角色"
+                  style={{ width: 160, marginRight: 8 }}
+                  value={editPrimaryBusinessRole ?? undefined}
+                  onChange={(v) => setEditPrimaryBusinessRole(v ?? null)}
+                  options={PRIMARY_BUSINESS_ROLE_OPTIONS}
+                  allowClear
+                />
+                <Button
+                  type="primary"
+                  size="small"
+                  loading={updateAccountSaving}
+                  onClick={() => {
+                    if (selectedUser == null) return;
+                    setUpdateAccountSaving(true);
+                    updateAccount(selectedUser.id, { primaryBusinessRole: editPrimaryBusinessRole ?? undefined })
+                      .then((res) => {
+                        message.success('已保存');
+                        setSelectedUser({ ...selectedUser, primaryBusinessRole: res.primaryBusinessRole ?? undefined });
+                      })
+                      .catch((err) => message.error(err.response?.data?.message ?? '保存失败'))
+                      .finally(() => setUpdateAccountSaving(false));
+                  }}
+                >
+                  保存
+                </Button>
               </div>
               <Space style={{ marginBottom: 12 }} wrap align="center">
                 <span style={{ fontSize: 12 }}>启用：</span>

@@ -1,6 +1,38 @@
-# 开发环境记录（本机事实）
+# DEV-ENV — 开发环境与启动/构建命令
 
-仅供协作参考；不做环境推荐。记录「在这台机器上实际跑出来的版本/路径」。
+- **As-of:** 2025-02-24 (stage baseline rebuild)
+- **Repo:** main
+- **Commit:** 328150bd
+- **Verification method:** Inspected `package.json`, `pom.xml`, `application.yml`; handover doc content.
+
+**Facts only.** 本机事实仅供协作参考；不做环境推荐。
+
+---
+
+## Exact local startup/build commands
+
+| Scope | Command | Working directory |
+|-------|---------|-------------------|
+| Backend run | `.\mvnw.cmd spring-boot:run` (Windows) or `./mvnw spring-boot:run` (Unix) | `backend/dfbs-app` |
+| Backend compile | `.\mvnw.cmd -q clean compile -DskipTests` | `backend/dfbs-app` |
+| Frontend dev | `npm run dev` | `frontend/dfbs-ui` |
+| Frontend build | `npm run build` | `frontend/dfbs-ui` |
+
+Required: Postgres at `spring.datasource.url` (default `jdbc:postgresql://localhost:5432/dfbs`); Node/npm for frontend. See TEST_BASELINE.md for test commands.
+
+---
+
+## Reality semantics
+
+- **FE only:** `npm run dev` in `frontend/dfbs-ui`; needs backend or mock for API. Vite proxy may point to backend (see `vite.config.ts`).
+- **BE only:** `.\mvnw.cmd spring-boot:run` in `backend/dfbs-app`; needs DB and migrations applied.
+- **Both:** Start backend then frontend dev; frontend uses `/api` baseURL (proxy to backend).
+
+---
+
+## Not verified
+
+- Full local run (FE + BE + DB) not executed in this handover. Toolchain versions below are from prior handover/machine notes.
 
 ---
 

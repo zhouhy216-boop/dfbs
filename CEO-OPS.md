@@ -284,15 +284,16 @@ wsl -l -v   # 【环境检查】看 WSL 里的发行版
 
 ##  阶段对齐工单
 ```
-[DIRECT OPS TICKET — HANDOVER SYNC (FIXED)]
+[DIRECT OPS TICKET — STAGE BASELINE REBUILD (FIXED)]
 
 Goal:
-- Refresh the handover pack so it matches CURRENT repo reality.
-- This handover pack is the ONLY truth source for non-repo viewers. It MUST be detailed and accurate.
+- Rebuild the stage baseline so it is detailed enough for decision-making, not just for rough orientation.
+- Refresh the handover pack to match CURRENT repo reality.
+- Audit the product alignment pack against CURRENT repo reality, without rewriting product intent into repo-fact language.
 - Facts only. No new requirements. No planning. No guesses.
 
-Scope (documentation only; overwrite/update in place):
-Update these files under `evidence/handover/` (overwrite/update in place):
+Scope (documentation only; overwrite/update in place where allowed):
+A) Update these files under `evidence/handover/` (overwrite/update in place):
 - STATE_SNAPSHOT.md
 - UI_ENTRYPOINTS.md
 - API_SURFACE.md
@@ -301,58 +302,117 @@ Update these files under `evidence/handover/` (overwrite/update in place):
 - REPO_MAP.md
 - REUSABLE_BLOCKS.md
 - REUSABLE_BLOCKS_ZH.md
+- DEV-ENV.md
+
+B) Audit these files under `docs/product/` against CURRENT repo reality:
+- MODULE_ROUTE_ANCHORS_v0.1.md
+- BUSINESS_MAP_v0.1.md
+- PROCESS_MAP_v0.1.md
+- OBJECT_MAP_v0.1.md
+
+Rules for B:
+- These are product-alignment docs, not pure repo-fact docs.
+- Do NOT rewrite product intent/speculation into repo-truth language.
+- ONLY add/update a short factual section per file such as:
+  - `Repo reality check`
+  - `Conflicts with current repo reality`
+  - `Anchor gaps / not yet present in repo`
+- Preserve the original product intent text unless it is an obvious factual route/path/symbol typo.
 
 Definition of Done (DoD):
-- Every file above is updated to reflect CURRENT repo reality.
-- Any statement conflicting with repo reality is deleted/rewritten to current facts (no legacy sections).
-- Each file contains enough detail that a PM can understand CURRENT behavior without opening the repo.
-- Each file includes concrete evidence pointers (paths/identifiers/commands) so facts are auditable.
+- Every handover file above reflects CURRENT repo reality.
+- Any statement conflicting with repo reality is deleted/rewritten in handover docs (no legacy sections).
+- Product docs are audited and annotated with repo-reality conflicts/gaps where needed.
+- Each file is detailed enough that a PM can make safer execution decisions without opening the repo.
+- Each key fact includes concrete evidence pointers (paths / symbols / routes / migrations / scripts / commands).
 
 Hard rules (anti-laziness):
 - Repo is source of truth. You MUST inspect the repo to confirm each item.
 - Be explicit & exhaustive within the repo’s current scope:
-  - No hand-wavy language: remove `etc.`, `likely`, `maybe`, `approximately`, “similar”.
-  - No placeholders like “TBD”, “TODO”, unless explicitly required; prefer “Not verified” if truly unverifiable.
+  - No hand-wavy language: remove `etc.`, `likely`, `maybe`, `approximately`, `similar`.
+  - No placeholders like `TBD`, `TODO`, unless explicitly required.
+  - If something cannot be verified from repo sources, write exactly: `Not verified`.
 - Evidence pointers are required:
-  - For each key fact, include at least one of: file path, symbol name, route path, script name, command line, migration filename.
-- If something cannot be verified from repo sources, write exactly: `Not verified` AND list it in a final “Not verified” section per file AND in the final receipt.
-- Do NOT change any application code/behavior/scripts/infra. Docs only.
+  - For each key fact, include at least one of:
+    - file path
+    - symbol/class/component/controller name
+    - route path
+    - script/command
+    - migration filename
+- Do NOT change any application code / behavior / scripts / infra. Docs only.
 - Keep docs detailed but do not paste huge code blocks. Prefer concise tables/bullets + pointers.
 
-Global header requirement (add/update at top of EACH file):
+Global header requirement (add/update at top of EACH touched file):
 - As-of: <YYYY-MM-DD HH:MM>
 - Repo: <branch name>
 - Commit: <short SHA>
 - Verification method: <commands used / key files inspected>
 
+Global section requirements (apply where relevant in EACH handover file):
+- `Reality semantics`
+  - Explain what the current capability REALLY means in repo terms (not just that a page/endpoint exists).
+- `Reuse status`
+  - For each key capability/module in scope, classify as one of:
+    - Reusable as-is
+    - Reusable with small patch
+    - Exists but incomplete
+    - Not present
+- `Decision-risk notes`
+  - Facts that are easy to misread and could mislead planning/execution if interpreted loosely.
+- `Not verified`
+  - Mandatory section if anything remains unverifiable.
+
 Per-file minimum requirements (MUST):
+
 1) STATE_SNAPSHOT.md
-- “What works now” list (user-visible capabilities) with pointers (routes/pages/modules).
+- “What works now” list (user-visible capabilities) with pointers (routes/pages/modules/files).
 - “Known limitations” list (facts only).
-- “Feature flags / config gates” if present (name + where set).
+- “Reality semantics” for key foundation areas:
+  - login/auth
+  - organization/person
+  - account management
+  - permissions/bypass behavior
+  - role simulator / mock account related current state if present
+- “Reuse status” for major foundation capabilities.
+- “Decision-risk notes” for facts that can easily cause wrong planning assumptions.
+- “Feature flags / config gates” if present.
 - “Not verified” section if any.
 
 2) UI_ENTRYPOINTS.md
 - Enumerate ALL current UI entry points / major pages/flows (route or navigation path).
 - For each entry:
-  - Name, route/path (or navigation), prerequisites (auth/role/data), primary actions/outcomes.
-  - Link to related APIs or modules (pointer only).
+  - Name
+  - route/path or navigation path
+  - prerequisites (auth/role/data) if determinable
+  - primary actions/outcomes
+  - related APIs/modules (pointer only)
+  - reuse status
+  - current real semantic note if the page is only partial / shell / gated / misleading
+- Include “decision-risk notes” for any entry whose existence could be misread as “feature complete”.
 - “Not verified” section if any.
 
 3) API_SURFACE.md
 - Enumerate ALL current endpoints:
   - METHOD + PATH
-  - Grouped by controller/module (pointer to file).
-  - Include auth/role requirement if determinable from code/config.
-  - Include request/response schema pointers (DTO/type names or files), not full dumps.
+  - grouped by controller/module (pointer to file)
+  - auth/role requirement if determinable from code/config
+  - request/response schema pointers (DTO/type names or files), not full dumps
+- For auth-sensitive areas, explicitly note real semantics if admin/super-admin bypass is partial / whitelist-based / not global.
+- Add reuse status for major API groups.
+- Add “decision-risk notes” where endpoint existence does NOT mean end-to-end feature readiness.
 - “Not verified” section if any.
 
 4) DATA_BASELINE.md
 - List ALL Flyway migration filenames in order.
 - For each migration:
-  - Key tables/entities touched (names).
-  - Brief intent (fact-based from migration content/comments).
-  - Pointer: migration file path.
+  - key tables/entities touched
+  - brief intent (fact-based from migration content/comments)
+  - pointer: migration file path
+- Highlight migrations relevant to:
+  - accounts / users / people / org
+  - permissions / role-like structures
+  - business ownership fields if present
+- “Decision-risk notes” for tables/entities easy to over-assume from naming alone.
 - “Not verified” section if any.
 
 5) TEST_BASELINE.md
@@ -360,32 +420,76 @@ Per-file minimum requirements (MUST):
   - backend tests/build
   - frontend tests/build
   - full-suite build (what counts as BUILD SUCCESS)
-- Required env vars/config (names + where referenced).
-- Common failure modes observed in repo scripts/config (facts only, if evident).
+- Required env vars/config (names + where referenced)
+- Common failure modes visible from repo scripts/config (facts only)
+- Reality semantics:
+  - what “build success” really proves / does not prove
 - “Not verified” section if any.
 
 6) REPO_MAP.md
-- High-level directory map of the repo (key folders).
-- Entry points for FE/BE (main files), build scripts, routing definitions, config roots.
-- Where “evidence/handover” lives + intended usage.
+- High-level directory map of the repo (key folders)
+- Entry points for FE/BE (main files), build scripts, routing definitions, config roots
+- Where `evidence/handover` lives + intended usage
+- Where `docs/product` lives + intended usage
+- Reality semantics:
+  - which directories/pages are actively wired vs shells / partial / legacy
 - “Not verified” section if any.
 
 7) REUSABLE_BLOCKS.md (EN)
-- List reusable blocks/components/services judged reusable in CURRENT repo.
+- List reusable blocks/components/services judged reusable in CURRENT repo
 - For each block:
-  - Name, purpose (1 line), location (file path), usage sites (list pages/flows), key interface (props/inputs/outputs names only).
+  - name
+  - purpose (1 line)
+  - location (file path)
+  - usage sites (list pages/flows)
+  - key interface (props/inputs/outputs names only)
+  - reuse status
+- Mark if reusable in name only but not safely reusable yet.
 - “Not verified” section if any.
 
 8) REUSABLE_BLOCKS_ZH.md (ZH)
-- Same list as EN, but usage sites must be described in page/flow wording (NO code paths).
-- Still include the component name + location pointer, but do not explain via code structure.
+- Same list as EN, but usage sites described in page/flow wording (NO code-structure explanation)
+- Still include component/service name + location pointer
+- Add reuse status in Chinese wording
 - “Not verified” section if any.
 
-Output (short receipt only; <=20 lines):
-- `DONE: HANDOVER_SYNC (FIXED) — Run: <YYYY-MM-DD HH:MM>`
-- 3–6 bullets: what changed (mention which files had major rewrites)
-- `Not verified:` list (if any, aggregated)
-- If anything blocked you from verifying: 1 blocker question max (only if truly blocking)
+9) DEV-ENV.md
+- Exact local startup/build commands and required toolchain versions if determinable
+- Required config/env files or env vars
+- Any known local setup gates visible from repo/config
+- Reality semantics:
+  - what is sufficient to run FE only / BE only / both
+- “Not verified” section if any.
 
-[/DIRECT OPS TICKET — HANDOVER SYNC (FIXED)]
+Product pack audit requirements (for docs/product files):
+For EACH of the 4 product files, add a short factual section:
+- `Repo reality check`
+  - Which anchors/claims already map to current repo reality
+- `Conflicts with current repo reality`
+  - Only factual conflicts (wrong route, missing page, wrong module/path, etc.)
+- `Anchor gaps / not yet present in repo`
+  - Items that are valid product discussion anchors but do not yet exist in code
+- Do NOT delete product intent because the repo has not implemented it yet.
+- Do NOT silently “upgrade” product docs into implementation docs.
+
+Special focus areas (must verify carefully; these are currently high decision-risk):
+- Whether org structure already contains usable person records and how they are surfaced
+- Whether account creation/binding already depends on person records
+- What “account & permissions” can truly do now vs what is shell/incomplete
+- Real meaning of admin / super-admin behavior:
+  - full permission?
+  - whitelist-based bypass?
+  - page-only access restored vs action-level blocked?
+- Whether route existence equals usable business feature, or only partial page wiring
+- Current status of role simulator / mock account related code, if any exists
+- Whether current business pages already support “my / pending / my-orders / assigned to me” semantics, and at what real level
+
+Output (short receipt only; <=20 lines):
+- `DONE: STAGE_BASELINE_REBUILD (FIXED) — Run: <YYYY-MM-DD HH:MM>`
+- 3–6 bullets: what changed (mention major rewrites and any product-doc conflict annotations)
+- `Not verified:` list (aggregated)
+- `Highest decision-risk facts found:` list (aggregated, very short)
+- 1 blocker question max (only if truly blocking)
+
+[/DIRECT OPS TICKET — STAGE BASELINE REBUILD (FIXED)]
 ```

@@ -131,7 +131,8 @@ public class AccountListService {
                     position != null ? position : "",
                     department != null ? department : "",
                     roleTemplateId,
-                    roleTemplateLabel
+                    roleTemplateLabel,
+                    u.getPrimaryBusinessRole()
             ));
         }
         return result;

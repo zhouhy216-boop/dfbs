@@ -1,9 +1,9 @@
 # API_SURFACE — REST endpoints by controller
 
-- **As-of:** 2025-02-24 20:00
+- **As-of:** 2025-02-24 (stage baseline rebuild)
 - **Repo:** main
-- **Commit:** 983df8e7
-- **Verification method:** Grep of `@RequestMapping`, `@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping`, `@PatchMapping` under `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/` and `HealthController.java`.
+- **Commit:** 328150bd
+- **Verification method:** Grep of `@RequestMapping`, `@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping` under `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/`.
 
 **Facts only.** Enumerated from controller classes. Frontend uses `baseURL: '/api'` (`frontend/dfbs-ui/src/shared/utils/request.ts`). Auth: Bearer token from request interceptor for protected routes; admin dictionary/org/perm routes guarded by SuperAdminGuard or equivalent on frontend; backend may enforce via `SuperAdminGuard.requireSuperAdmin()` (e.g. `DictionaryTypeAdminController`, `DictionaryItemAdminController`, `TestDataCleanerAdminController`). Response schema pointers: DTOs in controller package or `application/` (e.g. `QuoteResponseDto`, `CreateQuoteRequest`).
 
@@ -15,6 +15,34 @@
 |--------|------|
 | POST | /api/auth/login |
 | GET | /api/auth/me |
+
+---
+
+## AccountPermissionsController — `interfaces/perm/AccountPermissionsController.java`
+
+Base path: `/api/v1/admin/account-permissions`. Admin or Super Admin (frontend: `AdminOrSuperAdminGuard`). Request/response: `PermAccountOverrideDto` (CreateAccountRequest with primaryBusinessRole; UpdateAccountRequest: nickname, primaryBusinessRole; AccountSummaryResponse, AccountListItemResponse, UserSummary include primaryBusinessRole).
+
+| Method | Path |
+|--------|------|
+| GET | /api/v1/admin/account-permissions/auth/default-password/status |
+| PUT | /api/v1/admin/account-permissions/auth/default-password |
+| GET | /api/v1/admin/account-permissions/account-list |
+| GET | /api/v1/admin/account-permissions/people |
+| POST | /api/v1/admin/account-permissions/accounts |
+| PUT | /api/v1/admin/account-permissions/accounts/{userId}/enabled |
+| PUT | /api/v1/admin/account-permissions/accounts/{userId} |
+| POST | /api/v1/admin/account-permissions/accounts/{userId}/reset-password |
+| GET | /api/v1/admin/account-permissions/users |
+| GET | /api/v1/admin/account-permissions/users/{id} |
+| GET | /api/v1/admin/account-permissions/accounts/{userId}/override |
+| PUT | /api/v1/admin/account-permissions/accounts/{userId}/override |
+| GET | /api/v1/admin/account-permissions/roles |
+| POST | /api/v1/admin/account-permissions/roles |
+| PUT | /api/v1/admin/account-permissions/roles/{id} |
+| DELETE | /api/v1/admin/account-permissions/roles/{id} |
+| POST | /api/v1/admin/account-permissions/roles/{id}/clone |
+| GET | /api/v1/admin/account-permissions/roles/{id}/permissions |
+| PUT | /api/v1/admin/account-permissions/roles/{id}/template |
 
 ---
 
@@ -824,6 +852,26 @@ Super-admin guarded.
 **Controller file paths:** `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/` + subpackages. Rescan when controllers change.
 
 **Request/response schema pointers:** DTOs and request types live in same package as controller or in `application/` (e.g. `CreateQuoteRequest`, `QuoteResponseDto`). Not enumerated here.
+
+---
+
+## Reality semantics (auth-sensitive)
+
+- **Admin/super-admin bypass:** Backend `PermEnforcementService.java` uses a **whitelist**: only VIEW keys for shipments, platform orgs, platform applications, work_order; work_order:CREATE; and the fixed set `DEV_STAGE_FIRST_BATCH_ACTION_BYPASS` (shipment/work_order/platform action keys). Any other permission key requires the user to have it in effective keys; otherwise 403. Endpoint existence does not imply end-to-end usability for non–Super Admin users.
+- **Account-permissions:** POST accounts accepts `primaryBusinessRole`; PUT `/accounts/{userId}` updates nickname and primaryBusinessRole. GET users, GET users/{id}, GET account-list return primaryBusinessRole. No contract-review API in repo.
+
+---
+
+## Reuse status
+
+Account-permissions API group: Reusable as-is for create/edit account with Primary Business Role. Shipment/work-order/platform APIs: usable for Super Admin with bypass; for other users, effective keys must include required permission.
+
+---
+
+## Decision-risk notes
+
+- Endpoint exists ≠ feature complete: list/detail/workflow may return 403 if user lacks permission and key is not in bypass whitelist.
+- Contract module: ContractController provides CRUD for contracts; no review/initiator/assigned/handler endpoints in repo.
 
 ---
 

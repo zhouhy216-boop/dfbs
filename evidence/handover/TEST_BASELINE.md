@@ -1,8 +1,8 @@
 # TEST_BASELINE — How to run tests; what counts as BUILD SUCCESS
 
-- **As-of:** 2025-02-24 20:00
+- **As-of:** 2025-02-24 (stage baseline rebuild)
 - **Repo:** main
-- **Commit:** 983df8e7
+- **Commit:** 328150bd
 - **Verification method:** Inspected `backend/dfbs-app/pom.xml`, `frontend/dfbs-ui/package.json`, `application.yml`; grep `*Test.java` under `backend/dfbs-app/src/test/`.
 
 **Facts only.** No test run was executed in this handover; BUILD SUCCESS criteria are defined from project config.
@@ -62,6 +62,13 @@ Source: `frontend/dfbs-ui/package.json`.
 | preview | vite preview |
 
 There is no `test` script. Frontend gate for PR: Not verified; candidates are `npm run build`, `npm run lint`.
+
+---
+
+## Reality semantics
+
+- **What “build success” proves:** Backend BUILD SUCCESS means compile + tests pass (no runtime deployment). Frontend build success means tsc and Vite build complete; it does not prove E2E or that all pages work with real backend.
+- **What it does not prove:** Full-suite build was not run in this handover. Frontend currently fails build due to existing TS errors; backend test run not executed.
 
 ---
 

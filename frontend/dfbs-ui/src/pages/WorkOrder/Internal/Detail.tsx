@@ -20,6 +20,7 @@ import { ArrowLeftOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import request from '@/shared/utils/request';
 import { useAuthStore } from '@/shared/stores/useAuthStore';
 import { useEffectivePermissions } from '@/shared/hooks/useEffectivePermissions';
+import { useIsAdminOrSuperAdmin } from '@/shared/components/AdminOrSuperAdminGuard';
 import { useSimulatedRoleStore } from '@/shared/stores/useSimulatedRoleStore';
 import { isWorkOrderActionAllowedForSimulatedRole } from '@/shared/config/roleToUiGatingMatrix';
 import dayjs from 'dayjs';
@@ -107,6 +108,7 @@ export default function WorkOrderInternalDetail() {
   const navigate = useNavigate();
   const userInfo = useAuthStore((s) => s.userInfo);
   const { has } = useEffectivePermissions();
+  const isAdminOrSuperAdmin = useIsAdminOrSuperAdmin();
   const simulatedRole = useSimulatedRoleStore((s) => s.simulatedRole);
   const simulatorDisable = !isWorkOrderActionAllowedForSimulatedRole(simulatedRole);
   const [detail, setDetail] = useState<WorkOrderDetailDto | null>(null);
@@ -318,7 +320,7 @@ export default function WorkOrderInternalDetail() {
         }
         extra={
           <Space wrap>
-            {canDispatch && has('work_order:ASSIGN') && (
+            {canDispatch && (has('work_order:ASSIGN') || isAdminOrSuperAdmin) && (
               simulatorDisable ? (
                 <Tooltip title={SIMULATOR_DISABLED_TOOLTIP}>
                   <span style={{ display: 'inline-block' }}>
@@ -331,7 +333,7 @@ export default function WorkOrderInternalDetail() {
                 </Button>
               )
             )}
-            {canAccept && has('work_order:SUBMIT') && (
+            {canAccept && (has('work_order:SUBMIT') || isAdminOrSuperAdmin) && (
               simulatorDisable ? (
                 <Tooltip title={SIMULATOR_DISABLED_TOOLTIP}>
                   <span style={{ display: 'inline-block' }}>
@@ -344,33 +346,72 @@ export default function WorkOrderInternalDetail() {
                 </Button>
               )
             )}
-            {canStart && has('work_order:EDIT') && (
-              <Button type="primary" onClick={() => setRecordOpen(true)}>
-                开始处理
-              </Button>
-            )}
-            {canAddRecordOrParts && has('work_order:EDIT') && (
-              <>
-                <Button onClick={() => { setRecordOpen(true); }}>添加记录</Button>
-                <Button
-                  onClick={() => {
-                    loadSpareParts();
-                    setPartOpen(true);
-                  }}
-                >
-                  添加配件
+            {canStart && (has('work_order:EDIT') || isAdminOrSuperAdmin) && (
+              simulatorDisable ? (
+                <Tooltip title={SIMULATOR_DISABLED_TOOLTIP}>
+                  <span style={{ display: 'inline-block' }}>
+                    <Button type="primary" disabled>开始处理</Button>
+                  </span>
+                </Tooltip>
+              ) : (
+                <Button type="primary" onClick={() => setRecordOpen(true)}>
+                  开始处理
                 </Button>
-              </>
+              )
             )}
-            {canSubmitSign && has('work_order:APPROVE') && (
-              <Button type="primary" onClick={handleSubmitSign} loading={submitting}>
-                提交签字
-              </Button>
+            {canAddRecordOrParts && (has('work_order:EDIT') || isAdminOrSuperAdmin) && (
+              simulatorDisable ? (
+                <>
+                  <Tooltip key="record" title={SIMULATOR_DISABLED_TOOLTIP}>
+                    <span style={{ display: 'inline-block' }}>
+                      <Button disabled>添加记录</Button>
+                    </span>
+                  </Tooltip>
+                  <Tooltip key="part" title={SIMULATOR_DISABLED_TOOLTIP}>
+                    <span style={{ display: 'inline-block' }}>
+                      <Button disabled>添加配件</Button>
+                    </span>
+                  </Tooltip>
+                </>
+              ) : (
+                <>
+                  <Button onClick={() => { setRecordOpen(true); }}>添加记录</Button>
+                  <Button
+                    onClick={() => {
+                      loadSpareParts();
+                      setPartOpen(true);
+                    }}
+                  >
+                    添加配件
+                  </Button>
+                </>
+              )
             )}
-            {canComplete && has('work_order:CLOSE') && (
-              <Button type="primary" onClick={() => setCompleteOpen(true)}>
-                完修
-              </Button>
+            {canSubmitSign && (has('work_order:APPROVE') || isAdminOrSuperAdmin) && (
+              simulatorDisable ? (
+                <Tooltip title={SIMULATOR_DISABLED_TOOLTIP}>
+                  <span style={{ display: 'inline-block' }}>
+                    <Button type="primary" disabled>提交签字</Button>
+                  </span>
+                </Tooltip>
+              ) : (
+                <Button type="primary" onClick={handleSubmitSign} loading={submitting}>
+                  提交签字
+                </Button>
+              )
+            )}
+            {canComplete && (has('work_order:CLOSE') || isAdminOrSuperAdmin) && (
+              simulatorDisable ? (
+                <Tooltip title={SIMULATOR_DISABLED_TOOLTIP}>
+                  <span style={{ display: 'inline-block' }}>
+                    <Button type="primary" disabled>完修</Button>
+                  </span>
+                </Tooltip>
+              ) : (
+                <Button type="primary" onClick={() => setCompleteOpen(true)}>
+                  完修
+                </Button>
+              )
             )}
           </Space>
         }
@@ -451,7 +492,7 @@ export default function WorkOrderInternalDetail() {
               title: '操作',
               width: 100,
               render: (_, row: WorkOrderPart) =>
-                row.usageStatus === 'PENDING' && has('work_order:EDIT') ? (
+                row.usageStatus === 'PENDING' && (has('work_order:EDIT') || isAdminOrSuperAdmin) ? (
                   <Button
                     type="link"
                     size="small"

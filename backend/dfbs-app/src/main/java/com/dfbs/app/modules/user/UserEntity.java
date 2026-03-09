@@ -38,6 +38,10 @@ public class UserEntity {
     @Column(name = "org_person_id")
     private Long orgPersonId;
 
+    /** Primary business role (one per account; Chinese label; identity basis for downstream flows). MOCKACC-260309-001-01. */
+    @Column(name = "primary_business_role", length = 64)
+    private String primaryBusinessRole;
+
     /** Account enabled; disabled accounts cannot login. */
     @Column(name = "enabled", nullable = false)
     private Boolean enabled = true;
