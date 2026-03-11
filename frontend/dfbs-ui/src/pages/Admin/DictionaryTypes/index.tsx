@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Collapse, Form, Input, message, Modal, Select, Switch, Table, Tag } from 'antd';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
-import { ProTable } from '@ant-design/pro-components';
+import { UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 import dayjs from 'dayjs';
 import {
   listDictTypes,
@@ -280,7 +280,8 @@ export default function DictionaryTypesPage() {
           },
         ]}
       />
-      <ProTable<DictTypeItem>
+      <UnifiedProTable<DictTypeItem>
+        tableKey={UNIFIED_TABLE_KEYS.ADMIN_DICTIONARY_TYPES}
         actionRef={actionRef}
         rowKey="id"
         columns={columns}

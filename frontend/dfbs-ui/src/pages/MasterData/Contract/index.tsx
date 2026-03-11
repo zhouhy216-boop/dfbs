@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 import {
-  ProTable,
   ModalForm,
   ProFormText,
   ProFormSelect,
@@ -9,6 +8,7 @@ import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import { Drawer, Descriptions, Button, message } from 'antd';
 import request from '@/shared/utils/request';
 import { toProTableResult, type SpringPage } from '@/shared/utils/adapters';
+import { CopyableCell, UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 
 interface ContractRow {
   id: number;
@@ -49,7 +49,12 @@ export default function Contract() {
 
   const columns: ProColumns<ContractRow>[] = [
     { title: 'ID', dataIndex: 'id', width: 80, search: false },
-    { title: '合同号', dataIndex: 'contractNo', width: 160 },
+    {
+      title: '合同号',
+      dataIndex: 'contractNo',
+      width: 160,
+      render: (_, r) => <CopyableCell value={r.contractNo} />,
+    },
     { title: '客户ID', dataIndex: 'customerId', width: 100, search: false },
     {
       title: '状态',
@@ -99,7 +104,8 @@ export default function Contract() {
 
   return (
     <div style={{ padding: 24 }}>
-      <ProTable<ContractRow>
+      <UnifiedProTable<ContractRow>
+        tableKey={UNIFIED_TABLE_KEYS.CONTRACT}
         actionRef={actionRef}
         columns={columns}
         request={async (params) => {
@@ -118,7 +124,6 @@ export default function Contract() {
         }}
         rowKey="id"
         search={{ labelWidth: 'auto' }}
-        pagination={{ pageSize: 10 }}
         headerTitle="合同"
         toolBarRender={() => [
           <ModalForm<{ contractNo: string; customerId: number; attachment: string; createdBy?: string }>

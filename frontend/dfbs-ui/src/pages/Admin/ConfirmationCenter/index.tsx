@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
-import { Tabs, Table, Button, Modal, Form, Tag, message } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { useEffect, useRef, useState } from 'react';
+import type { ActionType, ProColumns } from '@ant-design/pro-components';
+import { Tabs, Button, Modal, Form, Tag, message } from 'antd';
 import request from '@/shared/utils/request';
 import SmartReferenceSelect from '@/shared/components/SmartReferenceSelect';
 import type { EntityType } from '@/shared/components/SmartReferenceSelect';
+import { UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 
 interface TempPoolItem {
   id: number;
@@ -38,6 +39,7 @@ export default function ConfirmationCenter() {
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [targetId, setTargetId] = useState<number | null>(null);
   const [finalName, setFinalName] = useState<string>('');
+  const tableRef = useRef<ActionType>(null);
 
   const fetchPool = async () => {
     setLoading(true);
@@ -54,6 +56,10 @@ export default function ConfirmationCenter() {
   useEffect(() => {
     fetchPool();
   }, []);
+
+  useEffect(() => {
+    tableRef.current?.reload?.();
+  }, [pool]);
 
   const openConfirmModal = (row: TempPoolItem) => {
     setConfirmingRow(row);
@@ -94,7 +100,7 @@ export default function ConfirmationCenter() {
     }
   };
 
-  const columns: ColumnsType<TempPoolItem> = [
+  const columns: ProColumns<TempPoolItem>[] = [
     { title: 'ID', dataIndex: 'id', width: 72, ellipsis: true },
     { title: '关键标识', dataIndex: 'displayName', ellipsis: true, render: (_, r) => r.displayName || r.uniqueKey },
     {
@@ -115,19 +121,26 @@ export default function ConfirmationCenter() {
     },
   ];
 
-  const tabItems = ENTITY_TAB_ORDER.map((key) => {
-    const list = pool[key] ?? [];
+  const tabItems = ENTITY_TAB_ORDER.map((entityKey) => {
+    const list = pool[entityKey] ?? [];
     return {
-      key,
-      label: `${ENTITY_LABELS[key] ?? key} (${list.length})`,
+      key: entityKey,
+      label: `${ENTITY_LABELS[entityKey] ?? entityKey} (${list.length})`,
       children: (
-        <Table
+        <UnifiedProTable<TempPoolItem>
+          tableKey={UNIFIED_TABLE_KEYS.CONFIRMATION_CENTER}
+          actionRef={tableRef}
           rowKey="id"
-          size="small"
-          loading={loading}
           columns={columns}
-          dataSource={list}
-          pagination={{ pageSize: 10, showSizeChanger: false }}
+          request={async () => ({
+            data: list,
+            total: list.length,
+            success: true,
+          })}
+          search={false}
+          pagination={{ pageSize: 10 }}
+          loading={loading}
+          options={{ fullScreen: true, density: true, reload: true, setting: true }}
         />
       ),
     };

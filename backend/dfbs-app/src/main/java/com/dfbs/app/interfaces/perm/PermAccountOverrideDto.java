@@ -6,9 +6,9 @@ import java.util.List;
 public final class PermAccountOverrideDto {
 
     /** Minimal user info for account selection (GET /users?query=, GET /users/{id}). */
-    public record UserSummary(Long id, String username, String nickname, Boolean enabled, String primaryBusinessRole) {
+    public record UserSummary(Long id, String username, String nickname, Boolean enabled, String primaryBusinessRole, Long orgPersonId) {
         public UserSummary(Long id, String username, String nickname) {
-            this(id, username, nickname, null, null);
+            this(id, username, nickname, null, null, null);
         }
     }
 
@@ -18,8 +18,8 @@ public final class PermAccountOverrideDto {
     /** Response for created account or account summary. */
     public record AccountSummaryResponse(Long id, String username, String nickname, Boolean enabled, Long orgPersonId, String primaryBusinessRole) {}
 
-    /** Request body for PUT /accounts/{userId} (update account profile). */
-    public record UpdateAccountRequest(String nickname, String primaryBusinessRole) {}
+    /** Request body for PUT /accounts/{userId} (update account profile). Null/blank = leave unchanged. */
+    public record UpdateAccountRequest(String nickname, String primaryBusinessRole, String username, Long orgPersonId) {}
 
     /** Request body for PUT /accounts/{userId}/enabled. */
     public record SetEnabledRequest(boolean enabled) {}

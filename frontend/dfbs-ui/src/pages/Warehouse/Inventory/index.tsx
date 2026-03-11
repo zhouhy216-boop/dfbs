@@ -1,6 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
 import {
-  ProTable,
   ModalForm,
   ProFormText,
   ProFormDigit,
@@ -10,6 +9,7 @@ import {
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import { Button, message } from 'antd';
 import request from '@/shared/utils/request';
+import { UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 
 /** 库存行（与 WhInventoryEntity 对应） */
 interface WhInventoryRow {
@@ -72,7 +72,8 @@ export default function WarehouseInventory() {
 
   return (
     <div style={{ padding: 24 }}>
-      <ProTable<WhInventoryRow>
+      <UnifiedProTable<WhInventoryRow>
+        tableKey={UNIFIED_TABLE_KEYS.WAREHOUSE_INVENTORY}
         actionRef={actionRef}
         columns={columns}
         request={async (params) => {

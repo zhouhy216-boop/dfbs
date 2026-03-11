@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { ProTable, ModalForm, PageContainer } from '@ant-design/pro-components';
+import { ModalForm, PageContainer } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import { Tabs, Button, Modal, Form, Input, InputNumber, DatePicker, Select, message, Tooltip } from 'antd';
 import type { Dayjs } from 'dayjs';
@@ -10,6 +10,7 @@ import { useEffectivePermissions } from '@/shared/hooks/useEffectivePermissions'
 import { useIsAdminOrSuperAdmin } from '@/shared/components/AdminOrSuperAdminGuard';
 import { useSimulatedRoleStore } from '@/shared/stores/useSimulatedRoleStore';
 import { isWorkOrderActionAllowedForSimulatedRole } from '@/shared/config/roleToUiGatingMatrix';
+import { UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 
 function CustomerSmartSelectInternal() {
   const form = Form.useFormInstance();
@@ -473,7 +474,8 @@ export default function WorkOrderInternal() {
             key: 'pending',
             label: '待受理',
             children: (
-              <ProTable<WorkOrderRow>
+              <UnifiedProTable<WorkOrderRow>
+                tableKey={UNIFIED_TABLE_KEYS.WORKORDERS_PENDING}
                 actionRef={pendingPoolRef}
                 columns={pendingPoolColumns}
                 request={async () => {
@@ -497,7 +499,8 @@ export default function WorkOrderInternal() {
             key: 'ready',
             label: '待派单',
             children: (
-              <ProTable<WorkOrderRow>
+              <UnifiedProTable<WorkOrderRow>
+                tableKey={UNIFIED_TABLE_KEYS.WORKORDERS_READY}
                 actionRef={readyPoolRef}
                 columns={readyPoolColumns}
                 request={async () => {
@@ -521,7 +524,8 @@ export default function WorkOrderInternal() {
             key: 'my',
             label: '我的工单',
             children: (
-              <ProTable<WorkOrderRow>
+              <UnifiedProTable<WorkOrderRow>
+                tableKey={UNIFIED_TABLE_KEYS.WORKORDERS_MY}
                 actionRef={myOrdersRef}
                 columns={baseColumns}
                 request={async () => {
@@ -544,7 +548,8 @@ export default function WorkOrderInternal() {
             key: 'all',
             label: '全部工单',
             children: (
-              <ProTable<WorkOrderRow>
+              <UnifiedProTable<WorkOrderRow>
+                tableKey={UNIFIED_TABLE_KEYS.WORKORDERS_ALL}
                 actionRef={allRef}
                 columns={allPoolColumns}
                 request={async () => {

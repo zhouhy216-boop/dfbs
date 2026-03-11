@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Button, Form, Input, InputNumber, message, Modal, Select, Switch, Tag } from 'antd';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
-import { ProTable } from '@ant-design/pro-components';
+import { UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 import dayjs from 'dayjs';
 import {
   listItems,
@@ -340,7 +340,8 @@ export default function DictionaryItemsPage() {
           : '请先选择父级后再排序子项；根节点可直接排序'}
       </div>
 
-      <ProTable<DictItem>
+      <UnifiedProTable<DictItem>
+        tableKey={UNIFIED_TABLE_KEYS.ADMIN_DICTIONARY_ITEMS}
         actionRef={actionRef}
         rowKey="id"
         columns={columns}

@@ -85,15 +85,32 @@ public class AdminAccountService {
         return new AccountSummary(u.getId(), u.getUsername(), u.getNickname(), u.getEnabled(), u.getOrgPersonId(), u.getPrimaryBusinessRole());
     }
 
-    /** Update account profile (nickname, primary business role). Null fields mean leave unchanged. */
+    /** Update account profile (nickname, primary business role, username, bound org person). Null/blank means leave unchanged. */
     @Transactional
-    public AccountSummary updateAccount(Long userId, String nickname, String primaryBusinessRole) {
+    public AccountSummary updateAccount(Long userId, String nickname, String primaryBusinessRole, String username, Long orgPersonId) {
         UserEntity u = userRepo.findById(userId).orElseThrow(() -> new UserNotFoundException("用户不存在: id=" + userId));
         if (nickname != null) {
             u.setNickname(nickname.isBlank() ? null : nickname.trim());
         }
         if (primaryBusinessRole != null) {
             u.setPrimaryBusinessRole(primaryBusinessRole.isBlank() ? null : primaryBusinessRole.trim());
+        }
+        if (username != null && !username.isBlank()) {
+            String trimmed = username.trim();
+            var existing = userRepo.findByUsername(trimmed);
+            if (existing.isPresent() && !existing.get().getId().equals(userId)) {
+                throw new UsernameExistsException("用户名已存在: " + trimmed);
+            }
+            u.setUsername(trimmed);
+        }
+        if (orgPersonId != null && !orgPersonId.equals(u.getOrgPersonId())) {
+            OrgPersonEntity person = orgPersonRepo.findById(orgPersonId)
+                    .orElseThrow(() -> new PersonNotFoundException("人员不存在: id=" + orgPersonId));
+            if (!Boolean.TRUE.equals(person.getIsActive())) {
+                throw new PersonNotActiveException("该人员已停用，无法绑定");
+            }
+            bindingValidation.requirePersonNotYetBound(orgPersonId);
+            u.setOrgPersonId(orgPersonId);
         }
         u = userRepo.save(u);
         return new AccountSummary(u.getId(), u.getUsername(), u.getNickname(), u.getEnabled(), u.getOrgPersonId(), u.getPrimaryBusinessRole());

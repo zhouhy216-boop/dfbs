@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ProTable, ModalForm, ProFormSelect, ProFormText } from '@ant-design/pro-components';
+import { ModalForm, ProFormSelect, ProFormText } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import { Drawer, Descriptions, Button, message, Modal, Input, Form, InputNumber, DatePicker, Select, Tooltip } from 'antd';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
@@ -7,6 +7,7 @@ import request from '@/shared/utils/request';
 import dayjs, { type Dayjs } from 'dayjs';
 import { AttachmentList } from '@/shared/components/AttachmentList';
 import { toProTableResult, type SpringPage } from '@/shared/utils/adapters';
+import { UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 import { useEffectivePermissions } from '@/shared/hooks/useEffectivePermissions';
 import { useIsAdminOrSuperAdmin } from '@/shared/components/AdminOrSuperAdminGuard';
 import { useSimulatedRoleStore } from '@/shared/stores/useSimulatedRoleStore';
@@ -404,7 +405,8 @@ export default function Shipment() {
 
   return (
     <div style={{ padding: 24 }}>
-      <ProTable<ShipmentListRow>
+      <UnifiedProTable<ShipmentListRow>
+        tableKey={UNIFIED_TABLE_KEYS.SHIPMENTS}
         actionRef={actionRef}
         columns={columns}
         request={async (params) => {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ProTable, ModalForm, ProFormMoney, ProFormDigit } from '@ant-design/pro-components';
+import { ModalForm, ProFormMoney, ProFormDigit } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import { Alert, Button, Col, Modal, Form, Input, InputNumber, Row, Select, Tabs, Tag, message, Tooltip } from 'antd';
 import request from '@/shared/utils/request';
@@ -18,6 +18,7 @@ import { useIsAdminOrSuperAdmin } from '@/shared/components/AdminOrSuperAdminGua
 import { useSimulatedRoleStore } from '@/shared/stores/useSimulatedRoleStore';
 import { isPlatformApplicationActionAllowedForSimulatedRole } from '@/shared/config/roleToUiGatingMatrix';
 import ApplicationsHistory from '@/pages/Platform/applications/History';
+import { UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 
 const PERM_APPS_CREATE = 'platform_application.applications:CREATE';
 const PERM_APPS_SUBMIT = 'platform_application.applications:SUBMIT';
@@ -667,7 +668,8 @@ export default function PlatformApplication({
             key: 'pending',
             label: '待处理',
             children: (
-              <ProTable<ApplicationRow>
+              <UnifiedProTable<ApplicationRow>
+                tableKey={UNIFIED_TABLE_KEYS.PLATFORM_APPLICATIONS}
                 actionRef={actionRef}
                 columns={columns}
                 request={tableRequest}

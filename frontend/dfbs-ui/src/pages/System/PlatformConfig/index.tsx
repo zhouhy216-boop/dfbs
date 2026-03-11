@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Button, Form, Input, message, Modal, Radio, Switch, Tag } from 'antd';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
-import { ProTable } from '@ant-design/pro-components';
+import { UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 import {
   getPlatformConfigs,
   addPlatformConfig,
@@ -165,7 +165,8 @@ export default function PlatformConfigPage() {
 
   return (
     <div style={{ padding: 24 }}>
-      <ProTable<PlatformConfigItem>
+      <UnifiedProTable<PlatformConfigItem>
+        tableKey={UNIFIED_TABLE_KEYS.SYSTEM_PLATFORM_CONFIG}
         actionRef={actionRef}
         rowKey="id"
         columns={columns}

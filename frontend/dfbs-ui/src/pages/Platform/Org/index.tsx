@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Alert, Button, Form, Input, message, Modal, Popconfirm, Select, Switch, Tag, Tooltip } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
-import { ProTable, ProDescriptions } from '@ant-design/pro-components';
+import { ProDescriptions } from '@ant-design/pro-components';
 import type { AxiosError } from 'axios';
 import request from '@/shared/utils/request';
 import SmartReferenceSelect from '@/shared/components/SmartReferenceSelect';
@@ -12,6 +12,7 @@ import DuplicateCheckModal from '@/features/platform/components/DuplicateCheckMo
 import type { DuplicateMatchItem } from '@/features/platform/components/DuplicateCheckModal';
 import { getPlatformStatusLabelForOrg } from '@/features/platform/components/HitAnalysisPanel';
 import type { SpringPage } from '@/shared/utils/adapters';
+import { UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 import { PhoneRule, EmailRule } from '@/shared/utils/validators/common';
 import { OrgCodeRule, OrgCodeUppercaseRule } from '@/features/platform/utils/validators';
 import { getPlatformConfigs, type PlatformConfigItem } from '@/features/platform/services/platformConfig';
@@ -672,7 +673,8 @@ export default function PlatformOrg() {
 
   return (
     <div>
-      <ProTable<PlatformOrgRow>
+      <UnifiedProTable<PlatformOrgRow>
+        tableKey={UNIFIED_TABLE_KEYS.PLATFORM_ORGS}
         actionRef={actionRef}
         rowKey="id"
         columns={columns}

@@ -34,10 +34,8 @@ import DictionaryTypes from '@/pages/Admin/DictionaryTypes';
 import DictionaryItems from '@/pages/Admin/DictionaryItems';
 import DictionaryTransitions from '@/pages/Admin/DictionaryTransitions';
 import DictionarySnapshotDemo from '@/pages/Admin/DictionarySnapshotDemo';
-import RolesPermissionsPage from '@/pages/Admin/RolesPermissions';
 import AccountPermissionsPage from '@/pages/Admin/AccountPermissions';
 import { SuperAdminGuard } from '@/shared/components/SuperAdminGuard';
-import { PermSuperAdminGuard } from '@/shared/components/PermSuperAdminGuard';
 import { AdminOrSuperAdminGuard } from '@/shared/components/AdminOrSuperAdminGuard';
 import { PlatformViewGuard } from '@/shared/components/PlatformViewGuard';
 import { WorkOrderViewGuard } from '@/shared/components/WorkOrderViewGuard';
@@ -108,7 +106,7 @@ function App() {
             <Route path="admin/dictionary-types/:typeId/transitions" element={<SuperAdminGuard><DictionaryTransitions /></SuperAdminGuard>} />
             <Route path="admin/dictionary-snapshot-demo" element={<SuperAdminGuard><DictionarySnapshotDemo /></SuperAdminGuard>} />
             <Route path="admin/account-permissions" element={<AdminOrSuperAdminGuard><AccountPermissionsPage /></AdminOrSuperAdminGuard>} />
-            <Route path="admin/roles-permissions" element={<PermSuperAdminGuard><RolesPermissionsPage /></PermSuperAdminGuard>} />
+            <Route path="admin/roles-permissions" element={<Navigate to="/admin/account-permissions" replace />} />
             <Route path="system/platform-config" element={<PlatformConfig />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

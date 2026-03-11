@@ -1,6 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import {
-  ProTable,
   ModalForm,
   ProFormSelect,
   ProFormDigit,
@@ -14,6 +13,7 @@ import { getDictionaryItems } from '@/features/dicttype/services/dictRead';
 import dayjs from 'dayjs';
 import { AttachmentList } from '@/shared/components/AttachmentList';
 import { toProTableResult, type SpringPage } from '@/shared/utils/adapters';
+import { UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 
 interface CustomerItem {
   id: number;
@@ -229,7 +229,8 @@ export default function Quote() {
 
   return (
     <div style={{ padding: 24 }}>
-      <ProTable<QuoteListRow>
+      <UnifiedProTable<QuoteListRow>
+        tableKey={UNIFIED_TABLE_KEYS.QUOTES}
         actionRef={actionRef}
         columns={columns}
         request={async (params, sort) => {
@@ -248,12 +249,12 @@ export default function Quote() {
         rowKey="id"
         search={false}
         pagination={{ pageSize: 10 }}
-        headerTitle="报价单"
+        headerTitle="报价单列表"
         toolBarRender={() => [
           <ModalForm<{ customerId: number; customerName?: string; businessLineId?: number }>
             key="create"
             title="新建报价单"
-            trigger={<Button type="primary">New Quote</Button>}
+            trigger={<Button type="primary">新建报价单</Button>}
             onFinish={async (values) => {
               await request.post('/v1/quotes', {
                 sourceType: 'MANUAL',

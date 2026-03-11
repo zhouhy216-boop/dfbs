@@ -1,9 +1,9 @@
 import { useRef } from 'react';
-import { ProTable } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import { message } from 'antd';
 import request from '@/shared/utils/request';
 import { toProTableResult, type SpringPage } from '@/shared/utils/adapters';
+import { UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 
 function showError(e: unknown) {
   const status = (e as { response?: { status?: number } })?.response?.status;
@@ -76,7 +76,8 @@ export default function ModelPartList() {
 
   return (
     <div style={{ padding: 24 }}>
-      <ProTable<ModelPartListRow>
+      <UnifiedProTable<ModelPartListRow>
+        tableKey={UNIFIED_TABLE_KEYS.MASTERDATA_MODELPARTLISTS}
         actionRef={actionRef}
         columns={columns}
         request={async (params) => {
@@ -97,7 +98,7 @@ export default function ModelPartList() {
         rowKey="id"
         search={{ labelWidth: 'auto' }}
         pagination={{ pageSize: 10 }}
-        headerTitle="型号BOM (Model Part List)"
+        headerTitle="型号零件清单"
       />
     </div>
   );

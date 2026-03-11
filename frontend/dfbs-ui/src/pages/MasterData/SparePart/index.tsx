@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 import {
-  ProTable,
   ModalForm,
   ProFormText,
   ProFormDigit,
@@ -9,6 +8,7 @@ import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import { Drawer, Descriptions, Button, message } from 'antd';
 import request from '@/shared/utils/request';
 import { toProTableResult, type SpringPage } from '@/shared/utils/adapters';
+import { UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 
 interface SparePartRow {
   id: number;
@@ -94,7 +94,8 @@ export default function SparePart() {
 
   return (
     <div style={{ padding: 24 }}>
-      <ProTable<SparePartRow>
+      <UnifiedProTable<SparePartRow>
+        tableKey={UNIFIED_TABLE_KEYS.MASTERDATA_SPAREPARTS}
         actionRef={actionRef}
         columns={columns}
         request={async (params) => {

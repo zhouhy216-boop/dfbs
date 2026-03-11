@@ -1,10 +1,10 @@
-import { useRef, useState } from 'react';
-import { ProTable } from '@ant-design/pro-components';
+import { useRef } from 'react';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
-import { Button, message } from 'antd';
+import { message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import request from '@/shared/utils/request';
 import { toProTableResult, type SpringPage } from '@/shared/utils/adapters';
+import { UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 
 interface AfterSalesRow {
   id: number;
@@ -54,7 +54,8 @@ export default function AfterSales() {
 
   return (
     <div style={{ padding: 24 }}>
-      <ProTable<AfterSalesRow>
+      <UnifiedProTable<AfterSalesRow>
+        tableKey={UNIFIED_TABLE_KEYS.AFTER_SALES}
         actionRef={actionRef}
         columns={columns}
         request={async (params) => {

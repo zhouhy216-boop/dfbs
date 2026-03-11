@@ -2,20 +2,22 @@
  * Accounts tab: search/select account, create account by binding person, enable/disable, reset password, template + override.
  * Uses /api/v1/admin/account-permissions/*.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Collapse, Drawer, Input, message, Modal, Select, Space, Switch, Table, Tabs, Tag } from 'antd';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ActionType } from '@ant-design/pro-components';
+import { Button, Collapse, Drawer, Input, message, Modal, Select, Space, Switch, Tabs, Tag } from 'antd';
 import {
   createAccount,
+  getAccountList,
   getAccountOverride,
   getPeopleOptions,
   getRolePermissions,
   getRoles,
   getUser,
   saveAccountOverride,
-  searchUsers,
   setAccountEnabled,
   updateAccount,
   resetPassword as apiResetPassword,
+  type AccountListItem,
   type AccountOverrideResponse,
   type PersonOptionForBinding,
   type RoleResponse,
@@ -50,6 +52,7 @@ import {
   type QuickOp,
 } from './permissionQuickOps';
 import { useIsPermSuperAdmin } from '@/shared/components/PermSuperAdminGuard';
+import { CopyableCell, UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 import BizPermCatalogMaintenance from './BizPermCatalogMaintenance';
 import BizPermAssignmentView from './BizPermAssignmentView';
 
@@ -69,11 +72,22 @@ function getEffectiveHasKey(
   return (templateKeys.has(key) || draftAdd.has(key)) && !draftRemove.has(key);
 }
 
+/** Build UserSummary from list row for drawer/override. */
+function toUserSummary(row: AccountListItem): UserSummary {
+  return {
+    id: row.userId,
+    username: row.username,
+    nickname: row.nickname ?? undefined,
+    enabled: row.enabled ?? true,
+    primaryBusinessRole: row.primaryBusinessRole ?? undefined,
+    orgPersonId: row.orgPersonId ?? undefined,
+  };
+}
+
 export default function AccountsTab() {
   const { allowed: permSuperAdminAllowed } = useIsPermSuperAdmin();
+  const accountTableRef = useRef<ActionType>(null);
   const [userSearchQuery, setUserSearchQuery] = useState('');
-  const [userSearchResults, setUserSearchResults] = useState<UserSummary[]>([]);
-  const [userSearchLoading, setUserSearchLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserSummary | null>(null);
   const [overrideLoading, setOverrideLoading] = useState(false);
   const [overrideSaveLoading, setOverrideSaveLoading] = useState(false);
@@ -100,6 +114,15 @@ export default function AccountsTab() {
   // Edit primary business role in drawer
   const [editPrimaryBusinessRole, setEditPrimaryBusinessRole] = useState<string | null>(null);
   const [updateAccountSaving, setUpdateAccountSaving] = useState(false);
+  // Post-creation username correction in drawer
+  const [editUsername, setEditUsername] = useState('');
+  const [usernameCorrecting, setUsernameCorrecting] = useState(false);
+  // Post-creation bound-org-person correction in drawer
+  const [rebindPersonQuery, setRebindPersonQuery] = useState('');
+  const [rebindPersonOptions, setRebindPersonOptions] = useState<PersonOptionForBinding[]>([]);
+  const [rebindPersonLoading, setRebindPersonLoading] = useState(false);
+  const [rebindSelectedPersonId, setRebindSelectedPersonId] = useState<number | null>(null);
+  const [rebindSubmitting, setRebindSubmitting] = useState(false);
   // Reset password modal
   const [resetPwdModalOpen, setResetPwdModalOpen] = useState(false);
   const [resetPwdValue, setResetPwdValue] = useState('');
@@ -141,8 +164,21 @@ export default function AccountsTab() {
   useEffect(() => {
     if (accountDetailDrawerOpen && selectedUser) {
       setEditPrimaryBusinessRole(selectedUser.primaryBusinessRole ?? null);
+      setEditUsername(selectedUser.username ?? '');
+      setRebindSelectedPersonId(selectedUser.orgPersonId ?? null);
+      setRebindPersonQuery('');
     }
-  }, [accountDetailDrawerOpen, selectedUser?.id, selectedUser?.primaryBusinessRole]);
+  }, [accountDetailDrawerOpen, selectedUser?.id, selectedUser?.primaryBusinessRole, selectedUser?.username, selectedUser?.orgPersonId]);
+
+  // Load person options for rebind when drawer is open (initial + search)
+  useEffect(() => {
+    if (!accountDetailDrawerOpen || !selectedUser) return;
+    setRebindPersonLoading(true);
+    getPeopleOptions(rebindPersonQuery.trim())
+      .then((opts) => setRebindPersonOptions(opts))
+      .catch(() => setRebindPersonOptions([]))
+      .finally(() => setRebindPersonLoading(false));
+  }, [accountDetailDrawerOpen, selectedUser?.id, rebindPersonQuery]);
 
   useEffect(() => {
     if (selectedUser == null) {
@@ -168,7 +204,6 @@ export default function AccountsTab() {
         }
         if (err.response?.data?.machineCode === 'PERM_USER_NOT_FOUND') {
           setSelectedUser(null);
-          setUserSearchResults([]);
         }
       })
       .finally(() => setOverrideLoading(false));
@@ -199,19 +234,7 @@ export default function AccountsTab() {
       [...draftRemoveKeys].some((k) => !savedRemoveSet.has(k)));
 
   const handleUserSearch = (q: string) => {
-    setUserSearchQuery(q);
-    if (!q.trim()) {
-      setUserSearchResults([]);
-      return;
-    }
-    setUserSearchLoading(true);
-    searchUsers(q.trim())
-      .then(setUserSearchResults)
-      .catch((err) => {
-        setUserSearchResults([]);
-        message.error(getErrorMessage(err));
-      })
-      .finally(() => setUserSearchLoading(false));
+    setUserSearchQuery(q ?? '');
   };
 
   const setOverrideKeyState = (key: string, state: 'none' | 'add' | 'remove') => {
@@ -411,12 +434,11 @@ export default function AccountsTab() {
           nickname: res.nickname ?? undefined,
           enabled: res.enabled ?? true,
           primaryBusinessRole: res.primaryBusinessRole ?? undefined,
+          orgPersonId: res.orgPersonId,
         };
         setSelectedUser(newUser);
-        setUserSearchResults((prev) =>
-          prev.some((u) => u.id === res.id) ? prev : [newUser, ...prev],
-        );
-        setUserSearchQuery(res.username);
+        setUserSearchQuery('');
+        accountTableRef.current?.reload();
         getAccountOverride(res.id).then((overrideRes) => {
           setSavedOverride(overrideRes);
           setDraftRoleTemplateId(overrideRes.roleTemplateId ?? null);
@@ -449,9 +471,7 @@ export default function AccountsTab() {
       })
       .then((u) => {
         setSelectedUser(u);
-        setUserSearchResults((prev) =>
-          prev.map((r) => (r.id === u.id ? { ...r, enabled: u.enabled } : r)),
-        );
+        accountTableRef.current?.reload();
       })
       .catch((err) => message.error(getErrorMessage(err)));
   };
@@ -490,60 +510,76 @@ export default function AccountsTab() {
             value={userSearchQuery}
             onChange={(e) => setUserSearchQuery(e.target.value)}
             onSearch={(q) => handleUserSearch(q ?? userSearchQuery)}
-            loading={userSearchLoading}
             style={{ width: 280 }}
             allowClear
           />
         </Space>
       </div>
 
-      {userSearchResults.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
-          <Table<UserSummary>
-            size="small"
-            dataSource={userSearchResults}
-            rowKey="id"
-            pagination={false}
-            scroll={{ x: 500 }}
-            locale={{ emptyText: '无结果，请输入关键词搜索' }}
-            onRow={(record) => ({
-              onClick: () => {
-                setSelectedUser(record);
-                setAccountDetailDrawerOpen(true);
-              },
-              style: { cursor: 'pointer', background: selectedUser?.id === record.id ? '#e6f7ff' : undefined },
-            })}
-            columns={[
-              { title: 'ID', dataIndex: 'id', width: 72, render: (v: number) => v },
-              { title: '用户名', dataIndex: 'username', ellipsis: true },
-              { title: '昵称', dataIndex: 'nickname', ellipsis: true },
-              { title: '主业务角色', dataIndex: 'primaryBusinessRole', width: 100, ellipsis: true, render: (v: string | null | undefined) => v ?? '—' },
-              {
-                title: '状态',
-                dataIndex: 'enabled',
-                width: 80,
-                render: (v: boolean | undefined) => (v !== false ? '启用' : '停用'),
-              },
-              {
-                title: '操作',
-                key: 'action',
-                width: 80,
-                render: (_, record) => (
-                  <Button type="link" size="small" onClick={(e) => { e.stopPropagation(); setSelectedUser(record); setAccountDetailDrawerOpen(true); }}>
-                    详情
-                  </Button>
-                ),
-              },
-            ]}
-          />
-        </div>
-      )}
-
-      {userSearchResults.length === 0 && userSearchQuery.trim() === '' && (
-        <p style={{ color: '#999' }}>请输入用户名或昵称搜索账号，点击表格行打开详情编辑。</p>
-      )}
-      {userSearchQuery.trim() !== '' && userSearchResults.length === 0 && !userSearchLoading && (
-        <p style={{ color: '#999' }}>无匹配账号</p>
+      <div style={{ marginBottom: 16 }} className="unified-table-accounts">
+        <UnifiedProTable<AccountListItem>
+          tableKey={UNIFIED_TABLE_KEYS.ACCOUNT_LIST}
+          actionRef={accountTableRef}
+          params={{ keyword: userSearchQuery }}
+          request={async (params) => {
+            try {
+              const data = await getAccountList((params as { keyword?: string }).keyword ?? '', 50);
+              return { data, total: data.length, success: true };
+            } catch (err) {
+              message.error(getErrorMessage(err as Parameters<typeof getErrorMessage>[0]));
+              return { data: [], total: 0, success: false };
+            }
+          }}
+          rowKey="userId"
+          search={false}
+          pagination={false}
+          columns={[
+            { title: 'ID', dataIndex: 'userId', width: 72, search: false, render: (_: unknown, r: AccountListItem) => r.userId },
+            {
+              title: '用户名',
+              dataIndex: 'username',
+              ellipsis: true,
+              search: false,
+              render: (_: unknown, r: AccountListItem) => <CopyableCell value={r.username} />,
+            },
+            {
+              title: '昵称',
+              dataIndex: 'nickname',
+              ellipsis: true,
+              search: false,
+              render: (_: unknown, r: AccountListItem) => <CopyableCell value={r.nickname} />,
+            },
+            { title: '主业务角色', dataIndex: 'primaryBusinessRole', width: 100, ellipsis: true, search: false, render: (_: unknown, r: AccountListItem) => r.primaryBusinessRole ?? '—' },
+            {
+              title: '状态',
+              dataIndex: 'enabled',
+              width: 80,
+              search: false,
+              render: (_: unknown, r: AccountListItem) => (r.enabled !== false ? '启用' : '停用'),
+            },
+            {
+              title: '操作',
+              key: 'action',
+              width: 80,
+              search: false,
+              render: (_, record) => (
+                <Button type="link" size="small" onClick={(e) => { e.stopPropagation(); setSelectedUser(toUserSummary(record)); setAccountDetailDrawerOpen(true); }}>
+                  详情
+                </Button>
+              ),
+            },
+          ]}
+          onRow={(record) => ({
+            onClick: () => {
+              setSelectedUser(toUserSummary(record));
+              setAccountDetailDrawerOpen(true);
+            },
+            style: { cursor: 'pointer', background: selectedUser?.id === record.userId ? '#e6f7ff' : undefined },
+          })}
+        />
+      </div>
+      {userSearchQuery.trim() !== '' && (
+        <p style={{ color: '#999', fontSize: 12 }}>无匹配时可清空搜索框查看全部。</p>
       )}
 
       <Modal
@@ -649,14 +685,58 @@ export default function AccountsTab() {
             <>
               <div style={{ marginBottom: 16, padding: 12, background: '#fafafa', borderRadius: 4 }}>
                 <p style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>账号信息</p>
-                <p style={{ marginBottom: 4 }}><strong>用户名</strong>：{selectedUser.username}</p>
-                <p style={{ marginBottom: 4 }}><strong>昵称</strong>：{selectedUser.nickname ?? '—'}</p>
                 <p style={{ marginBottom: 4 }}><strong>ID</strong>：{selectedUser.id}</p>
+                <p style={{ marginBottom: 4 }}><strong>昵称</strong>：{selectedUser.nickname ?? '—'}</p>
                 <p style={{ marginBottom: 4 }}><strong>状态</strong>：{selectedUser.enabled !== false ? '启用' : '停用'}</p>
                 <p style={{ marginBottom: 4 }}><strong>主业务角色</strong>：{selectedUser.primaryBusinessRole ?? '—'}</p>
                 <p style={{ marginBottom: 4 }}><strong>角色模板</strong>：{roleLabelForUser}</p>
                 <p style={{ marginBottom: 4 }}><strong>岗位</strong>：—</p>
                 <p style={{ marginBottom: 0 }}><strong>部门</strong>：—</p>
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <span style={{ fontSize: 12, marginRight: 8 }}>用户名（可更正）：</span>
+                <Input
+                  value={editUsername}
+                  onChange={(e) => setEditUsername(e.target.value)}
+                  placeholder="登录用用户名"
+                  style={{ width: 200, marginRight: 8 }}
+                />
+                <Button
+                  type="primary"
+                  size="small"
+                  loading={usernameCorrecting}
+                  onClick={() => {
+                    if (selectedUser == null) return;
+                    const trimmed = editUsername.trim();
+                    if (!trimmed) {
+                      message.warning('请输入用户名');
+                      return;
+                    }
+                    if (trimmed === selectedUser.username) {
+                      message.info('未修改');
+                      return;
+                    }
+                    setUsernameCorrecting(true);
+                    updateAccount(selectedUser.id, { username: trimmed })
+                      .then((res) => {
+                        message.success('用户名已更新');
+                        setSelectedUser({ ...selectedUser, username: res.username ?? trimmed });
+                        accountTableRef.current?.reload();
+                      })
+                      .catch((err: { response?: { data?: { message?: string; machineCode?: string } } }) => {
+                        const code = err.response?.data?.machineCode;
+                        const msg = err.response?.data?.message ?? '保存失败';
+                        if (code === 'ACCTPERM_USERNAME_EXISTS') {
+                          message.error('用户名已存在');
+                        } else {
+                          message.error(msg);
+                        }
+                      })
+                      .finally(() => setUsernameCorrecting(false));
+                  }}
+                >
+                  保存
+                </Button>
               </div>
               <div style={{ marginBottom: 12 }}>
                 <span style={{ fontSize: 12, marginRight: 8 }}>主业务角色：</span>
@@ -685,6 +765,73 @@ export default function AccountsTab() {
                   }}
                 >
                   保存
+                </Button>
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <span style={{ fontSize: 12, marginRight: 8 }}>绑定人员（可更正）：</span>
+                <Select
+                  placeholder="输入姓名/组织/职位搜索"
+                  showSearch
+                  filterOption={false}
+                  onSearch={setRebindPersonQuery}
+                  loading={rebindPersonLoading}
+                  style={{ width: 280, marginRight: 8 }}
+                  value={rebindSelectedPersonId ?? undefined}
+                  onChange={(v) => setRebindSelectedPersonId(v ?? null)}
+                  notFoundContent={rebindPersonQuery.trim() ? '无结果' : '输入关键词搜索'}
+                  options={rebindPersonOptions.map((p) => ({
+                    value: p.personId,
+                    label: [p.name, p.orgUnitLabel, p.title].filter(Boolean).join(' · ') || p.name,
+                  }))}
+                  allowClear={false}
+                />
+                <Button
+                  size="small"
+                  loading={rebindSubmitting}
+                  onClick={() => {
+                    if (selectedUser == null) return;
+                    const newPersonId = rebindSelectedPersonId;
+                    if (newPersonId == null) {
+                      message.warning('请选择要绑定的人员');
+                      return;
+                    }
+                    if (newPersonId === selectedUser.orgPersonId) {
+                      message.info('未修改');
+                      return;
+                    }
+                    const option = rebindPersonOptions.find((p) => p.personId === newPersonId);
+                    const label = option ? [option.name, option.orgUnitLabel].filter(Boolean).join(' · ') || option.name : `人员 #${newPersonId}`;
+                    Modal.confirm({
+                      title: '确认更正绑定人员',
+                      content: `确定要将该账号的绑定人员更改为「${label}」吗？此操作仅用于修正创建时选错人员。`,
+                      okText: '确定',
+                      cancelText: '取消',
+                      onOk: () => {
+                        setRebindSubmitting(true);
+                        return updateAccount(selectedUser.id, { orgPersonId: newPersonId })
+                          .then((res) => {
+                            message.success('绑定人员已更新');
+                            setSelectedUser({ ...selectedUser, orgPersonId: res.orgPersonId ?? newPersonId });
+                            accountTableRef.current?.reload();
+                          })
+                          .catch((err: { response?: { data?: { message?: string; machineCode?: string } } }) => {
+                            const code = err.response?.data?.machineCode;
+                            if (code === 'ACCTPERM_PERSON_ALREADY_BOUND') {
+                              message.error('该人员已绑定其他账号');
+                            } else if (code === 'ACCTPERM_PERSON_NOT_ACTIVE') {
+                              message.error('该人员已停用，无法绑定');
+                            } else if (code === 'ACCTPERM_PERSON_NOT_FOUND') {
+                              message.error('人员不存在');
+                            } else {
+                              message.error(err.response?.data?.message ?? '保存失败');
+                            }
+                          })
+                          .finally(() => setRebindSubmitting(false));
+                      },
+                    });
+                  }}
+                >
+                  确认更正绑定
                 </Button>
               </div>
               <Space style={{ marginBottom: 12 }} wrap align="center">

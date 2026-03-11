@@ -12,10 +12,11 @@ import {
   Space,
 } from 'antd';
 import type { ProColumns } from '@ant-design/pro-components';
-import { ProTable, ModalForm, ProFormText, ProFormDatePicker, ProFormList, ProFormDigit, ProFormGroup } from '@ant-design/pro-components';
+import { ModalForm, ProFormText, ProFormDatePicker, ProFormList, ProFormDigit, ProFormGroup } from '@ant-design/pro-components';
 import type { ActionType } from '@ant-design/pro-components';
 import request from '@/shared/utils/request';
 import { toProTableResult, type SpringPage } from '@/shared/utils/adapters';
+import { UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 import ConflictDrawer from './components/ConflictDrawer';
 
 interface ModelDetail {
@@ -204,9 +205,10 @@ export default function MachineModelDetail() {
               },
               {
                 key: 'bom',
-                label: '零部件清单 (BOM)',
+                label: '零部件清单',
                 children: (
-                  <ProTable<BomVersionRow>
+                  <UnifiedProTable<BomVersionRow>
+                    tableKey={UNIFIED_TABLE_KEYS.MACHINEMODEL_DETAIL_BOM}
                     actionRef={bomTableRef}
                     columns={bomColumns}
                     request={async (params) => {
@@ -234,7 +236,7 @@ export default function MachineModelDetail() {
                         createdBy?: string;
                       }>
                         key="new-version"
-                        title="新建 BOM 版本"
+                        title="新建版本"
                         trigger={<Button type="primary">新建版本</Button>}
                         onFinish={async (values) => {
                           try {

@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ProDescriptions, ProTable } from '@ant-design/pro-components';
-import type { ProColumns } from '@ant-design/pro-components';
-import { Card, Tabs, Button, message } from 'antd';
+import { ProDescriptions } from '@ant-design/pro-components';
+import type { ActionType, ProColumns } from '@ant-design/pro-components';
+import { Card, Tabs, Button } from 'antd';
 import request from '@/shared/utils/request';
 import type { SpringPage } from '@/shared/utils/adapters';
+import { UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 
 interface MachineDetail {
   id: number;
@@ -34,6 +35,7 @@ export default function MachineDetail() {
   const [detail, setDetail] = useState<MachineDetail | null>(null);
   const [historyData, setHistoryData] = useState<OwnershipLogRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const historyTableRef = useRef<ActionType>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -60,6 +62,10 @@ export default function MachineDetail() {
       .catch(() => setHistoryData([]))
       .finally(() => setHistoryLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    historyTableRef.current?.reload?.();
+  }, [historyData]);
 
   const historyColumns: ProColumns<OwnershipLogRow>[] = [
     { title: 'ID', dataIndex: 'id', width: 80 },
@@ -99,9 +105,11 @@ export default function MachineDetail() {
               key: 'history',
               label: '归属历史',
               children: (
-                <ProTable<OwnershipLogRow>
+                <UnifiedProTable<OwnershipLogRow>
+                  tableKey={UNIFIED_TABLE_KEYS.MACHINE_DETAIL_HISTORY}
+                  actionRef={historyTableRef}
                   columns={historyColumns}
-                  dataSource={historyData}
+                  request={async () => ({ data: historyData, total: historyData.length, success: true })}
                   loading={historyLoading}
                   rowKey="id"
                   search={false}

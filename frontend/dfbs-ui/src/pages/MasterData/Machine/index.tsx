@@ -1,6 +1,5 @@
 import { useRef } from 'react';
 import {
-  ProTable,
   ModalForm,
   ProFormText,
   ProFormSelect,
@@ -10,6 +9,7 @@ import { Button, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import request from '@/shared/utils/request';
 import { toProTableResult, type SpringPage } from '@/shared/utils/adapters';
+import { UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 
 interface MachineRow {
   id: number;
@@ -95,7 +95,8 @@ export default function Machine() {
 
   return (
     <div style={{ padding: 24 }}>
-      <ProTable<MachineRow>
+      <UnifiedProTable<MachineRow>
+        tableKey={UNIFIED_TABLE_KEYS.MASTERDATA_MACHINES}
         actionRef={actionRef}
         columns={columns}
         request={async (params) => {

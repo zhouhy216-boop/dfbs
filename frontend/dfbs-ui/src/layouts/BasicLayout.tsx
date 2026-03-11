@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { ProLayout } from '@ant-design/pro-components';
-import { Button, Dropdown, Modal, Popover, Table } from 'antd';
-import type { MenuProps } from 'antd';
+import { Button, Input, Modal, Table } from 'antd';
 import { useAuthStore } from '@/shared/stores/useAuthStore';
 import {
   DashboardOutlined,
@@ -25,61 +24,35 @@ import {
   AuditOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
-import request, { getStoredToken } from '@/shared/utils/request';
+import request, {
+  getStoredToken,
+  getStoredUserId,
+  getStoredUserInfo,
+  setStoredUserId,
+  getStoredOriginalUserId,
+  setStoredOriginalUserId,
+  getStoredOriginalUserInfo,
+  setStoredOriginalUserInfo,
+  clearOriginalUser,
+} from '@/shared/utils/request';
+import { clearPermAllowedCache } from '@/shared/permAllowedCache';
+import { clearEffectiveKeysCache } from '@/shared/effectiveKeysCache';
+import { getAccountList, type AccountListItem } from '@/pages/Admin/AccountPermissions/acctPermService';
 import { useIsSuperAdmin } from '@/shared/components/SuperAdminGuard';
 import { useIsPermSuperAdmin } from '@/shared/components/PermSuperAdminGuard';
 import { useIsAdminOrSuperAdmin } from '@/shared/components/AdminOrSuperAdminGuard';
 import { useEffectivePermissions } from '@/shared/hooks/useEffectivePermissions';
-import {
-  ROLE_TO_UI_GATING_MATRIX,
-  SIMULATOR_BUSINESS_ROLES_ZH,
-  SUPPORT_NONE_ENTRY_IDS,
-  FIRST_BATCH_ENTRY_IDS,
-  BUSINESS_MODULE_LABEL_MAP,
-  FIRST_BATCH_UI_AREA_LABEL_MAP,
-  filterMenuBySimulatedRole,
-  type MenuRouteItem,
-  type RoleToUiGatingEntry,
-} from '@/shared/config/roleToUiGatingMatrix';
+import { SIMULATOR_BUSINESS_ROLES_ZH, filterMenuBySimulatedRole, type MenuRouteItem } from '@/shared/config/roleToUiGatingMatrix';
 import { useSimulatedRoleStore } from '@/shared/stores/useSimulatedRoleStore';
 
 /** Re-export for consumers that need the storage key. */
 export { SIMULATED_ROLE_STORAGE_KEY } from '@/shared/stores/useSimulatedRoleStore';
 
-/** CEO-facing simulator options: Chinese business roles only + 取消模拟 (ROLESIMA-260306-001-02). */
-const SIMULATOR_ROLE_OPTIONS: { label: string; key: string }[] = [
-  ...SIMULATOR_BUSINESS_ROLES_ZH.map((role) => ({ label: role, key: role })),
-  { label: '取消模拟', key: '__none__' },
-];
+import { TestDataCleanerModal } from '@/shared/components/TestDataCleaner/Modal';
 
 const PERM_ORGS_VIEW = 'platform_application.orgs:VIEW';
 const PERM_APPS_VIEW = 'platform_application.applications:VIEW';
 const PERM_WORK_ORDER_VIEW = 'work_order:VIEW';
-import { TestDataCleanerModal } from '@/shared/components/TestDataCleaner/Modal';
-
-/** 两层验收边界说明（与后端 PermEnforcementService 首批放行范围一致，仅用于开发阶段真实验收） */
-const DUAL_LAYER_BOUNDARY_CONTENT = (
-  <div style={{ maxWidth: 420, fontSize: 12 }}>
-    <p style={{ marginBottom: 8, fontWeight: 600 }}>① 开发阶段超管不受限</p>
-    <p style={{ marginBottom: 12, color: '#333' }}>
-      当您以超管身份登录时，以下首批页面可由后端放行，仅用于开发阶段真实验收，与「界面角色模拟」无关：
-    </p>
-    <ul style={{ marginBottom: 12, paddingLeft: 16 }}>
-      <li>发货列表：查看</li>
-      <li>工单管理：查看、新建工单</li>
-      <li>平台管理：查看</li>
-      <li>申请管理：查看</li>
-    </ul>
-    <p style={{ marginBottom: 4, fontWeight: 600 }}>② 界面角色模拟</p>
-    <p style={{ marginBottom: 12, color: '#333' }}>
-      仅影响左侧菜单显隐与页面内按钮的禁用/提示，不改变实际权限。模拟角色不会获得任何后端放行。
-    </p>
-    <p style={{ marginBottom: 4, fontWeight: 600 }}>验收方式</p>
-    <p style={{ marginBottom: 0, color: '#333' }}>
-      先用超管账号在首批模块（发货、工单、平台管理、申请管理）内执行真实操作，确认流程可跑通；再使用「角色模拟」切换业务角色，核对左侧菜单与页面按钮的显示是否符合该角色预期。
-    </p>
-  </div>
-);
 
 /** Static menu config: guaranteed array to avoid "spread non-iterable" in ProLayout. */
 const MENU_ROUTES_BASE = [
@@ -240,7 +213,14 @@ export default function BasicLayout() {
   const isAdminOrSuperAdmin = useIsAdminOrSuperAdmin();
   const { has: hasPermission } = useEffectivePermissions();
   const [testDataCleanerOpen, setTestDataCleanerOpen] = useState(false);
-  const [matrixReviewOpen, setMatrixReviewOpen] = useState(false);
+  const [accountSwitchModalOpen, setAccountSwitchModalOpen] = useState(false);
+  const [accountSwitchList, setAccountSwitchList] = useState<AccountListItem[]>([]);
+  const [accountSwitchLoading, setAccountSwitchLoading] = useState(false);
+  const [accountSwitchQuery, setAccountSwitchQuery] = useState('');
+  const [selectedSwitchTarget, setSelectedSwitchTarget] = useState<AccountListItem | null>(null);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+  const [switchApplying, setSwitchApplying] = useState(false);
+  const setUserInfoFromMe = useAuthStore((s) => s.setUserInfoFromMe);
   const simulatedRole = useSimulatedRoleStore((s) => s.simulatedRole);
   const setSimulatedRole = useSimulatedRoleStore((s) => s.setSimulatedRole);
   useEffect(() => {
@@ -253,19 +233,17 @@ export default function BasicLayout() {
     const base = buildMenuRoutes(isSuperAdmin, permAllowed, isAdminOrSuperAdmin, hasPermission);
     return filterMenuBySimulatedRole(base as MenuRouteItem[], simulatedRole);
   }, [isSuperAdmin, permAllowed, isAdminOrSuperAdmin, hasPermission, simulatedRole]);
-  const showSimulator =
-    Boolean(userInfoRefreshedFromServer && userInfo && Array.isArray(userInfo.roles) &&
-      (userInfo.roles.includes('ADMIN') || userInfo.roles.includes('SUPER_ADMIN')));
+  const isSwitched = Boolean(getStoredOriginalUserId());
+  const originalUsername = getStoredOriginalUserInfo()?.username ?? '—';
 
-  const onSimulatedRoleSelect: MenuProps['onClick'] = ({ key }) => {
-    const value = key === '__none__' ? null : key;
-    setSimulatedRole(value);
-  };
-
-  const simulatorMenuItems: MenuProps['items'] = SIMULATOR_ROLE_OPTIONS.map((opt) => ({
-    key: opt.key,
-    label: opt.label,
-  }));
+  useEffect(() => {
+    if (!accountSwitchModalOpen) return;
+    setAccountSwitchLoading(true);
+    getAccountList(accountSwitchQuery.trim(), 50)
+      .then(setAccountSwitchList)
+      .catch(() => setAccountSwitchList([]))
+      .finally(() => setAccountSwitchLoading(false));
+  }, [accountSwitchModalOpen, accountSwitchQuery]);
 
   return (
     <div style={{ height: '100vh', minHeight: '100vh' }}>
@@ -281,57 +259,81 @@ export default function BasicLayout() {
           title: displayName,
         }}
         actionsRender={() => [
-          ...(showSimulator
+          ...(isSuperAdmin || isSwitched
             ? [
                 <span
-                  key="sim-status"
+                  key="real-switch-state"
                   style={{
-                    marginRight: 12,
+                    marginRight: 8,
                     padding: '2px 8px',
-                    background: simulatedRole ? '#faad14' : 'transparent',
-                    color: simulatedRole ? '#000' : '#8c8c8c',
-                    border: simulatedRole ? 'none' : '1px solid #d9d9d9',
+                    background: isSwitched ? '#e6f7ff' : 'transparent',
+                    color: isSwitched ? '#0050b3' : '#8c8c8c',
+                    border: isSwitched ? '1px solid #91d5ff' : '1px solid #d9d9d9',
                     borderRadius: 4,
                     fontSize: 12,
-                    fontWeight: 500,
                   }}
                 >
-                  {simulatedRole ? `模拟中：${simulatedRole}` : '当前：未模拟'}
+                  {isSwitched ? `测试切换：已切换至 ${displayName}（原：${originalUsername}）` : `当前账号：${displayName}`}
                 </span>,
-                <span
-                  key="sim-disclaimer"
-                  style={{ marginRight: 8, fontSize: 11, color: '#8c8c8c' }}
-                  title="UI-only simulation; does not change real permissions or security."
-                >
-                  仅界面模拟，不改变实际权限
-                </span>,
-                <Popover
-                  key="boundary-popover"
-                  title="两层验收边界说明"
-                  content={DUAL_LAYER_BOUNDARY_CONTENT}
-                  trigger="click"
-                >
-                  <a onClick={(e) => e.preventDefault()} style={{ marginRight: 8 }}>
-                    验收边界说明
-                  </a>
-                </Popover>,
-                <Dropdown
-                  key="simulated-role"
-                  menu={{ items: simulatorMenuItems, onClick: onSimulatedRoleSelect }}
-                  trigger={['click']}
-                >
-                  <a onClick={(e) => e.preventDefault()} style={{ marginRight: 8 }}>
-                    角色模拟
-                  </a>
-                </Dropdown>,
-                <a
-                  key="matrix-review"
-                  onClick={() => setMatrixReviewOpen(true)}
-                  style={{ marginRight: 8 }}
-                  title="Read-only review of Role-to-UI gating matrix"
-                >
-                  角色-界面矩阵（查看）
-                </a>,
+                isSwitched ? (
+                  <>
+                    <Button
+                      key="open-switch-modal"
+                      type="default"
+                      size="small"
+                      style={{ marginRight: 8 }}
+                      onClick={() => {
+                        setAccountSwitchModalOpen(true);
+                        setSelectedSwitchTarget(null);
+                        setAccountSwitchQuery('');
+                        setAccountSwitchLoading(true);
+                        getAccountList('', 50).then(setAccountSwitchList).catch(() => setAccountSwitchList([])).finally(() => setAccountSwitchLoading(false));
+                      }}
+                    >
+                      切换至其他账号
+                    </Button>
+                    <Button
+                      key="restore-account"
+                      type="default"
+                      size="small"
+                      loading={restoreLoading}
+                      onClick={() => {
+                        const origId = getStoredOriginalUserId();
+                        if (!origId) return;
+                        setRestoreLoading(true);
+                        setStoredUserId(origId);
+                        request.get<{ id?: number; username?: string; nickname?: string; roles?: string[] }>('/auth/me')
+                          .then((res) => {
+                            if (res.data && typeof res.data === 'object') {
+                              setUserInfoFromMe({ id: res.data.id, username: res.data.username, roles: res.data.roles });
+                            }
+                            clearOriginalUser();
+                            clearPermAllowedCache();
+                            clearEffectiveKeysCache();
+                          })
+                          .catch(() => {})
+                          .finally(() => setRestoreLoading(false));
+                      }}
+                    >
+                      恢复原账号
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    key="open-switch-modal"
+                    type="default"
+                    size="small"
+                    onClick={() => {
+                      setAccountSwitchModalOpen(true);
+                      setSelectedSwitchTarget(null);
+                      setAccountSwitchQuery('');
+                      setAccountSwitchLoading(true);
+                      getAccountList('', 50).then(setAccountSwitchList).catch(() => setAccountSwitchList([])).finally(() => setAccountSwitchLoading(false));
+                    }}
+                  >
+                    切换账号
+                  </Button>
+                ),
               ]
             : []),
           ...(isSuperAdmin
@@ -363,112 +365,73 @@ export default function BasicLayout() {
         onClose={() => setTestDataCleanerOpen(false)}
       />
       <Modal
-        title="角色-界面矩阵（只读）"
-        open={matrixReviewOpen}
-        onCancel={() => setMatrixReviewOpen(false)}
-        footer={<Button type="primary" onClick={() => setMatrixReviewOpen(false)}>关闭</Button>}
-        width={1000}
+        title="测试账号切换 — 选择目标账号"
+        open={accountSwitchModalOpen}
+        onCancel={() => setAccountSwitchModalOpen(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setAccountSwitchModalOpen(false)}>取消</Button>,
+          <Button
+            key="ok"
+            type="primary"
+            disabled={!selectedSwitchTarget || selectedSwitchTarget.userId === userInfo?.id}
+            loading={switchApplying}
+            onClick={() => {
+              if (!selectedSwitchTarget || !userInfo?.id) return;
+              if (selectedSwitchTarget.userId === userInfo.id) return;
+              setSwitchApplying(true);
+              const alreadySwitched = Boolean(getStoredOriginalUserId());
+              if (!alreadySwitched) {
+                setStoredOriginalUserId(getStoredUserId() ?? userInfo.id);
+                setStoredOriginalUserInfo(getStoredUserInfo());
+              }
+              setStoredUserId(selectedSwitchTarget.userId);
+              request.get<{ id?: number; username?: string; nickname?: string; roles?: string[] }>('/auth/me')
+                .then((res) => {
+                  if (res.data && typeof res.data === 'object') {
+                    setUserInfoFromMe({ id: res.data.id, username: res.data.username, roles: res.data.roles });
+                  }
+                  setAccountSwitchModalOpen(false);
+                  clearPermAllowedCache();
+                  clearEffectiveKeysCache();
+                })
+                .catch(() => {})
+                .finally(() => setSwitchApplying(false));
+            }}
+          >
+            确认切换
+          </Button>,
+        ]}
+        width={640}
         destroyOnClose
       >
-        <div style={{ marginBottom: 12 }}>
-          <strong>首批条目数：</strong>{FIRST_BATCH_ENTRY_IDS.length}
-          <span style={{ marginLeft: 16 }}>
-            <strong>总条目数：</strong>{ROLE_TO_UI_GATING_MATRIX.length}
-          </span>
-          <span style={{ marginLeft: 16 }}>
-            <strong>无对应流程节点的条目：</strong>{SUPPORT_NONE_ENTRY_IDS.length} 个 — {SUPPORT_NONE_ENTRY_IDS.join(', ')}
-          </span>
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <strong>首批模块（锚点包 M04 / M05 / M08）</strong>
-        </div>
-        <Table<RoleToUiGatingEntry>
-          size="small"
-          pagination={false}
-          scroll={{ x: 880 }}
-          dataSource={ROLE_TO_UI_GATING_MATRIX.filter((e) => FIRST_BATCH_ENTRY_IDS.includes(e.id))}
-          rowKey="id"
-          columns={[
-            {
-              title: '界面名称',
-              key: 'uiArea',
-              width: 180,
-              render: (_: unknown, row: RoleToUiGatingEntry) => FIRST_BATCH_UI_AREA_LABEL_MAP[row.id] ?? row.uiAreaName,
-            },
-            {
-              title: '业务模块',
-              dataIndex: 'businessModuleCodes',
-              width: 120,
-              render: (v: string[]) => (Array.isArray(v) ? v.map((c) => BUSINESS_MODULE_LABEL_MAP[c] ?? c).join(', ') : ''),
-            },
-            {
-              title: '路由锚点',
-              dataIndex: 'routeAnchors',
-              width: 180,
-              render: (v: string[]) => (Array.isArray(v) ? v.join(', ') : ''),
-            },
-            {
-              title: '流程节点',
-              dataIndex: 'processNodes',
-              width: 120,
-              render: (v: string[]) => (Array.isArray(v) ? v.join(', ') : ''),
-            },
-            {
-              title: '对象范围',
-              dataIndex: 'objectScope',
-              width: 160,
-              render: (v: string[]) => (Array.isArray(v) ? v.join(', ') : '—'),
-            },
-            {
-              title: '可见角色集',
-              dataIndex: 'allowedSimulatedRoleSet',
-              width: 200,
-              render: (v: string[]) => (Array.isArray(v) ? v.join(', ') : ''),
-            },
-          ]}
+        <p style={{ marginBottom: 12, fontSize: 12, color: '#666' }}>
+          切换后，页面与接口将按目标账号身份生效；仅用于测试阶段验证。恢复原账号请使用顶栏「恢复原账号」。
+        </p>
+        <Input.Search
+          placeholder="输入用户名或昵称搜索"
+          value={accountSwitchQuery}
+          onChange={(e) => setAccountSwitchQuery(e.target.value)}
+          onSearch={(q) => setAccountSwitchQuery(q ?? accountSwitchQuery)}
+          allowClear
+          style={{ width: '100%', marginBottom: 12 }}
         />
-        <div style={{ marginTop: 24, marginBottom: 8 }}>
-          <strong>系统/全局条目</strong>
-        </div>
-        <Table<RoleToUiGatingEntry>
+        <Table<AccountListItem>
           size="small"
+          dataSource={accountSwitchList}
+          rowKey="userId"
+          loading={accountSwitchLoading}
           pagination={false}
-          scroll={{ x: 880 }}
-          dataSource={ROLE_TO_UI_GATING_MATRIX.filter((e) => !FIRST_BATCH_ENTRY_IDS.includes(e.id))}
-          rowKey="id"
+          scroll={{ y: 320 }}
+          rowClassName={(r) => (selectedSwitchTarget?.userId === r.userId ? 'ant-table-row-selected' : '')}
+          onRow={(record) => ({
+            onClick: () => setSelectedSwitchTarget(record),
+            style: { cursor: 'pointer' },
+          })}
           columns={[
-            { title: 'id', dataIndex: 'id', width: 160, ellipsis: true },
-            { title: 'UI 区域', dataIndex: 'uiAreaName', width: 220, ellipsis: true },
-            {
-              title: '业务模块',
-              dataIndex: 'businessModuleCodes',
-              width: 100,
-              render: (v: string[]) => (Array.isArray(v) ? v.map((c) => BUSINESS_MODULE_LABEL_MAP[c] ?? c).join(', ') : ''),
-            },
-            {
-              title: '路由锚点',
-              dataIndex: 'routeAnchors',
-              width: 140,
-              render: (v: string[]) => (Array.isArray(v) ? v.join(', ') : ''),
-            },
-            {
-              title: '流程节点',
-              dataIndex: 'processNodes',
-              width: 120,
-              render: (v: string[]) => (Array.isArray(v) ? v.join(', ') : ''),
-            },
-            {
-              title: '对象范围',
-              dataIndex: 'objectScope',
-              width: 140,
-              render: (v: string[]) => (Array.isArray(v) ? v.join(', ') : '—'),
-            },
-            {
-              title: '可见角色集',
-              dataIndex: 'allowedSimulatedRoleSet',
-              width: 160,
-              render: (v: string[]) => (Array.isArray(v) ? v.join(', ') : ''),
-            },
+            { title: 'ID', dataIndex: 'userId', width: 72, render: (v: number) => v },
+            { title: '用户名', dataIndex: 'username', ellipsis: true },
+            { title: '昵称', dataIndex: 'nickname', ellipsis: true, render: (v: string | null | undefined) => v ?? '—' },
+            { title: '状态', dataIndex: 'enabled', width: 72, render: (v: boolean | undefined) => (v !== false ? '启用' : '停用') },
           ]}
         />
       </Modal>

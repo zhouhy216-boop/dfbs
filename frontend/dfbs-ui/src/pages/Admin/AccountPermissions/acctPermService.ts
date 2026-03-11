@@ -10,6 +10,21 @@ export interface UserSummary {
   nickname?: string;
   enabled?: boolean;
   primaryBusinessRole?: string | null;
+  orgPersonId?: number | null;
+}
+
+/** One row from GET /account-list (full account table for Accounts tab). */
+export interface AccountListItem {
+  userId: number;
+  username: string;
+  nickname?: string | null;
+  enabled?: boolean | null;
+  orgPersonId?: number | null;
+  position?: string | null;
+  department?: string | null;
+  roleTemplateId?: number | null;
+  roleTemplateLabel?: string | null;
+  primaryBusinessRole?: string | null;
 }
 
 export interface AccountOverrideResponse {
@@ -75,7 +90,7 @@ export function createAccount(body: {
 
 export function updateAccount(
   userId: number,
-  body: { nickname?: string; primaryBusinessRole?: string | null },
+  body: { nickname?: string; primaryBusinessRole?: string | null; username?: string | null; orgPersonId?: number | null },
 ): Promise<AccountSummaryResponse> {
   return request
     .put<AccountSummaryResponse>(`${BASE}/accounts/${userId}`, body)
@@ -95,6 +110,15 @@ export function resetPassword(userId: number, newPassword?: string): Promise<voi
 export function searchUsers(query: string): Promise<UserSummary[]> {
   return request
     .get<UserSummary[]>(`${BASE}/users`, { params: { query: query || '' } })
+    .then((res) => res.data ?? []);
+}
+
+/** Account list for Accounts tab: empty query = first N (default 50); with query = filtered. limit 1–200. */
+export function getAccountList(query = '', limit = 50): Promise<AccountListItem[]> {
+  const params: { query?: string; limit?: number } = { limit: Math.min(200, Math.max(1, limit)) };
+  if (query.trim() !== '') params.query = query.trim();
+  return request
+    .get<AccountListItem[]>(`${BASE}/account-list`, { params })
     .then((res) => res.data ?? []);
 }
 

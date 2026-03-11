@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react';
-import { ProTable } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import { Drawer, Descriptions, InputNumber, Button, Form, message } from 'antd';
 import request from '@/shared/utils/request';
 import dayjs from 'dayjs';
 import { toProTableResult, type SpringPage } from '@/shared/utils/adapters';
+import { UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 
 interface PaymentItem {
   id: number;
@@ -84,7 +84,8 @@ export default function Finance() {
           <Button type="primary" onClick={() => tableRef.current?.reload()}>查询</Button>
         </Form.Item>
       </Form>
-      <ProTable<PaymentItem>
+      <UnifiedProTable<PaymentItem>
+        tableKey={UNIFIED_TABLE_KEYS.FINANCE}
         actionRef={tableRef}
         columns={columns}
         request={async (params) => {

@@ -1,6 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
 import {
-  ProTable,
   ModalForm,
   ProFormSelect,
   ProFormText,
@@ -10,6 +9,7 @@ import {
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import { Tabs, Button, Modal, Form, Input, Radio, message } from 'antd';
 import request from '@/shared/utils/request';
+import { UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 
 /** 补货申请行（与 WhReplenishRequestEntity 对应） */
 interface ReplenishRequestRow {
@@ -149,7 +149,8 @@ export default function WarehouseReplenish() {
             key: 'my',
             label: '我的申请',
             children: (
-              <ProTable<ReplenishRequestRow>
+              <UnifiedProTable<ReplenishRequestRow>
+                tableKey={UNIFIED_TABLE_KEYS.WAREHOUSE_REPLENISH_MY}
                 actionRef={myRequestsRef}
                 columns={myRequestColumns}
                 request={async () => {
@@ -206,7 +207,8 @@ export default function WarehouseReplenish() {
             key: 'pending',
             label: '待我审批',
             children: (
-              <ProTable<ReplenishRequestRow>
+              <UnifiedProTable<ReplenishRequestRow>
+                tableKey={UNIFIED_TABLE_KEYS.WAREHOUSE_REPLENISH_PENDING}
                 actionRef={pendingRef}
                 columns={pendingColumns}
                 request={async () => {

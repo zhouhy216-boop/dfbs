@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ProDescriptions, ProTable } from '@ant-design/pro-components';
-import type { ProColumns } from '@ant-design/pro-components';
+import { ProDescriptions } from '@ant-design/pro-components';
+import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { Card, Tabs, Button } from 'antd';
 import request from '@/shared/utils/request';
 import type { SpringPage } from '@/shared/utils/adapters';
+import { UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 
 interface SimCardDetail {
   id: number;
@@ -33,6 +34,7 @@ export default function SimCardDetail() {
   const [detail, setDetail] = useState<SimCardDetail | null>(null);
   const [historyData, setHistoryData] = useState<BindingLogRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const historyTableRef = useRef<ActionType>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -59,6 +61,10 @@ export default function SimCardDetail() {
       .catch(() => setHistoryData([]))
       .finally(() => setHistoryLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    historyTableRef.current?.reload?.();
+  }, [historyData]);
 
   const historyColumns: ProColumns<BindingLogRow>[] = [
     { title: 'ID', dataIndex: 'id', width: 80 },
@@ -97,9 +103,11 @@ export default function SimCardDetail() {
               key: 'history',
               label: '绑定历史',
               children: (
-                <ProTable<BindingLogRow>
+                <UnifiedProTable<BindingLogRow>
+                  tableKey={UNIFIED_TABLE_KEYS.SIMCARD_DETAIL_HISTORY}
+                  actionRef={historyTableRef}
                   columns={historyColumns}
-                  dataSource={historyData}
+                  request={async () => ({ data: historyData, total: historyData.length, success: true })}
                   loading={historyLoading}
                   rowKey="id"
                   search={false}

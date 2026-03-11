@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react';
-import { ProTable, ModalForm, ProFormText } from '@ant-design/pro-components';
+import { ModalForm, ProFormText } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import { Drawer, Descriptions, Button, message } from 'antd';
 import request from '@/shared/utils/request';
 import dayjs from 'dayjs';
 import { toProTableResult, type SpringPage } from '@/shared/utils/adapters';
+import { CopyableCell, UnifiedProTable, UNIFIED_TABLE_KEYS } from '@/shared/table';
 
 interface CustomerItem {
   id: number;
@@ -22,8 +23,19 @@ export default function Customer() {
 
   const columns: ProColumns<CustomerItem>[] = [
     { title: 'ID', dataIndex: 'id', width: 80, search: false },
-    { title: '客户编码', dataIndex: 'customerCode', width: 140, search: false },
-    { title: '名称', dataIndex: 'name', ellipsis: true },
+    {
+      title: '客户编码',
+      dataIndex: 'customerCode',
+      width: 140,
+      search: false,
+      render: (_, r) => <CopyableCell value={r.customerCode} />,
+    },
+    {
+      title: '名称',
+      dataIndex: 'name',
+      ellipsis: true,
+      render: (_, r) => <CopyableCell value={r.name} />,
+    },
     { title: '状态', dataIndex: 'status', width: 100, search: false },
     {
       title: '创建时间',
@@ -55,7 +67,8 @@ export default function Customer() {
 
   return (
     <div style={{ padding: 24 }}>
-      <ProTable<CustomerItem>
+      <UnifiedProTable<CustomerItem>
+        tableKey={UNIFIED_TABLE_KEYS.CUSTOMER}
         actionRef={actionRef}
         columns={columns}
         request={async (params, sort) => {
@@ -74,14 +87,12 @@ export default function Customer() {
         }}
         rowKey="id"
         search={{ labelWidth: 'auto' }}
-        pagination={{ pageSize: 10 }}
-        options={{ reload: true }}
         headerTitle="客户列表"
         toolBarRender={() => [
           <ModalForm<{ name: string; customerNo?: string }>
             key="create"
             title="新建客户"
-            trigger={<Button type="primary">New Customer</Button>}
+            trigger={<Button type="primary">新建客户</Button>}
             onFinish={async (values) => {
               try {
                 const customerNo = values.customerNo?.trim() || `CUST-${Date.now()}`;

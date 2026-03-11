@@ -1,0 +1,23 @@
+/* Phase-1 统一表格：斑马纹、行悬停（表体） */
+.unified-table .ant-table-tbody > tr.unified-table-row-zebra > td {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+.unified-table .ant-table-tbody > tr:hover > td {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Excel 式列宽拖拽：表头右边界为热点，整条缝可拖 */
+.unified-table .react-resizable .react-resizable-handle-e {
+  position: absolute !important;
+  right: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 6px !important;
+  height: auto !important;
+  cursor: col-resize !important;
+  border: none !important;
+  background: transparent !important;
+}
+.unified-table .react-resizable .react-resizable-handle-e:hover {
+  background: rgba(24, 144, 255, 0.08) !important;
+}

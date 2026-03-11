@@ -6,6 +6,9 @@ import { clearEffectiveKeysCache } from '@/shared/effectiveKeysCache';
 const AUTH_TOKEN_KEY = 'dfbs_token';
 const AUTH_USER_ID_KEY = 'dfbs_user_id';
 const AUTH_USER_INFO_KEY = 'dfbs_user_info';
+/** Test-stage real account switch: original user for restore (sessionStorage, per-tab). */
+const ORIGINAL_USER_ID_KEY = 'dfbs_original_user_id';
+const ORIGINAL_USER_INFO_KEY = 'dfbs_original_user_info';
 
 export function getStoredToken(): string | null {
   return localStorage.getItem(AUTH_TOKEN_KEY);
@@ -56,8 +59,37 @@ export function clearStoredToken(): void {
   localStorage.removeItem(AUTH_TOKEN_KEY);
   localStorage.removeItem(AUTH_USER_ID_KEY);
   localStorage.removeItem(AUTH_USER_INFO_KEY);
+  try { sessionStorage.removeItem(ORIGINAL_USER_ID_KEY); sessionStorage.removeItem(ORIGINAL_USER_INFO_KEY); } catch { /* ignore */ }
   clearPermAllowedCache();
   clearEffectiveKeysCache();
+}
+
+/** Original user when in test-stage switched state (sessionStorage). */
+export function getStoredOriginalUserId(): string | null {
+  try { return sessionStorage.getItem(ORIGINAL_USER_ID_KEY); } catch { return null; }
+}
+export function setStoredOriginalUserId(userId: number | string | undefined | null): void {
+  try {
+    if (userId != null && String(userId).trim() !== '') sessionStorage.setItem(ORIGINAL_USER_ID_KEY, String(userId));
+    else sessionStorage.removeItem(ORIGINAL_USER_ID_KEY);
+  } catch { /* ignore */ }
+}
+export function getStoredOriginalUserInfo(): StoredUserInfo | null {
+  try {
+    const raw = sessionStorage.getItem(ORIGINAL_USER_INFO_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as StoredUserInfo;
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch { return null; }
+}
+export function setStoredOriginalUserInfo(info: StoredUserInfo | null | undefined): void {
+  try {
+    if (info != null && typeof info === 'object') sessionStorage.setItem(ORIGINAL_USER_INFO_KEY, JSON.stringify({ id: info.id, username: info.username, roles: info.roles }));
+    else sessionStorage.removeItem(ORIGINAL_USER_INFO_KEY);
+  } catch { /* ignore */ }
+}
+export function clearOriginalUser(): void {
+  try { sessionStorage.removeItem(ORIGINAL_USER_ID_KEY); sessionStorage.removeItem(ORIGINAL_USER_INFO_KEY); } catch { /* ignore */ }
 }
 
 const request = axios.create({

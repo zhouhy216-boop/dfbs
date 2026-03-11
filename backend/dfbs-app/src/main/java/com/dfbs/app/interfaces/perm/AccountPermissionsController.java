@@ -38,6 +38,7 @@ public class AccountPermissionsController {
     private static final String USER_NOT_FOUND = "PERM_USER_NOT_FOUND";
     private static final String INVALID_PERMISSION_KEY = "PERM_INVALID_PERMISSION_KEY";
     private static final String ACCTPERM_PERSON_ALREADY_BOUND = "ACCTPERM_PERSON_ALREADY_BOUND";
+    private static final String ACCTPERM_PERSON_NOT_ACTIVE = "ACCTPERM_PERSON_NOT_ACTIVE";
     private static final String ACCTPERM_USERNAME_EXISTS = "ACCTPERM_USERNAME_EXISTS";
     private static final String ACCTPERM_PERSON_NOT_FOUND = "ACCTPERM_PERSON_NOT_FOUND";
     private static final String ACCTPERM_USER_NOT_FOUND = "ACCTPERM_USER_NOT_FOUND";
@@ -171,11 +172,19 @@ public class AccountPermissionsController {
                                           @RequestBody PermAccountOverrideDto.UpdateAccountRequest request) {
         adminGuard.requireAdminOrSuperAdmin();
         try {
-            var summary = adminAccountService.updateAccount(userId, request.nickname(), request.primaryBusinessRole());
+            var summary = adminAccountService.updateAccount(userId, request.nickname(), request.primaryBusinessRole(), request.username(), request.orgPersonId());
             return ResponseEntity.ok(new PermAccountOverrideDto.AccountSummaryResponse(
                     summary.id(), summary.username(), summary.nickname(), summary.enabled(), summary.orgPersonId(), summary.primaryBusinessRole()));
         } catch (AdminAccountService.UserNotFoundException ex) {
             return ResponseEntity.badRequest().body(ErrorResult.of(ex.getMessage(), ACCTPERM_USER_NOT_FOUND));
+        } catch (AdminAccountService.UsernameExistsException ex) {
+            return ResponseEntity.badRequest().body(ErrorResult.of(ex.getMessage(), ACCTPERM_USERNAME_EXISTS));
+        } catch (PersonAlreadyBoundException ex) {
+            return ResponseEntity.badRequest().body(ErrorResult.of(ex.getMessage(), ACCTPERM_PERSON_ALREADY_BOUND));
+        } catch (AdminAccountService.PersonNotActiveException ex) {
+            return ResponseEntity.badRequest().body(ErrorResult.of(ex.getMessage(), ACCTPERM_PERSON_NOT_ACTIVE));
+        } catch (AdminAccountService.PersonNotFoundException ex) {
+            return ResponseEntity.badRequest().body(ErrorResult.of(ex.getMessage(), ACCTPERM_PERSON_NOT_FOUND));
         }
     }
 
@@ -206,7 +215,7 @@ public class AccountPermissionsController {
         List<PermAccountOverrideDto.UserSummary> list = userRepo
                 .findTop20ByUsernameContainingIgnoreCaseOrNicknameContainingIgnoreCaseOrderByUsername(q, q)
                 .stream()
-                .map(u -> new PermAccountOverrideDto.UserSummary(u.getId(), u.getUsername(), u.getNickname(), u.getEnabled(), u.getPrimaryBusinessRole()))
+                .map(u -> new PermAccountOverrideDto.UserSummary(u.getId(), u.getUsername(), u.getNickname(), u.getEnabled(), u.getPrimaryBusinessRole(), u.getOrgPersonId()))
                 .toList();
         return ResponseEntity.ok(list);
     }
@@ -219,7 +228,7 @@ public class AccountPermissionsController {
             return ResponseEntity.badRequest().body(ErrorResult.of("用户不存在: id=" + id, USER_NOT_FOUND));
         }
         var u = opt.get();
-        return ResponseEntity.ok(new PermAccountOverrideDto.UserSummary(u.getId(), u.getUsername(), u.getNickname(), u.getEnabled(), u.getPrimaryBusinessRole()));
+        return ResponseEntity.ok(new PermAccountOverrideDto.UserSummary(u.getId(), u.getUsername(), u.getNickname(), u.getEnabled(), u.getPrimaryBusinessRole(), u.getOrgPersonId()));
     }
 
     @GetMapping("/accounts/{userId}/override")

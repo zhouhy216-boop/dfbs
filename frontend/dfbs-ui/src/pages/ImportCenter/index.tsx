@@ -18,6 +18,7 @@ import { ProCard } from '@ant-design/pro-components';
 import type { ColumnsType } from 'antd/es/table';
 import { InboxOutlined, CheckCircleOutlined, CloseCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import request from '@/shared/utils/request';
+import '@/shared/table/unifiedTableStyles.css';
 
 const { Dragger } = Upload;
 
@@ -296,6 +297,7 @@ export default function ImportCenter() {
             <div style={{ marginBottom: 24 }}>
               <div style={{ marginBottom: 8, fontWeight: 500 }}>失败明细</div>
               <Table
+                className="unified-table"
                 dataSource={result.failures}
                 columns={failureColumns}
                 rowKey="rowNum"
@@ -309,6 +311,7 @@ export default function ImportCenter() {
             <div>
               <div style={{ marginBottom: 8, fontWeight: 500 }}>冲突处理</div>
               <Table
+                className="unified-table"
                 dataSource={result.conflicts}
                 columns={conflictColumns}
                 rowKey={(r) => `${r.rowNum}-${r.uniqueKey}`}
