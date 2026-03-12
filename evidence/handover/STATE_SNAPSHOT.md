@@ -1,9 +1,9 @@
 # STATE_SNAPSHOT — What works now / known limitations
 
-- **As-of:** 2025-02-24 (stage baseline rebuild)
+- **As-of:** 2025-02-24 14:00
 - **Repo:** main
-- **Commit:** 328150bd
-- **Verification method:** Inspected `App.tsx`, `BasicLayout.tsx`, `PermEnforcementService.java`, `AccountPermissionsController.java`, `UserEntity.java`, `roleToUiGatingMatrix.ts`; migrations under `backend/dfbs-app/src/main/resources/db/migration/` (including V0087).
+- **Commit:** 23467d7d
+- **Verification method:** Inspected `frontend/dfbs-ui/src/App.tsx`, `layouts/BasicLayout.tsx`, backend `interfaces/perm/AccountPermissionsController.java`, `application.yml`; grep `@RequestMapping` under `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/`; list `db/migration/V*.sql`.
 
 **Facts only.** Unverifiable items in "Not verified" section.
 
@@ -62,6 +62,8 @@
 | Role simulator (UI) | Reusable as-is | Chinese roles; menu/action gating; matrix modal |
 | First-batch pages (shipments, work-orders, platform) | Reusable with small patch | Frontend may need isAdminOrSuperAdmin for action visibility; backend bypass already in place for Super Admin |
 | Contract module | Exists but incomplete | List/detail/create at `/master-data/contracts`; no contract review flow, no initiator/assigned/current handler in repo |
+| shared/form (form wheel) | Reusable as-is | Platform Application create modal only; Contract Review V1 consumer not in repo |
+| UnifiedProTable / table wheel | Reusable as-is | List/detail tables use tableKey; column state and widths persisted |
 | Contract review (M02) | Not present | No route or review record in repo; anchor pack marks 评审协同 as “暂无” |
 
 ---

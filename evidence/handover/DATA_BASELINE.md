@@ -1,9 +1,9 @@
 # DATA_BASELINE — Flyway migrations and key tables
 
-- **As-of:** 2025-02-24 (stage baseline rebuild)
+- **As-of:** 2025-02-24 14:00
 - **Repo:** main
-- **Commit:** 328150bd
-- **Verification method:** List `backend/dfbs-app/src/main/resources/db/migration/V*.sql` (sorted by name); grep `CREATE TABLE|ALTER TABLE` in migration files.
+- **Commit:** 23467d7d
+- **Verification method:** `Get-ChildItem backend/dfbs-app/src/main/resources/db/migration/*.sql | Sort-Object Name`; grep `CREATE TABLE|ALTER TABLE` in migration files. Pointer: `backend/dfbs-app/src/main/resources/db/migration/`.
 
 **Facts only.** Location: `backend/dfbs-app/src/main/resources/db/migration/`. Format: `Vxxxx__<name>.sql`. V0056 missing in repo.
 

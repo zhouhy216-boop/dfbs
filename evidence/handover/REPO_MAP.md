@@ -1,9 +1,9 @@
 # REPO_MAP — Key folders and entry points
 
-- **As-of:** 2025-02-24 (stage baseline rebuild)
+- **As-of:** 2025-02-24 14:00
 - **Repo:** main
-- **Commit:** 328150bd
-- **Verification method:** List repo root and key dirs; inspected `App.tsx`, `BasicLayout.tsx`, `DfbsAppApplication.java`, `package.json`, `pom.xml`.
+- **Commit:** 23467d7d
+- **Verification method:** List repo root and key dirs; inspected `frontend/dfbs-ui/src/App.tsx`, `layouts/BasicLayout.tsx`, `backend/dfbs-app/.../DfbsAppApplication.java`, `frontend/dfbs-ui/package.json`, `backend/dfbs-app/pom.xml`.
 
 **Facts only.** Paths relative to repo root.
 
@@ -47,8 +47,8 @@
 
 ## Where docs/product lives and intended usage
 
-- **Path:** `docs/product/` (e.g. `MODULE_ROUTE_ANCHORS_v0.1.md`, `BUSINESS_MAP_v0.1.md`, `PROCESS_MAP_v0.1.md`, `OBJECT_MAP_v0.1.md`).
-- **Usage:** Product alignment pack; anchors and module/process/object maps. Audited against repo reality in “Repo reality check” / “Conflicts” / “Anchor gaps” sections per file (see product docs).
+- **Path:** `docs/project/` (e.g. `MODULE_ROUTE_ANCHORS_v0.1.md`, `BUSINESS_MAP_v0.1.md`, `PROCESS_MAP_v0.1.md`, `OBJECT_MAP_v0.1.md`).
+- **Usage:** Product alignment pack; anchors and module/process/object maps. Audited against repo reality in “Repo reality check” / “Conflicts” / “Anchor gaps” sections per file.
 
 ---
 

@@ -1,9 +1,9 @@
 # REUSABLE_BLOCKS — Inventory of reusable building blocks
 
-- **As-of:** 2025-02-24 (stage baseline rebuild)
+- **As-of:** 2025-02-24 14:00
 - **Repo:** main
-- **Commit:** 328150bd
-- **Verification method:** Grep imports/usages in `frontend/dfbs-ui/src` for component and hook names.
+- **Commit:** 23467d7d
+- **Verification method:** Grep imports/usages in `frontend/dfbs-ui/src` for component and hook names; `shared/form/index.ts`, `shared/table/UnifiedProTable.tsx`, `shared/hooks/useDraftForm.ts`.
 
 **Facts only.** Usage sites from repo. Paths under `frontend/dfbs-ui/src/`.
 
@@ -198,7 +198,36 @@
 
 ---
 
-## 22. useSimulatedRoleStore, roleToUiGatingMatrix
+## 22. shared/form (form wheel)
+
+- **Purpose:** Minimal reusable form container, sections, draft alert, readonly view, common fields (phone/email/text), validators, template hook. Used for Platform Application create modal (grouped display, draft, restore-default, readonly preview).
+- **Location:** `shared/form/` — `FormSection.tsx`, `FormContainer.tsx`, `DraftAlert.tsx`, `ReadonlyFormView.tsx`, `FormFields.tsx`, `useFormReadonly.ts`, `useFormTemplate.ts`, `formValidators.ts`, `formWheelStyles.css`; entry `shared/form/index.ts`.
+- **Usage sites:** Platform Application Create modal (Tabs and createModalOnly paths); `pages/Platform/Application/index.tsx`.
+- **Key interface:** FormSection({ title, help, children }); FormContainer({ children }); DraftAlert({ hasDraft, onRestore, onClear }); ReadonlyFormView({ values, fields }); FormFieldPhone, FormFieldEmail, FormFieldText; useFormReadonly(initial); useFormTemplate(form, template); formValidators (PhoneRule, EmailRule).
+- **Reuse status:** Reusable as-is for large forms with sections, draft, readonly switch, default template. Not validated on Contract Review (no consumer in repo).
+
+---
+
+## 23. UnifiedProTable, useTableColumnsState, CopyableCell, ResizableTitle
+
+- **Purpose:** Wrapper around ProTable with unified column state persistence, density, refresh, restore-default, column resizing (Excel-like), zebra striping, empty/loading locale, copyable cell. Column widths and columnsState in localStorage by tableKey.
+- **Location:** `shared/table/UnifiedProTable.tsx`, `useTableColumnsState.ts`, `CopyableCell.tsx`, `ResizableTitle.tsx`, `unifiedTableLocale.ts`, `unifiedTableConstants.ts`, `unifiedTableStyles.css`; entry `shared/table/index.ts`.
+- **Usage sites:** Customer, Contract, AccountPermissions AccountsTab, Quote, Shipment, AfterSales, Finance, Warehouse Inventory/Replenish, Platform Org/Application, MasterData (Contract, SimCard, SparePart, Machine, MachineModel, ModelPartList), Admin DictionaryTypes/Items, ConfirmationCenter, System PlatformConfig, WorkOrder Internal, ImportCenter (unified-table class only); detail tables (Machine/SimCard/MachineModel Detail).
+- **Key interface:** UnifiedProTable&lt;T&gt;(tableKey, columns, request, ...ProTableProps); useTableColumnsState(tableKey); CopyableCell({ value }); UNIFIED_TABLE_KEYS enum.
+- **Reuse status:** Reusable as-is for list/detail tables; tableKey must be unique per page/tab.
+
+---
+
+## 24. useDraftForm
+
+- **Purpose:** Hook to save/load/clear form draft in localStorage by key; hasDraft, saveDraft(values), loadDraft(), clearDraft().
+- **Location:** `shared/hooks/useDraftForm.ts`.
+- **Usage sites:** Platform Application Create modal (draftKey per sourceType); Platform Application Planner confirm modal; form wheel DraftAlert.
+- **Key interface:** useDraftForm(storageKey) → { hasDraft, saveDraft, loadDraft, clearDraft }.
+
+---
+
+## 25. useSimulatedRoleStore, roleToUiGatingMatrix
 
 - **Purpose:** UI-only role simulator: store holds current simulated role (from top bar dropdown); matrix and helpers (isShipmentWorkflowActionAllowedForSimulatedRole, isWorkOrderActionAllowedForSimulatedRole, isPlatformOrgActionAllowedForSimulatedRole, isPlatformApplicationActionAllowedForSimulatedRole, filterMenuBySimulatedRole) gate left nav and action buttons by simulated role.
 - **Location:** `shared/stores/useSimulatedRoleStore.ts`; `shared/config/roleToUiGatingMatrix.ts`.
@@ -210,7 +239,9 @@
 ## Reuse status
 
 - Blocks 1–21: Reusable as-is for current usage sites; request/adapters/dictRead/dictTransition are shared across pages.
-- Block 22 (useSimulatedRoleStore, roleToUiGatingMatrix): Reusable as-is for UI-only simulator; does not affect backend identity or permissions. Reusable in name only for “real” role-based flows—backend uses effective keys and Primary Business Role on account, not simulated role.
+- Block 22 (shared/form): Reusable as-is for sectioned forms, draft, readonly, default template; consumer so far: Platform Application create only; Contract Review V1 consumer not in repo.
+- Blocks 23–24 (UnifiedProTable, useDraftForm): Reusable as-is; tableKey and draft key must be unique per context.
+- Block 25 (useSimulatedRoleStore, roleToUiGatingMatrix): Reusable as-is for UI-only simulator; does not affect backend identity or permissions. Reusable in name only for “real” role-based flows—backend uses effective keys and Primary Business Role on account, not simulated role.
 
 ---
 

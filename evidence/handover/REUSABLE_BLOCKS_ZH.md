@@ -1,9 +1,9 @@
 # REUSABLE_BLOCKS_ZH — 可复用模块一览（中文）
 
-- **As-of:** 2025-02-24 (stage baseline rebuild)
+- **As-of:** 2025-02-24 14:00
 - **Repo:** main
-- **Commit:** 328150bd
-- **Verification method:** Grep imports/usages in `frontend/dfbs-ui/src` for component and hook names.
+- **Commit:** 23467d7d
+- **Verification method:** Grep imports/usages in `frontend/dfbs-ui/src`; `shared/form/index.ts`, `shared/table/UnifiedProTable.tsx`, `shared/hooks/useDraftForm.ts`.
 
 **仅事实。** 路径均在 `frontend/dfbs-ui/src/` 下。用途以页面/流程描述，不列代码路径。
 
@@ -177,7 +177,31 @@
 
 ---
 
-## 22. useSimulatedRoleStore、roleToUiGatingMatrix
+## 22. shared/form（表单轮子）
+
+- **用途：** 最小可复用表单容器、分组区块、草稿条、只读视图、通用字段（电话/邮箱/文本）、校验规则、模板 hook；平台申请创建弹窗已接入（分组、说明、草稿、恢复默认、只读预览）。
+- **位置：** `shared/form/`（FormSection、FormContainer、DraftAlert、ReadonlyFormView、FormFields、useFormReadonly、useFormTemplate、formValidators、formWheelStyles.css）；入口 `shared/form/index.ts`。
+- **使用场景：** 平台申请创建弹窗（待处理/新建申请 与 销售·营企·服务申请 入口）；合同评审 V1 消费者尚未在仓库中。
+
+---
+
+## 23. UnifiedProTable、useTableColumnsState、CopyableCell、ResizableTitle
+
+- **用途：** 基于 ProTable 的统一列表：列状态与列宽持久化、密度、刷新、恢复默认、列宽拖拽（表头右缘）、斑马纹、空态/加载态、可复制单元格；按 tableKey 存 localStorage。
+- **位置：** `shared/table/UnifiedProTable.tsx`、`useTableColumnsState.ts`、`CopyableCell.tsx`、`ResizableTitle.tsx` 等；入口 `shared/table/index.ts`。
+- **使用场景：** 客户、合同、账号列表、报价、发货、运输异常、财务、库存与补货、平台组织与申请、主数据（合同、SIM卡、零部件、机器、型号、型号BOM）、字典类型与项、数据确认中心、平台配置、工单、导入中心结果表；详情页内嵌表格（机器/SIM卡/型号详情）。
+
+---
+
+## 24. useDraftForm
+
+- **用途：** 按 key 将表单草稿写入/读出/清除 localStorage；hasDraft、saveDraft(values)、loadDraft()、clearDraft()。
+- **位置：** `shared/hooks/useDraftForm.ts`。
+- **使用场景：** 平台申请创建弹窗（按渠道/入口区分 key）；申请管理营企确认弹窗；表单轮子 DraftAlert。
+
+---
+
+## 25. useSimulatedRoleStore、roleToUiGatingMatrix
 
 - **用途：** 仅界面层面的角色模拟：顶栏下拉选中的模拟角色存入 store；矩阵与辅助函数负责左侧菜单与各页操作按钮按模拟角色显隐/禁用及 tooltip「该角色不可操作」。
 - **位置：** `shared/stores/useSimulatedRoleStore.ts`；`shared/config/roleToUiGatingMatrix.ts`。
@@ -188,7 +212,9 @@
 ## Reuse status（复用状态）
 
 - 1–21：当前使用场景下可直接复用；request/adapters/字典读取/状态流读取为多页共用。
-- 22（角色模拟 store 与矩阵）：仅界面模拟，不改变后端身份或权限；可直接复用于当前验收场景。若需“真实”角色业务流，须依赖账号主业务角色与后端权限，不可仅靠模拟角色。
+- 22（shared/form）：可直接复用；当前仅平台申请创建弹窗接入；合同评审 V1 消费者未在仓库。
+- 23–24（UnifiedProTable、useDraftForm）：可直接复用；tableKey/草稿 key 需按页面/标签唯一。
+- 25（角色模拟 store 与矩阵）：仅界面模拟，不改变后端身份或权限；可直接复用于当前验收场景。若需“真实”角色业务流，须依赖账号主业务角色与后端权限，不可仅靠模拟角色。
 
 ---
 

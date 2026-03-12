@@ -1,9 +1,9 @@
 # DEV-ENV — 开发环境与启动/构建命令
 
-- **As-of:** 2025-02-24 (stage baseline rebuild)
+- **As-of:** 2025-02-24 14:00
 - **Repo:** main
-- **Commit:** 328150bd
-- **Verification method:** Inspected `package.json`, `pom.xml`, `application.yml`; handover doc content.
+- **Commit:** 23467d7d
+- **Verification method:** Inspected `frontend/dfbs-ui/package.json`, `vite.config.ts`, `backend/dfbs-app/pom.xml`, `backend/dfbs-app/src/main/resources/application.yml`.
 
 **Facts only.** 本机事实仅供协作参考；不做环境推荐。
 
@@ -19,6 +19,10 @@
 | Frontend build | `npm run build` | `frontend/dfbs-ui` |
 
 Required: Postgres at `spring.datasource.url` (default `jdbc:postgresql://localhost:5432/dfbs`); Node/npm for frontend. See TEST_BASELINE.md for test commands.
+
+| Env / config | Where | Purpose |
+|--------------|--------|---------|
+| `VITE_API_TARGET` | `frontend/dfbs-ui/vite.config.ts` (loadEnv) | API proxy target for dev server; default `http://localhost:8080`. |
 
 ---
 

@@ -1,9 +1,9 @@
 # TEST_BASELINE — How to run tests; what counts as BUILD SUCCESS
 
-- **As-of:** 2025-02-24 (stage baseline rebuild)
+- **As-of:** 2025-02-24 14:00
 - **Repo:** main
-- **Commit:** 328150bd
-- **Verification method:** Inspected `backend/dfbs-app/pom.xml`, `frontend/dfbs-ui/package.json`, `application.yml`; grep `*Test.java` under `backend/dfbs-app/src/test/`.
+- **Commit:** 23467d7d
+- **Verification method:** Inspected `backend/dfbs-app/pom.xml`, `frontend/dfbs-ui/package.json`, `backend/dfbs-app/src/main/resources/application.yml`; list `backend/dfbs-app/src/test/java/com/dfbs/app/`.
 
 **Facts only.** No test run was executed in this handover; BUILD SUCCESS criteria are defined from project config.
 

@@ -212,20 +212,20 @@ export function UnifiedProTable<T extends object, U = Record<string, unknown>, V
     [rowClassNameProp],
   );
 
+  // 与 ProTable 原生选项相同：传 span，由 ListToolBar 统一包成 div.setting-item > span，走同一套样式
   const restoreDefaultControl = useMemo(
     () => (
-      <div key="restore-default" className="ant-pro-table-list-toolbar-setting-item">
+      <span
+        key="restore-default"
+        onClick={handleRestoreDefault}
+        role="button"
+        aria-label="恢复默认视图"
+        style={{ cursor: 'pointer' }}
+      >
         <Tooltip title="恢复默认视图">
-          <span
-            style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
-            onClick={handleRestoreDefault}
-            role="button"
-            aria-label="恢复默认视图"
-          >
-            <RollbackOutlined style={{ fontSize: 14 }} />
-          </span>
+          <RollbackOutlined style={{ fontSize: 14 }} />
         </Tooltip>
-      </div>
+      </span>
     ),
     [handleRestoreDefault],
   );

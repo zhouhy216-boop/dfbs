@@ -84,7 +84,7 @@
 
 ---
 
-## Repo reality check (stage baseline 2025-02-24)
+## Repo reality check (stage baseline rebuild 2025-02-24; commit 23467d7d)
 
 - **Already in repo:** All routes in sections A–D exist in `frontend/dfbs-ui/src/App.tsx`. Aliases and redirects match. Left menu does not show 角色与权限 or 字典类型 (removed per menu cleanup); 账号与权限 and 数据字典 remain. Account-permissions page: create/edit account with 主业务角色 (Primary Business Role); PUT `/api/v1/admin/account-permissions/accounts/{userId}` for profile update.
 - **Menu vs route:** 角色与权限 is reachable by direct URL `/admin/roles-permissions` but not in left menu.

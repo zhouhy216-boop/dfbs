@@ -148,7 +148,7 @@
 
 ---
 
-## Repo reality check (stage baseline 2025-02-24)
+## Repo reality check (stage baseline rebuild 2025-02-24; commit 23467d7d)
 
 - **M01, M04, M05, M06, M07, M08, M09, M10:** Routes and pages exist as stated. Account-permissions under system admin: create/edit account with Primary Business Role (主业务角色); stored on `app_user.primary_business_role` (V0087).
 - **M02 评审协同, M03 生产准备:** No pages or routes in repo; product “暂无” is correct.

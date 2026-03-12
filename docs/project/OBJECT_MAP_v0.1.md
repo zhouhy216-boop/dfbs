@@ -105,7 +105,7 @@ flowchart TB
 
 ---
 
-## Repo reality check (stage baseline 2025-02-24)
+## Repo reality check (stage baseline rebuild 2025-02-24; commit 23467d7d)
 
 - **Objects present in repo:** 合同, 客户, 设备, 设备型号, BOM, 发货交付单, 工单, 报价单, 入网准备记录 (platform org/applications), SIM卡, 库存/补货, 收款/到账, 平台成本 (config) — entities or tables exist. **account / org person / primary business role:** `app_user` has `primary_business_role` (V0087); account bound to org person; no “mock people” layer.
 - **Review/ownership objects:** 评审记录、发起人、分配营业企画、当前处理人 — not in repo; no contract review entity or ownership fields.

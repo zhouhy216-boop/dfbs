@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ModalForm, ProFormMoney, ProFormDigit } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
@@ -13,6 +13,16 @@ import { PhoneRule, EmailRule } from '@/shared/utils/validators/common';
 import { ContractRule, OrgCodeRule, OrgCodeUppercaseRule } from '@/features/platform/utils/validators';
 import { getPlatformConfigs, type PlatformConfigItem } from '@/features/platform/services/platformConfig';
 import { useDraftForm } from '@/shared/hooks/useDraftForm';
+import {
+  FormContainer,
+  DraftAlert,
+  FormSection,
+  FormFieldPhone,
+  FormFieldEmail,
+  useFormReadonly,
+  ReadonlyFormView,
+} from '@/shared/form';
+import type { ReadonlyFormFieldConfig } from '@/shared/form';
 import { useEffectivePermissions } from '@/shared/hooks/useEffectivePermissions';
 import { useIsAdminOrSuperAdmin } from '@/shared/components/AdminOrSuperAdminGuard';
 import { useSimulatedRoleStore } from '@/shared/stores/useSimulatedRoleStore';
@@ -233,6 +243,39 @@ export default function PlatformApplication({
   );
   const getConfig = (code: string) => platformConfigs?.find((p) => p.platformCode === code);
   const getPlatformLabel = (code: string) => getConfig(code)?.platformName ?? code;
+
+  const { readonly: createFormReadonly, setReadonly: setCreateFormReadonly } = useFormReadonly(false);
+  const [createReadonlySnapshot, setCreateReadonlySnapshot] = useState<Record<string, unknown>>({});
+  useEffect(() => {
+    if (!createOpen) setCreateFormReadonly(false);
+  }, [createOpen, setCreateFormReadonly]);
+  const createReadonlyFields = useMemo((): ReadonlyFormFieldConfig[] => {
+    const getLabel = (code: string) => platformConfigs?.find((p) => p.platformCode === code)?.platformName ?? code;
+    const base: ReadonlyFormFieldConfig[] = [
+      { key: 'platform', label: '平台', render: (v) => getLabel(String(v ?? '')) },
+      { key: 'orgFullName', label: '机构全称' },
+      { key: 'contactPerson', label: '联系人' },
+      { key: 'phone', label: '联系电话' },
+      { key: 'email', label: '邮箱' },
+    ];
+    if (createSourceType === 'FACTORY') base.push({ key: 'contractNo', label: '合同号' });
+    if (createSourceType === 'SERVICE') {
+      base.push({ key: 'price', label: '单价（元/点）', render: (v) => (v != null && v !== '' ? String(v) : '—') });
+      base.push({ key: 'quantity', label: '台数' });
+      base.push({ key: 'reason', label: '原因' });
+    }
+    return base;
+  }, [createSourceType, platformConfigs]);
+  const getCreateDefaultTemplate = useCallback((): Record<string, unknown> => {
+    const base: Record<string, unknown> = { orgFullName: '', contactPerson: '', phone: '', email: '' };
+    if (createSourceType === 'FACTORY') base.contractNo = '';
+    if (createSourceType === 'SERVICE') {
+      base.price = 25;
+      base.quantity = 1;
+      base.reason = '';
+    }
+    return base;
+  }, [createSourceType]);
 
   const columns: ProColumns<ApplicationRow>[] = [
     { title: '申请单号', dataIndex: 'applicationNo', width: 160, ellipsis: true },
@@ -577,47 +620,61 @@ export default function PlatformApplication({
           layout="vertical"
           modalProps={{ destroyOnClose: true }}
           submitter={{
-            render: (_props, doms) => (
-              <>
-                {doms}
-                <Button key="draft" onClick={() => { const values = createFormRef.current?.getFieldsValue?.() ?? {}; saveDraft(values); message.success('草稿已保存'); setCreateOpen(false); setCreateSourceType('FACTORY'); createModalOnlyOnCancel?.(); }} style={{ marginLeft: 8 }}>保存草稿</Button>
-              </>
-            ),
+            render: (_props, doms) =>
+              createFormReadonly ? (
+                <Button key="back-edit" onClick={() => setCreateFormReadonly(false)}>返回编辑</Button>
+              ) : (
+                <>
+                  {doms}
+                  <Button key="draft" onClick={() => { const values = createFormRef.current?.getFieldsValue?.() ?? {}; saveDraft(values); message.success('草稿已保存'); setCreateOpen(false); setCreateSourceType('FACTORY'); createModalOnlyOnCancel?.(); }} style={{ marginLeft: 8 }}>保存草稿</Button>
+                  <Button key="default-template" onClick={() => { const t = getCreateDefaultTemplate(); createFormRef.current?.setFieldsValue?.(t); message.success('已恢复默认'); }} style={{ marginLeft: 8 }}>恢复默认</Button>
+                  <Button key="readonly-preview" onClick={() => { const values = createFormRef.current?.getFieldsValue?.() ?? {}; setCreateReadonlySnapshot(values); setCreateFormReadonly(true); }} style={{ marginLeft: 8 }}>只读预览</Button>
+                </>
+              ),
           }}
         >
-          {hasDraft && (
-            <Alert type="info" showIcon style={{ marginBottom: 16 }} message={<>{'您有未提交的草稿。 '}<Button type="link" size="small" onClick={() => { const v = loadDraft(); if (v && createFormRef.current?.setFieldsValue) createFormRef.current.setFieldsValue(v as Record<string, unknown>); }}>恢复草稿</Button><Button type="link" size="small" onClick={clearDraft}>清除草稿</Button></>} />
-          )}
-          <Form.Item name="platform" label="平台" rules={[{ required: true }]}>
-            <Select options={platformOptions} placeholder="选择平台" />
-          </Form.Item>
-          <Form.Item name="sourceType" hidden initialValue={createSourceType}><Input type="hidden" /></Form.Item>
-          <CustomerFieldCreate />
-          <Form.Item name="orgFullName" label="机构全称" rules={[{ required: true, message: '请输入机构全称' }]}>
-            <Input placeholder="机构全称（默认同客户名称，可修改）" />
-          </Form.Item>
-          <Form.Item name="contactPerson" label="联系人" rules={[{ required: true, message: '此项必填' }]}>
-            <SmartInput name="contactPerson" trim placeholder="联系人" />
-          </Form.Item>
-          <Form.Item name="phone" label="联系电话" rules={[{ required: true, message: '此项必填' }, PhoneRule]}>
-            <SmartInput name="phone" noSpaces placeholder="11位手机号或区号-号码" />
-          </Form.Item>
-          <Form.Item name="email" label="邮箱" rules={[{ required: true, message: '此项必填' }, EmailRule]}>
-            <SmartInput name="email" type="email" noSpaces placeholder="邮箱" />
-          </Form.Item>
-          {createSourceType === 'FACTORY' && (
-            <Form.Item name="contractNo" label="合同号" rules={enterpriseDirect ? [] : [{ required: true, message: '请输入合同号' }, ContractRule]}>
-              <SmartInput name="contractNo" uppercase noSpaces placeholder="合同号（英文/数字/符号）" />
-            </Form.Item>
-          )}
-          {createSourceType === 'SERVICE' && (
+          {/* Step-02 验收入口：与 Tabs 内创建弹窗同源，需同时具备 恢复默认 / 只读预览·返回编辑 可见 */}
+          {createFormReadonly ? (
+            <FormContainer>
+              <FormSection title="基本信息（只读）" help="当前为只读预览，点击「返回编辑」继续填写。">
+                <ReadonlyFormView values={createReadonlySnapshot} fields={createReadonlyFields} />
+              </FormSection>
+            </FormContainer>
+          ) : (
             <>
-              <Alert type="warning" message="首次开通必须交满1年（12个月），特殊情况请单独联系管理员" showIcon style={{ marginBottom: 16 }} />
-              <ProFormMoney name="price" label="单价（元/点）" initialValue={25} rules={[{ required: true, message: '请填写单价' }]} fieldProps={{ min: 0, precision: 2, step: 0.01, moneySymbol: false, addonAfter: '元/点', formatter: (v) => (v != null && String(v) !== '' ? Number(v).toFixed(2) : ''), parser: (v) => (v ? parseFloat(String(v).replace(/,/g, '')) : 0) }} />
-              <ProFormDigit name="quantity" label="台数" initialValue={1} rules={[{ required: true, message: '请填写台数' }]} fieldProps={{ min: 1, precision: 0, addonAfter: '台' }} />
-              <Form.Item name="reason" label="原因" rules={[{ required: true, message: '请填写原因' }]}>
-                <Input.TextArea rows={2} placeholder="原因" />
-              </Form.Item>
+              <FormContainer>
+                <DraftAlert hasDraft={hasDraft} onRestore={() => { const v = loadDraft(); if (v && createFormRef.current?.setFieldsValue) createFormRef.current.setFieldsValue(v as Record<string, unknown>); }} onClear={clearDraft} />
+                <FormSection title="基本信息" help="带 * 为必填。可点击「保存草稿」暂存，下次打开可恢复草稿。">
+                  <Form.Item name="platform" label="平台" rules={[{ required: true }]}>
+                    <Select options={platformOptions} placeholder="选择平台" />
+                  </Form.Item>
+                  <Form.Item name="sourceType" hidden initialValue={createSourceType}><Input type="hidden" /></Form.Item>
+                  <CustomerFieldCreate />
+                  <Form.Item name="orgFullName" label="机构全称" rules={[{ required: true, message: '请输入机构全称' }]}>
+                    <Input placeholder="机构全称（默认同客户名称，可修改）" />
+                  </Form.Item>
+                  <Form.Item name="contactPerson" label="联系人" rules={[{ required: true, message: '此项必填' }]}>
+                    <SmartInput name="contactPerson" trim placeholder="联系人" />
+                  </Form.Item>
+                  <FormFieldPhone name="phone" />
+                  <FormFieldEmail name="email" />
+                  {createSourceType === 'FACTORY' && (
+                    <Form.Item name="contractNo" label="合同号" rules={enterpriseDirect ? [] : [{ required: true, message: '请输入合同号' }, ContractRule]}>
+                      <SmartInput name="contractNo" uppercase noSpaces placeholder="合同号（英文/数字/符号）" />
+                    </Form.Item>
+                  )}
+                </FormSection>
+              </FormContainer>
+              {createSourceType === 'SERVICE' && (
+                <>
+                  <Alert type="warning" message="首次开通必须交满1年（12个月），特殊情况请单独联系管理员" showIcon style={{ marginBottom: 16 }} />
+                  <ProFormMoney name="price" label="单价（元/点）" initialValue={25} rules={[{ required: true, message: '请填写单价' }]} fieldProps={{ min: 0, precision: 2, step: 0.01, moneySymbol: false, addonAfter: '元/点', formatter: (v) => (v != null && String(v) !== '' ? Number(v).toFixed(2) : ''), parser: (v) => (v ? parseFloat(String(v).replace(/,/g, '')) : 0) }} />
+                  <ProFormDigit name="quantity" label="台数" initialValue={1} rules={[{ required: true, message: '请填写台数' }]} fieldProps={{ min: 1, precision: 0, addonAfter: '台' }} />
+                  <Form.Item name="reason" label="原因" rules={[{ required: true, message: '请填写原因' }]}>
+                    <Input.TextArea rows={2} placeholder="原因" />
+                  </Form.Item>
+                </>
+              )}
             </>
           )}
         </ModalForm>
@@ -705,66 +762,95 @@ export default function PlatformApplication({
         layout="vertical"
         modalProps={{ destroyOnClose: true }}
         submitter={{
-          render: (_props, doms) => (
-            <>
-              {doms}
+          render: (_props, doms) =>
+            createFormReadonly ? (
               <Button
-                key="draft"
-                onClick={() => {
-                  const values = createFormRef.current?.getFieldsValue?.() ?? {};
-                  saveDraft(values);
-                  message.success('草稿已保存');
-                  setCreateOpen(false);
-                }}
-                style={{ marginLeft: 8 }}
+                key="back-edit"
+                onClick={() => setCreateFormReadonly(false)}
               >
-                保存草稿
+                返回编辑
               </Button>
-            </>
-          ),
-        }}
-      >
-        {hasDraft && (
-          <Alert
-            type="info"
-            showIcon
-            style={{ marginBottom: 16 }}
-            message={
+            ) : (
               <>
-                您有未提交的草稿。
-                <Button type="link" size="small" onClick={() => { const v = loadDraft(); if (v && createFormRef.current?.setFieldsValue) createFormRef.current.setFieldsValue(v as Record<string, unknown>); }}>
-                  恢复草稿
+                {doms}
+                <Button
+                  key="draft"
+                  onClick={() => {
+                    const values = createFormRef.current?.getFieldsValue?.() ?? {};
+                    saveDraft(values);
+                    message.success('草稿已保存');
+                    setCreateOpen(false);
+                  }}
+                  style={{ marginLeft: 8 }}
+                >
+                  保存草稿
                 </Button>
-                <Button type="link" size="small" onClick={clearDraft}>
-                  清除草稿
+                <Button
+                  key="default-template"
+                  onClick={() => {
+                    const t = getCreateDefaultTemplate();
+                    createFormRef.current?.setFieldsValue?.(t);
+                    message.success('已恢复默认');
+                  }}
+                  style={{ marginLeft: 8 }}
+                >
+                  恢复默认
+                </Button>
+                <Button
+                  key="readonly-preview"
+                  onClick={() => {
+                    const values = createFormRef.current?.getFieldsValue?.() ?? {};
+                    setCreateReadonlySnapshot(values);
+                    setCreateFormReadonly(true);
+                  }}
+                  style={{ marginLeft: 8 }}
+                >
+                  只读预览
                 </Button>
               </>
-            }
-          />
+            ),
+        }}
+      >
+        {/* Step-02 验收入口：本弹窗为「销售申请/营企申请/服务申请」创建，具备分组/说明/草稿/只读切换/恢复默认 */}
+        {createFormReadonly ? (
+          <FormContainer>
+            <FormSection title="基本信息（只读）" help="当前为只读预览，点击「返回编辑」继续填写。">
+              <ReadonlyFormView values={createReadonlySnapshot} fields={createReadonlyFields} />
+            </FormSection>
+          </FormContainer>
+        ) : (
+          <FormContainer>
+            <DraftAlert
+              hasDraft={hasDraft}
+              onRestore={() => { const v = loadDraft(); if (v && createFormRef.current?.setFieldsValue) createFormRef.current.setFieldsValue(v as Record<string, unknown>); }}
+              onClear={clearDraft}
+            />
+            <FormSection
+              title="基本信息"
+              help="带 * 为必填。可点击「保存草稿」暂存，下次打开可恢复草稿。"
+            >
+              <Form.Item name="platform" label="平台" rules={[{ required: true }]}>
+                <Select options={platformOptions} placeholder="选择平台" />
+              </Form.Item>
+              <Form.Item name="sourceType" hidden initialValue={createSourceType}><Input type="hidden" /></Form.Item>
+              <CustomerFieldCreate />
+              <Form.Item name="orgFullName" label="机构全称" rules={[{ required: true, message: '请输入机构全称' }]}>
+                <Input placeholder="机构全称（默认同客户名称，可修改）" />
+              </Form.Item>
+              <Form.Item name="contactPerson" label="联系人" rules={[{ required: true, message: '此项必填' }]}>
+                <SmartInput name="contactPerson" trim placeholder="联系人" />
+              </Form.Item>
+              <FormFieldPhone name="phone" />
+              <FormFieldEmail name="email" />
+              {createSourceType === 'FACTORY' && (
+                <Form.Item name="contractNo" label="合同号" rules={[{ required: true, message: '请输入合同号' }, ContractRule]}>
+                  <SmartInput name="contractNo" uppercase noSpaces placeholder="合同号（英文/数字/符号）" />
+                </Form.Item>
+              )}
+            </FormSection>
+          </FormContainer>
         )}
-        <Form.Item name="platform" label="平台" rules={[{ required: true }]}>
-          <Select options={platformOptions} placeholder="选择平台" />
-        </Form.Item>
-        <Form.Item name="sourceType" hidden initialValue={createSourceType}><Input type="hidden" /></Form.Item>
-        <CustomerFieldCreate />
-        <Form.Item name="orgFullName" label="机构全称" rules={[{ required: true, message: '请输入机构全称' }]}>
-          <Input placeholder="机构全称（默认同客户名称，可修改）" />
-        </Form.Item>
-        <Form.Item name="contactPerson" label="联系人" rules={[{ required: true, message: '此项必填' }]}>
-          <SmartInput name="contactPerson" trim placeholder="联系人" />
-        </Form.Item>
-        <Form.Item name="phone" label="联系电话" rules={[{ required: true, message: '此项必填' }, PhoneRule]}>
-          <SmartInput name="phone" noSpaces placeholder="11位手机号或区号-号码" />
-        </Form.Item>
-        <Form.Item name="email" label="邮箱" rules={[{ required: true, message: '此项必填' }, EmailRule]}>
-          <SmartInput name="email" type="email" noSpaces placeholder="邮箱" />
-        </Form.Item>
-        {createSourceType === 'FACTORY' && (
-          <Form.Item name="contractNo" label="合同号" rules={[{ required: true, message: '请输入合同号' }, ContractRule]}>
-            <SmartInput name="contractNo" uppercase noSpaces placeholder="合同号（英文/数字/符号）" />
-          </Form.Item>
-        )}
-        {createSourceType === 'SERVICE' && (
+        {!createFormReadonly && createSourceType === 'SERVICE' && (
           <>
             <Alert
               type="warning"

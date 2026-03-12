@@ -1,9 +1,9 @@
 # UI_ENTRYPOINTS — All current UI entry points
 
-- **As-of:** 2025-02-24 (stage baseline rebuild)
+- **As-of:** 2025-02-24 14:00
 - **Repo:** main
-- **Commit:** 328150bd
-- **Verification method:** Inspected `App.tsx` (Routes), `BasicLayout.tsx` (MENU_ROUTES_BASE, buildMenuRoutes, adminExtras), `AccountPermissions/AccountsTab.tsx` (create/edit account + Primary Business Role).
+- **Commit:** 23467d7d
+- **Verification method:** Inspected `frontend/dfbs-ui/src/App.tsx` (all Route paths), `layouts/BasicLayout.tsx` (MENU_ROUTES_BASE, buildMenuRoutes, adminExtras), `pages/Admin/AccountPermissions/AccountsTab.tsx`, `shared/utils/request.ts` (baseURL `/api`).
 
 **Facts only.** Unverifiable items in "Not verified" section.
 

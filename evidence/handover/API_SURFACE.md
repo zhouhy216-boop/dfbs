@@ -1,9 +1,9 @@
 # API_SURFACE — REST endpoints by controller
 
-- **As-of:** 2025-02-24 (stage baseline rebuild)
+- **As-of:** 2025-02-24 14:00
 - **Repo:** main
-- **Commit:** 328150bd
-- **Verification method:** Grep of `@RequestMapping`, `@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping` under `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/`.
+- **Commit:** 23467d7d
+- **Verification method:** Grep `@RequestMapping`, `@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping`, `@PatchMapping` under `backend/dfbs-app/src/main/java/com/dfbs/app/interfaces/`; frontend `shared/utils/request.ts` baseURL `/api`.
 
 **Facts only.** Enumerated from controller classes. Frontend uses `baseURL: '/api'` (`frontend/dfbs-ui/src/shared/utils/request.ts`). Auth: Bearer token from request interceptor for protected routes; admin dictionary/org/perm routes guarded by SuperAdminGuard or equivalent on frontend; backend may enforce via `SuperAdminGuard.requireSuperAdmin()` (e.g. `DictionaryTypeAdminController`, `DictionaryItemAdminController`, `TestDataCleanerAdminController`). Response schema pointers: DTOs in controller package or `application/` (e.g. `QuoteResponseDto`, `CreateQuoteRequest`).
 

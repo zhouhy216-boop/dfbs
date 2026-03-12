@@ -134,7 +134,7 @@ flowchart LR
 
 ---
 
-## Repo reality check (stage baseline 2025-02-24)
+## Repo reality check (stage baseline rebuild 2025-02-24; commit 23467d7d)
 
 - **A2–A9 (合同录入→交付关闭):** Contract CRUD at `/master-data/contracts`; shipment workflow (accept/prepare/ship/complete/tracking/exception/cancel/close) at `/shipments`. No “评审/补充” (A3) as a distinct flow in repo.
 - **N1–N5 (入网准备):** Platform org/applications and SIM-related routes exist; no single “入网准备协作” process node UI.

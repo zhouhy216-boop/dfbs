@@ -1,0 +1,45 @@
+.unified-form-container {
+  margin: 0;
+  padding: 0;
+}
+
+.unified-form-section {
+  margin-bottom: 20px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.unified-form-section:last-child {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.unified-form-section-title {
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.88);
+  margin-bottom: 8px;
+  font-size: 15px;
+  padding-left: 10px;
+  border-left: 3px solid #1677ff;
+  line-height: 1.4;
+}
+
+.unified-form-section-help {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+  margin-bottom: 10px;
+  line-height: 1.5;
+  padding-left: 13px;
+}
+
+.unified-form-section-body {
+  margin: 0;
+}
+
+.unified-form-readonly-view {
+  line-height: 2;
+}
+
+.unified-form-readonly-view .unified-form-readonly-row {
+  margin-bottom: 4px;
+}
