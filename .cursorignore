@@ -1,0 +1,95 @@
+# =========================
+# Sensitive files
+# =========================
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.crt
+*.cer
+secrets/**
+credentials/**
+**/application-local.yml
+**/application-local.yaml
+**/application-secret.yml
+**/application-secret.yaml
+
+# =========================
+# VCS / IDE / OS noise
+# =========================
+.git/**
+.idea/**
+.vscode/**
+.DS_Store
+Thumbs.db
+
+# =========================
+# Frontend dependencies / build output
+# =========================
+**/node_modules/**
+**/dist/**
+**/build/**
+**/.vite/**
+**/.next/**
+**/.nuxt/**
+**/.cache/**
+**/coverage/**
+
+# =========================
+# Java / backend build output
+# =========================
+**/target/**
+**/out/**
+**/.gradle/**
+**/build/classes/**
+**/build/generated/**
+**/build/reports/**
+
+# =========================
+# Python caches / virtual env
+# =========================
+**/__pycache__/**
+**/.pytest_cache/**
+**/.mypy_cache/**
+**/.venv/**
+**/venv/**
+*.pyc
+
+# =========================
+# Logs / temp / dumps
+# =========================
+**/logs/**
+**/*.log
+**/tmp/**
+**/temp/**
+**/*.tmp
+**/*.bak
+**/*.swp
+
+# =========================
+# Large / non-code evidence artifacts
+# =========================
+evidence/**
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.webp
+**/*.gif
+**/*.mp4
+**/*.mov
+**/*.zip
+**/*.7z
+**/*.rar
+**/*.xlsx
+**/*.xls
+**/*.csv
+
+# =========================
+# Optional: legacy / archived materials
+# Uncomment if these become noise
+# =========================
+# _DISCOVERY/**
