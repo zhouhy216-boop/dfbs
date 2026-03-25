@@ -1,0 +1,151 @@
+# 文件：docs/product/PROCESS_MAP_v0.1.md
+# 流程地图 v0.1（落地版）
+> 目的：把“最长主线 + 中间节点发起 + 通用动作层”放进同一张流程图里。
+> 讨论规则：以后任何讨论都要落到【某个对象 + 某个状态 + 某个动作】上，避免各说各话。
+
+## 0) 关键统一口径（写死）
+- 设备号 = 机器号（同一个东西，下文统一叫“设备号”）。
+- 平台/SIM：客户自带不在合同体现；公司提供会在合同录入时体现（平台类型如映翰通、支付宝刷脸等）。
+- 入网准备协作：营业企画在交接生产准备时同步平台信息+SIM卡号；生产企画做“设备绑定”；平台主管做“SIM开通 + 平台绑定/新增平台”。
+- 外部系统暂不对接：可以先通过“导入/记录/附件归档”满足核算与追溯。
+- 报价统一成一种对象：按“报价类型”区分平台/SIM续费、运输、维修、配件四类。
+
+---
+
+## 1) 端到端流程图（主线 + 支线 + 中间发起）
+
+```mermaid
+flowchart LR
+  %% =========================
+  %% 主线：合同 → 评审 → 生产准备 → 交付签收关闭
+  %% =========================
+  subgraph 主线_交付
+    A1[销售：签合同] --> A2[销售：录入合同条款\n(机型/台数/保修起算点/平台&SIM条款/地址/到货期望/特殊要求)]
+    A2 --> A3[营业企画：评审/补充/协调]
+    A3 --> A4[生产企画：安排生产\n生成设备号]
+    A4 --> A5[物流主管：安排提货/送货]
+    A5 --> A6[仓库：出库]
+    A6 --> A7[物流公司：运输]
+    A7 --> A8[客户：签收]
+    A8 --> A9[交付：关闭]
+  end
+
+  %% =========================
+  %% 关键支线：入网准备协作（插在 A3→A4 同期）
+  %% =========================
+  subgraph 支线_入网准备(平台&SIM)
+    N1[营业企画：同步\n平台信息+SIM卡号\n→生产企画+平台主管]
+    N2[生产企画：设备绑定\n设备号 ↔ SIM ↔ 平台信息]
+    N3[平台主管：SIM开通]
+    N4[平台主管：平台绑定/新增平台]
+    N5[里程碑：入网准备完成\n(绑定完成+开通完成+平台已绑定)]
+  end
+
+  A3 --> N1 --> N2 --> N5
+  N1 --> N3 --> N5
+  N1 --> N4 --> N5
+
+  %% =========================
+  %% 主线：售后工单（可从中间节点发起）
+  %% =========================
+  subgraph 主线_售后工单
+    S0[入口A：客户自助报修\n/ public /repair] --> S1[客服代表：受理]
+    S1 --> S2[客服代表：派单]
+    S2 --> S3[服务经理：接单]
+    S3 --> S4[服务经理：上门维修/处理]
+    S4 --> S5[服务经理：完修]
+    S5 --> S6[客服代表：回访]
+    S6 --> S7[售后：闭环关闭]
+  end
+
+  %% 交付后可能触发报修（不是强依赖，只是常见路径）
+  A8 -.交付后进入使用期.-> S0
+
+  %% =========================
+  %% 新机培训（作为工单类型：发起人不同）
+  %% =========================
+  subgraph 工单类型_新机培训
+    T1[销售：发起培训申请\n(合同含培训次数)] --> T2[营业企画：审核]
+    T2 --> T3[客服代表：受理]
+    T3 --> T4[服务经理：接单/执行]
+    T4 --> T5[回访/关闭]
+  end
+
+  %% 培训复用工单闭环（只是发起入口不同）
+  T3 --> S2
+
+  %% =========================
+  %% 中间节点发起：运输异常（由物流手工标记）
+  %% =========================
+  subgraph 中间发起_运输异常
+    E1[物流/客服：标记异常\n/after-sales] --> E2[异常：提交]
+    E2 --> E3[异常：接收]
+    E3 --> E4[异常：处理/退回]
+    E4 --> E5[异常：完成/关闭]
+  end
+
+  A7 -.运输过程可产生异常(人工标记).-> E1
+
+  %% =========================
+  %% 收费闭环：统一报价对象（四类收费复用）
+  %% =========================
+  subgraph 收费闭环_统一报价对象
+    Q0[发起报价\n(平台/SIM续费 or 运输 or 维修 or 配件)]
+    Q1[服务经理：与客户确认]
+    Q2[会计：确认报价]
+    Q3[服务经理：收款]
+    Q4[会计：确认到账]
+    Q5[执行动作\n续费/安排运输/安排维修/配件发货]
+    Q0 --> Q1 --> Q2 --> Q3 --> Q4 --> Q5
+  end
+
+  %% 四类触发示意（都指向 Q0）
+  N5 -.公司提供平台/SIM → 续费收费.-> Q0
+  E1 -.客户委托运输可能收费.-> Q0
+  S1 -.保外/人为/配件等可能收费.-> Q0
+
+  %% 配件发货/仓库动作
+  Q5 --> K2
+
+  %% =========================
+  %% 仓库动作（总仓+小仓）
+  %% =========================
+  subgraph 仓库_库存动作
+    K2[库存动作：入库/出库/调拨/盘点/报损/借用归还\n按工单领用/按销售或配件订单发货]
+  end
+
+  S4 -.工单处理可能领用配件.-> K2
+  A6 --> K2
+
+  %% =========================
+  %% 报表中心（领导自选维度）
+  %% =========================
+  subgraph 报表中心
+    RPT[报表：所有数据可汇总分析\n(领导自选维度)]
+  end
+
+  A2 --> RPT
+  N5 --> RPT
+  S7 --> RPT
+  E5 --> RPT
+  Q5 --> RPT
+  K2 --> RPT
+```
+
+---
+
+## Repo reality check (stage baseline rebuild 2025-02-24; commit 23467d7d)
+
+- **A2–A9 (合同录入→交付关闭):** Contract CRUD at `/master-data/contracts`; shipment workflow (accept/prepare/ship/complete/tracking/exception/cancel/close) at `/shipments`. No “评审/补充” (A3) as a distinct flow in repo.
+- **N1–N5 (入网准备):** Platform org/applications and SIM-related routes exist; no single “入网准备协作” process node UI.
+- **S0–S7 (工单):** Work order pool, my-orders, accept, dispatch, record, sign, complete at `/work-orders` and `/work-orders/:id`. Public repair at `/public/repair`.
+- **M02 contract review nodes:** No process nodes or states for “评审协同” (initiator, assigned Business Planning person, current handler) in repo.
+
+## Conflicts with current repo reality
+
+- None. Process map describes intended flow; repo implements parts of it (shipment, work order, platform, contract CRUD). A3 “营业企画：评审/补充” has no dedicated backend or UI flow.
+
+## Anchor gaps / not yet present in repo
+
+- **A3 (评审/补充/协调):** No contract review workflow or review record; no ownership fields (initiator, assigned, current handler). Valid process node; not in repo.
+- **M02/M03 process nodes:** Any process nodes that would be “评审协同” or “生产准备” UI are not present in code.
